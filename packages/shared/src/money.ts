@@ -21,12 +21,19 @@ export function parseAmountToCents(input: string): MoneyCents {
   const sign = match[1] === "-" ? -1 : 1;
   const wholeCents = Number(match[2]) * 100;
   const fractionalCents = Number((match[3] ?? "").padEnd(2, "0"));
-  return moneyCents(sign * (wholeCents + fractionalCents));
+  const cents = sign * (wholeCents + fractionalCents);
+  return moneyCents(cents === 0 ? 0 : cents);
 }
 
 export function formatMoney(value: MoneyCents): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-  }).format(value / 100);
+  const cents = BigInt(value);
+  const sign = cents < 0n ? "-" : "";
+  const absoluteCents = cents < 0n ? -cents : cents;
+  const euros = absoluteCents / 100n;
+  const fractionalCents = (absoluteCents % 100n).toString().padStart(2, "0");
+  const formattedEuros = new Intl.NumberFormat("fr-FR", {
+    maximumFractionDigits: 0,
+  }).format(euros);
+
+  return `${sign}${formattedEuros},${fractionalCents}\u00a0€`;
 }

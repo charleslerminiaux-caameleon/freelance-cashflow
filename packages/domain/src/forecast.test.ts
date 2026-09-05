@@ -149,6 +149,52 @@ describe("calculateForecast", () => {
     expect(result.runwayDays).toBe(2);
   });
 
+  it("does not trigger runway while the closing balance equals the threshold", () => {
+    const result = calculateForecast({
+      startBalanceCents: moneyCents(500),
+      startDate: localDate("2026-09-05"),
+      endDate: localDate("2026-09-06"),
+      safetyThresholdCents: moneyCents(400),
+      scenario: "certain",
+      events: [
+        event({
+          direction: "outflow",
+          amountCents: moneyCents(100),
+          plannedDate: localDate("2026-09-06"),
+        }),
+      ],
+    });
+
+    expect(result.points[1]?.balanceCents).toBe(400);
+    expect(result.runwayDays).toBeNull();
+  });
+
+  it("rejects negative inflow event amounts", () => {
+    expect(() =>
+      calculateForecast({
+        startBalanceCents: moneyCents(0),
+        startDate: localDate("2026-09-05"),
+        endDate: localDate("2026-09-06"),
+        safetyThresholdCents: moneyCents(0),
+        scenario: "certain",
+        events: [event({ direction: "inflow", amountCents: moneyCents(-1) })],
+      }),
+    ).toThrow("non-negative");
+  });
+
+  it("rejects negative outflow event amounts", () => {
+    expect(() =>
+      calculateForecast({
+        startBalanceCents: moneyCents(0),
+        startDate: localDate("2026-09-05"),
+        endDate: localDate("2026-09-06"),
+        safetyThresholdCents: moneyCents(0),
+        scenario: "certain",
+        events: [event({ direction: "outflow", amountCents: moneyCents(-1) })],
+      }),
+    ).toThrow("non-negative");
+  });
+
   it("rejects inverted ranges and invalid probability basis points", () => {
     expect(() =>
       calculateForecast({

@@ -64,6 +64,9 @@ export function calculateForecast(input: ForecastInput): ForecastResult {
   }
 
   for (const event of input.events) {
+    if (event.amountCents < 0) {
+      throw new Error("Event amounts must be non-negative");
+    }
     if (
       !Number.isInteger(event.probabilityBasisPoints) ||
       event.probabilityBasisPoints < 0 ||
