@@ -132,6 +132,130 @@ nav a:focus-visible {
   display: none;
 }
 
+.auth-page {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+}
+
+.auth-card {
+  background: var(--fc-surface);
+  border: 1px solid var(--fc-border);
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 4rem rgb(14 98 89 / 8%);
+  max-width: 34rem;
+  padding: 2rem;
+  width: 100%;
+}
+
+.auth-card-wide {
+  max-width: 48rem;
+}
+
+.auth-brand {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+}
+
+.auth-brand img {
+  border-radius: 0.75rem;
+}
+
+.auth-card h1,
+.auth-card h2 {
+  letter-spacing: -0.03em;
+}
+
+.auth-card h1 {
+  margin: 0.35rem 0 0;
+}
+
+.auth-card h2 {
+  font-size: 1.1rem;
+  margin: 0 0 1rem;
+}
+
+.auth-intro,
+.auth-form p,
+.form-hint {
+  color: var(--fc-muted);
+}
+
+.auth-forms {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.auth-form,
+.onboarding-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.auth-form-secondary {
+  border-top: 1px solid var(--fc-border);
+  margin-top: 0.5rem;
+  padding-top: 1.5rem;
+}
+
+.auth-form label,
+.onboarding-form label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.auth-form input,
+.onboarding-form input,
+.onboarding-form select {
+  background: var(--fc-surface);
+  border: 1px solid var(--fc-border);
+  border-radius: 0.5rem;
+  color: var(--fc-ink);
+  font: inherit;
+  padding: 0.7rem 0.75rem;
+  width: 100%;
+}
+
+.auth-form button,
+.onboarding-form button {
+  background: var(--fc-petrol);
+  border: 0;
+  border-radius: 0.5rem;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  margin-top: 0.35rem;
+  padding: 0.75rem 1rem;
+}
+
+.auth-form button:disabled,
+.onboarding-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.auth-form [role="alert"],
+.onboarding-form [role="alert"] {
+  background: #fff3f0;
+  border-left: 3px solid var(--fc-coral);
+  color: #8a382c;
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media (max-width: 720px) {
   .sidebar {
     display: none;
@@ -180,5 +304,9 @@ nav a:focus-visible {
 
   .empty-state {
     padding: 2rem 1.5rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 }
