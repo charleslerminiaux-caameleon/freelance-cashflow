@@ -1,0 +1,158 @@
+:root {
+  --fc-petrol: #0e6259;
+  --fc-coral: #df6c5a;
+  --fc-ink: #16312d;
+  --fc-muted: #6d7d79;
+  --fc-surface: #ffffff;
+  --fc-border: #dce7e3;
+  background: #f4f8f6;
+  color: var(--fc-ink);
+  font-family: Arial, Helvetica, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--fc-surface);
+  border-right: 1px solid var(--fc-border);
+  display: flex;
+  flex-direction: column;
+  inset: 0 auto 0 0;
+  padding: 1.5rem 1rem;
+  position: fixed;
+  width: 16rem;
+}
+
+.brand {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.brand img {
+  border-radius: 0.65rem;
+  display: block;
+}
+
+nav {
+  margin-top: 2rem;
+}
+
+nav ul {
+  display: grid;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+nav a {
+  border-radius: 0.5rem;
+  color: var(--fc-muted);
+  display: block;
+  padding: 0.7rem 0.75rem;
+}
+
+nav a:hover,
+nav a:focus-visible {
+  background: #e8f2ef;
+  color: var(--fc-petrol);
+}
+
+.sync-status {
+  color: var(--fc-muted);
+  font-size: 0.8125rem;
+}
+
+.sidebar > .sync-status {
+  border-top: 1px solid var(--fc-border);
+  margin-top: auto;
+  padding: 1rem 0.75rem 0;
+}
+
+.app-content {
+  margin-left: 16rem;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.empty-state {
+  background: var(--fc-surface);
+  border: 1px solid var(--fc-border);
+  border-radius: 1rem;
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: 3rem;
+}
+
+.empty-state h1 {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  letter-spacing: -0.035em;
+  margin: 0.5rem 0;
+}
+
+.empty-state p:not(.eyebrow) {
+  color: var(--fc-muted);
+  margin-bottom: 0;
+}
+
+.eyebrow {
+  color: var(--fc-petrol);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.mobile-header {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .sidebar {
+    display: none;
+  }
+
+  .mobile-header {
+    align-items: center;
+    background: var(--fc-surface);
+    border-bottom: 1px solid var(--fc-border);
+    display: flex;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+  }
+
+  .mobile-header .sync-status {
+    max-width: 9rem;
+    text-align: right;
+  }
+
+  .app-content {
+    margin-left: 0;
+    padding: 1.25rem;
+  }
+
+  .empty-state {
+    padding: 2rem 1.5rem;
+  }
+}
