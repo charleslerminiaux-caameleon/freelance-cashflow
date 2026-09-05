@@ -75,6 +75,28 @@ importers:
         specifier: ^3.0.0
         version: 3.2.7(@types/node@22.20.1)(jsdom@26.1.0)
 
+  packages/domain:
+    dependencies:
+      '@fc/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jsdom@26.1.0)
+
+  packages/shared:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(@types/node@22.20.1)(jsdom@26.1.0)
+
 packages:
 
   '@adobe/css-tools@4.5.0':
