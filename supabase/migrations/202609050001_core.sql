@@ -155,8 +155,7 @@ create table public.invoices (
     references public.billing_schedule_items (owner_user_id, id)
     on delete set null (billing_schedule_item_id),
   unique (owner_user_id, id),
-  unique (owner_user_id, invoice_number),
-  unique nulls not distinct (owner_user_id, provider, external_id)
+  unique (owner_user_id, invoice_number)
 );
 
 create table public.invoice_payments (
@@ -290,6 +289,9 @@ create index billing_schedule_items_owner_invoice_date_idx
   on public.billing_schedule_items (owner_user_id, planned_invoice_date, status);
 create index invoices_owner_payment_date_idx
   on public.invoices (owner_user_id, expected_payment_date, status);
+create unique index invoices_owner_provider_external_id_uidx
+  on public.invoices (owner_user_id, provider, external_id)
+  where external_id is not null;
 create index invoice_payments_owner_paid_at_idx
   on public.invoice_payments (owner_user_id, paid_at);
 create index cashflow_categories_owner_type_idx

@@ -19,50 +19,59 @@ values (
 
 select is(
   (
-    select count(*)
-    from pg_class
-    where oid in (
-      'public.app_settings'::regclass,
-      'public.customers'::regclass,
-      'public.opportunities'::regclass,
-      'public.engagements'::regclass,
-      'public.billing_schedule_items'::regclass,
-      'public.invoices'::regclass,
-      'public.invoice_payments'::regclass,
-      'public.recurring_cashflows'::regclass,
-      'public.planned_cashflows'::regclass,
-      'public.cashflow_categories'::regclass
-    )
-      and relrowsecurity
+    select jsonb_agg(c.relname order by c.relname)
+    from pg_class as c
+    join pg_namespace as n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind in ('r', 'p')
+      and c.relrowsecurity
   ),
-  10::bigint,
-  'all owner-scoped tables have RLS enabled'
+  jsonb_build_array(
+    'app_settings',
+    'billing_schedule_items',
+    'cashflow_categories',
+    'customers',
+    'engagements',
+    'invoice_payments',
+    'invoices',
+    'opportunities',
+    'planned_cashflows',
+    'recurring_cashflows'
+  ),
+  'exactly the ten owner-scoped tables have RLS enabled'
 );
 
 select is(
   (
-    select count(*)
+    select jsonb_agg(
+      concat_ws(
+        '|',
+        tablename,
+        policyname,
+        permissive,
+        array_to_string(roles, ','),
+        cmd,
+        (qual = '(( SELECT auth.uid() AS uid) = owner_user_id)')::text,
+        (with_check = '(( SELECT auth.uid() AS uid) = owner_user_id)')::text
+      )
+      order by tablename, policyname
+    )
     from pg_policies
     where schemaname = 'public'
-      and tablename in (
-        'app_settings',
-        'customers',
-        'opportunities',
-        'engagements',
-        'billing_schedule_items',
-        'invoices',
-        'invoice_payments',
-        'recurring_cashflows',
-        'planned_cashflows',
-        'cashflow_categories'
-      )
-      and cmd = 'ALL'
-      and roles = array['authenticated']::name[]
-      and qual is not null
-      and with_check is not null
   ),
-  10::bigint,
-  'every table has one authenticated policy with USING and WITH CHECK'
+  jsonb_build_array(
+    'app_settings|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'billing_schedule_items|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'cashflow_categories|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'customers|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'engagements|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'invoice_payments|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'invoices|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'opportunities|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'planned_cashflows|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'recurring_cashflows|owner_access|PERMISSIVE|authenticated|ALL|true|true'
+  ),
+  'every public policy exactly matches the owner-access contract'
 );
 
 select set_config(
