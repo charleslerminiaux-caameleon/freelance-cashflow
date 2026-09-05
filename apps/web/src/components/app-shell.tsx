@@ -23,6 +23,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         </span>
       </header>
 
+      <nav className="mobile-navigation" aria-label="Navigation mobile">
+        <ul>
+          {navigation.map(([label, href]) => (
+            <li key={href}>
+              <a href={href}>{label}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
       <aside className="sidebar" aria-label="Navigation principale">
         <a className="brand" href="/dashboard" aria-label="Freelance Cashflow">
           <img src="/logo.jpeg" alt="" width="40" height="40" />
