@@ -10,6 +10,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@fc/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@fc/shared':
         specifier: workspace:*
         version: link:../../packages/shared
