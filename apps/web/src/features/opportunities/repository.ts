@@ -133,11 +133,16 @@ export async function updateOpportunity(
     })
     .eq("id", opportunityId)
     .eq("owner_user_id", ownerUserId)
+    .is("converted_engagement_id", null)
     .select(opportunityColumns)
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw repositoryError(error);
+  }
+
+  if (!data) {
+    throw new RepositoryError("FC_CONVERTED_OPPORTUNITY_IMMUTABLE");
   }
 
   return opportunityRowSchema.parse(data);
@@ -148,14 +153,21 @@ export async function deleteOpportunity(
   ownerUserId: string,
   opportunityId: string,
 ): Promise<void> {
-  const { error } = await client
+  const { data, error } = await client
     .from("opportunities")
     .delete()
     .eq("id", opportunityId)
-    .eq("owner_user_id", ownerUserId);
+    .eq("owner_user_id", ownerUserId)
+    .is("converted_engagement_id", null)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     throw repositoryError(error);
+  }
+
+  if (!data) {
+    throw new RepositoryError("FC_CONVERTED_OPPORTUNITY_IMMUTABLE");
   }
 }
 
@@ -166,7 +178,7 @@ export async function executeOpportunityConversion(
     opportunityId: string;
     reference: string;
     signedAt: string;
-    amountTtcCents: number;
+    vatRateBasisPoints: number;
     paymentTermsDays: number;
   },
 ): Promise<string> {
@@ -189,7 +201,7 @@ export async function executeOpportunityConversion(
     p_opportunity_id: command.opportunityId,
     p_reference: command.reference,
     p_signed_at: command.signedAt,
-    p_amount_ttc_cents: command.amountTtcCents,
+    p_vat_rate_basis_points: command.vatRateBasisPoints,
     p_payment_terms_days: command.paymentTermsDays,
   });
 

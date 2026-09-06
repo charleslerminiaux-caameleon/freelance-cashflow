@@ -1,7 +1,5 @@
 "use server";
 
-import { convertOpportunity as prepareOpportunityConversion } from "@fc/domain";
-import { moneyCents } from "@fc/shared";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -13,7 +11,6 @@ import {
   createOpportunity,
   deleteOpportunity,
   executeOpportunityConversion,
-  getOpportunity,
   updateOpportunity,
 } from "./repository";
 import { conversionFormSchema, opportunityFormSchema } from "./schema";
@@ -64,12 +61,31 @@ export async function updateOpportunityAction(
     await updateOpportunity(client, userId, opportunityId, command);
     revalidatePath("/opportunities");
     return { message: "Opportunité mise à jour.", success: true };
-  } catch {
-    return { message: "Impossible de mettre à jour cette opportunité.", success: false };
+  } catch (error) {
+    const message =
+      error instanceof RepositoryError &&
+      error.code === "FC_CONVERTED_OPPORTUNITY_IMMUTABLE"
+        ? "Une opportunité convertie ne peut plus être modifiée."
+        : "Impossible de mettre à jour cette opportunité.";
+    return { message, success: false };
   }
 }
 
-export async function deleteOpportunityAction(formData: FormData): Promise<void> {
+function deletionErrorMessage(error: unknown): string {
+  if (
+    error instanceof RepositoryError &&
+    error.code === "FC_CONVERTED_OPPORTUNITY_IMMUTABLE"
+  ) {
+    return "Une opportunité convertie ne peut pas être supprimée.";
+  }
+
+  return "Impossible de supprimer cette opportunité.";
+}
+
+export async function deleteOpportunityAction(
+  _state: CommercialActionState,
+  formData: FormData,
+): Promise<CommercialActionState> {
   const { userId } = await requireOwner();
 
   try {
@@ -77,8 +93,9 @@ export async function deleteOpportunityAction(formData: FormData): Promise<void>
     const client = await createClient();
     await deleteOpportunity(client, userId, opportunityId);
     revalidatePath("/opportunities");
-  } catch {
-    // Converted opportunities remain linked and unchanged when deletion is rejected.
+    return { message: "Opportunité supprimée.", success: true };
+  } catch (error) {
+    return { message: deletionErrorMessage(error), success: false };
   }
 }
 
@@ -111,29 +128,12 @@ export async function convertOpportunityAction(
       paymentTermsDays: formData.get("paymentTermsDays"),
     });
     const client = await createClient();
-    const opportunity = await getOpportunity(client, userId, command.opportunityId);
-
-    if (opportunity.converted_engagement_id !== null || opportunity.status === "won") {
-      throw new RepositoryError("FC_OPPORTUNITY_ALREADY_CONVERTED");
-    }
-
-    const conversion = prepareOpportunityConversion({
-      opportunityId: opportunity.id,
-      customerId: opportunity.customer_id,
-      name: command.reference,
-      status: opportunity.status,
-      amountHtCents: moneyCents(opportunity.estimated_amount_ht_cents),
+    await executeOpportunityConversion(client, userId, {
+      opportunityId: command.opportunityId,
+      reference: command.reference,
+      signedAt: command.signedAt,
       vatRateBasisPoints: command.vatRateBasisPoints,
       paymentTermsDays: command.paymentTermsDays,
-      signedAt: command.signedAt,
-    });
-
-    await executeOpportunityConversion(client, userId, {
-      opportunityId: opportunity.id,
-      reference: conversion.engagement.reference,
-      signedAt: conversion.engagement.signedAt,
-      amountTtcCents: conversion.engagement.amountTtcCents,
-      paymentTermsDays: conversion.engagement.paymentTermsDays,
     });
     revalidatePath("/opportunities");
     revalidatePath("/engagements");

@@ -70,3 +70,31 @@ export function CustomerForm({
     </form>
   );
 }
+
+export function CustomerDeleteForm({
+  action,
+  customerId,
+  customerName,
+}: {
+  action: CommercialFormAction;
+  customerId: string;
+  customerName: string;
+}) {
+  const [state, submit, pending] = useActionState(action, initialState);
+
+  return (
+    <form action={submit} className="commercial-delete-form">
+      <input type="hidden" name="customerId" value={customerId} />
+      {state.message ? (
+        <p role={state.success ? "status" : "alert"}>{state.message}</p>
+      ) : null}
+      <button
+        type="submit"
+        aria-label={`Supprimer le client ${customerName}`}
+        disabled={pending}
+      >
+        Supprimer
+      </button>
+    </form>
+  );
+}

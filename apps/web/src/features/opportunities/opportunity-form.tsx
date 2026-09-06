@@ -35,7 +35,6 @@ const statuses: ReadonlyArray<{ value: OpportunityStatus; label: string }> = [
   { value: "lead", label: "Piste" },
   { value: "qualified", label: "Qualifiée" },
   { value: "proposal", label: "Proposition" },
-  { value: "won", label: "Gagnée" },
   { value: "lost", label: "Perdue" },
 ];
 
@@ -152,6 +151,7 @@ export function ConversionForm({
   paymentTermsDays,
   status,
   today,
+  convertedEngagementId,
 }: {
   action: CommercialFormAction;
   opportunityId: string;
@@ -159,11 +159,12 @@ export function ConversionForm({
   paymentTermsDays: number;
   status: OpportunityStatus;
   today: string;
+  convertedEngagementId: string | null;
 }) {
   const [state, submit, pending] = useActionState(action, initialState);
   const fieldId = useId();
 
-  if (status === "won" || status === "lost") {
+  if (convertedEngagementId !== null || status === "won" || status === "lost") {
     return null;
   }
 
@@ -201,6 +202,34 @@ export function ConversionForm({
       {state.message ? <p role="alert">{state.message}</p> : null}
       <button type="submit" disabled={pending}>
         Convertir en commande
+      </button>
+    </form>
+  );
+}
+
+export function DeleteOpportunityForm({
+  action,
+  opportunityId,
+  opportunityName,
+}: {
+  action: CommercialFormAction;
+  opportunityId: string;
+  opportunityName: string;
+}) {
+  const [state, submit, pending] = useActionState(action, initialState);
+
+  return (
+    <form action={submit} className="commercial-delete-form">
+      <input type="hidden" name="opportunityId" value={opportunityId} />
+      {state.message ? (
+        <p role={state.success ? "status" : "alert"}>{state.message}</p>
+      ) : null}
+      <button
+        type="submit"
+        aria-label={`Supprimer l’opportunité ${opportunityName}`}
+        disabled={pending}
+      >
+        Supprimer
       </button>
     </form>
   );

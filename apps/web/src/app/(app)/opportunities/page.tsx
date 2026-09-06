@@ -1,14 +1,23 @@
 import { formatMoney, moneyCents } from "@fc/shared";
 
-import { CustomerForm } from "@/features/customers/customer-form";
-import { createCustomerAction, updateCustomerAction } from "@/features/customers/actions";
+import { CustomerDeleteForm, CustomerForm } from "@/features/customers/customer-form";
+import {
+  createCustomerAction,
+  deleteCustomerAction,
+  updateCustomerAction,
+} from "@/features/customers/actions";
 import { listCustomers } from "@/features/customers/repository";
 import {
   convertOpportunityAction,
   createOpportunityAction,
+  deleteOpportunityAction,
   updateOpportunityAction,
 } from "@/features/opportunities/actions";
-import { ConversionForm, OpportunityForm } from "@/features/opportunities/opportunity-form";
+import {
+  ConversionForm,
+  DeleteOpportunityForm,
+  OpportunityForm,
+} from "@/features/opportunities/opportunity-form";
 import { listOpportunities } from "@/features/opportunities/repository";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
@@ -93,6 +102,11 @@ export default async function OpportunitiesPage() {
                         notes: customer.notes ?? "",
                       }}
                     />
+                    <CustomerDeleteForm
+                      action={deleteCustomerAction}
+                      customerId={customer.id}
+                      customerName={customer.name}
+                    />
                   </details>
                 ))}
               </div>
@@ -153,33 +167,47 @@ export default async function OpportunitiesPage() {
                   </dl>
 
                   <div className="record-actions">
-                    <details className="inline-details">
-                      <summary>Modifier</summary>
-                      <OpportunityForm
-                        action={updateOpportunityAction}
-                        customers={customers.map(({ id, name }) => ({ id, name }))}
-                        value={{
-                          id: opportunity.id,
-                          customerId: opportunity.customer_id,
-                          name: opportunity.name,
-                          status: opportunity.status,
-                          estimatedAmountHt: centsToInput(opportunity.estimated_amount_ht_cents),
-                          probabilityPercent: basisPointsToInput(opportunity.probability_basis_points),
-                          expectedCloseDate: opportunity.expected_close_date ?? "",
-                          expectedStartDate: opportunity.expected_start_date ?? "",
-                          expectedEndDate: opportunity.expected_end_date ?? "",
-                          notes: opportunity.notes ?? "",
-                        }}
-                      />
-                    </details>
-                    <ConversionForm
-                      action={convertOpportunityAction}
-                      opportunityId={opportunity.id}
-                      opportunityName={opportunity.name}
-                      paymentTermsDays={opportunity.customer.payment_terms_days}
-                      status={opportunity.status}
-                      today={today}
-                    />
+                    {opportunity.converted_engagement_id === null && opportunity.status !== "won" ? (
+                      <>
+                        <div className="record-mutation-controls">
+                          <details className="inline-details">
+                            <summary>Modifier</summary>
+                            <OpportunityForm
+                              action={updateOpportunityAction}
+                              customers={customers.map(({ id, name }) => ({ id, name }))}
+                              value={{
+                                id: opportunity.id,
+                                customerId: opportunity.customer_id,
+                                name: opportunity.name,
+                                status: opportunity.status,
+                                estimatedAmountHt: centsToInput(opportunity.estimated_amount_ht_cents),
+                                probabilityPercent: basisPointsToInput(opportunity.probability_basis_points),
+                                expectedCloseDate: opportunity.expected_close_date ?? "",
+                                expectedStartDate: opportunity.expected_start_date ?? "",
+                                expectedEndDate: opportunity.expected_end_date ?? "",
+                                notes: opportunity.notes ?? "",
+                              }}
+                            />
+                          </details>
+                          <DeleteOpportunityForm
+                            action={deleteOpportunityAction}
+                            opportunityId={opportunity.id}
+                            opportunityName={opportunity.name}
+                          />
+                        </div>
+                        <ConversionForm
+                          action={convertOpportunityAction}
+                          opportunityId={opportunity.id}
+                          opportunityName={opportunity.name}
+                          paymentTermsDays={opportunity.customer.payment_terms_days}
+                          status={opportunity.status}
+                          today={today}
+                          convertedEngagementId={opportunity.converted_engagement_id}
+                        />
+                      </>
+                    ) : (
+                      <p className="muted-copy">Cette opportunité est verrouillée après conversion.</p>
+                    )}
                   </div>
                 </article>
               ))}

@@ -11,7 +11,6 @@
     "test:run": "vitest run"
   },
   "dependencies": {
-    "@fc/domain": "workspace:*",
     "@fc/shared": "workspace:*",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.0",

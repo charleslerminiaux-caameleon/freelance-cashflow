@@ -445,6 +445,47 @@ details.panel[open] > summary {
   padding: 0.75rem;
 }
 
+.commercial-delete-form {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.commercial-delete-form button {
+  background: transparent;
+  border: 1px solid #c46b5d;
+  border-radius: 0.55rem;
+  color: #8a382c;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  justify-self: start;
+  padding: 0.6rem 0.85rem;
+}
+
+.commercial-delete-form button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.commercial-delete-form [role="alert"],
+.commercial-delete-form [role="status"] {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+}
+
+.commercial-delete-form [role="alert"] {
+  background: #fff3f0;
+  border-left: 3px solid var(--fc-coral);
+  color: #8a382c;
+}
+
+.commercial-delete-form [role="status"] {
+  background: #e7f4e6;
+  border-left: 3px solid #4f8a49;
+  color: #31652d;
+}
+
 .compact-form .form-grid {
   grid-template-columns: 1fr;
 }
@@ -537,6 +578,10 @@ details.panel[open] > summary {
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 1fr);
   margin-top: 1.25rem;
   padding-top: 1rem;
+}
+
+.record-mutation-controls {
+  min-width: 0;
 }
 
 .conversion-form {

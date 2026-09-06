@@ -97,3 +97,33 @@ DONE. Implemented from base `1dd4d8f80d4f83d977ac68a121b8187b93df0eae` in the as
 ## Residual risk
 
 - A fully authenticated browser journey is intentionally not added here because the plan assigns end-to-end Playwright coverage to a later task. Task 5 covers the UI controls with component tests, the routes with type generation/build, and all transactional/security behavior with real PostgreSQL pgTAP tests.
+
+## Fix round — commercial invariants and deletions
+
+### Review findings verified
+
+1. The original RPC accepted a browser-computed TTC amount. That allowed stale or manipulated client state to diverge from the locked opportunity HT. The replacement RPC accepts integer VAT basis points, derives TTC from the current locked HT with the same half-up rule, bounds VAT to 0–100%, rejects bigint overflow before persistence, and drops the old overload.
+2. The original child trigger serialized schedule inserts but a direct parent reduction could still move an engagement TTC below its active schedule total. A parent UPDATE trigger now rejects that reduction, permits equality, excludes cancelled items, and composes with the existing reactivation check.
+3. Owner RLS allowed a converted opportunity to be edited, unlinked, or deleted after the RPC committed. A database trigger now preserves won status, the reciprocal engagement link, and every commercial field while permitting notes; repository UPDATE/DELETE queries also require a null conversion link so a conversion race becomes a stable refusal. The form no longer offers won as an editable status, and edit/delete/convert controls are hidden once `converted_engagement_id` is non-null.
+4. Customer and opportunity deletion actions previously swallowed every error and returned no state. They now return `CommercialActionState`, distinguish success from expected FK/converted refusals, sanitize malformed UUIDs and unexpected failures, and render accessible success/refusal feedback through dedicated delete controls.
+
+### Fix-round TDD evidence
+
+- Authoritative conversion RED: `corepack pnpm dlx supabase test db supabase/tests/database/convert_opportunity_authority.test.sql` failed before the replacement RPC; GREEN: 17/17 assertions passed, including changed source HT, VAT bounds, overflow rollback, privileges, and absence of the stale overload.
+- Parent ceiling RED: `corepack pnpm dlx supabase test db supabase/tests/database/engagement_schedule_invariants.test.sql` failed before the parent trigger; GREEN: 6/6 assertions passed for below-total refusal, equality, cancelled exclusion, and reactivation.
+- Converted immutability RED: after a clean reset, `corepack pnpm dlx supabase test db supabase/tests/database/converted_opportunity_immutability.test.sql` failed 9/13 assertions before the trigger. A reciprocal-link mutation was separately proven RED at 2/15 failures with that guard removed. GREEN: 15/15 assertions passed.
+- Repository/UI/deletion RED: the focused web run failed 9 behavioral tests plus the unresolved repository test harness before implementation; after adding the test-only `server-only` alias, the repository contract failed 3/3 for stale TTC input and missing conversion guards. Deletion action, form feedback, won-status reservation, no-row outcomes, and safe converted-edit messaging were each observed failing before their minimal implementation.
+- Repository/UI/deletion GREEN: focused repository suites passed 6/6; focused customer/opportunity form suites passed 8/8; action/schema/component/repository coverage is included in the 73-test web suite.
+
+### Final fix-round verification
+
+- `corepack pnpm dlx supabase db reset --local && corepack pnpm dlx supabase test db` — exit 0; all five migrations replayed and 124/124 assertions passed across 8 files.
+- `corepack pnpm test:run` — exit 0; shared 10/10, domain 15/15, web 73/73 (98/98 total).
+- `corepack pnpm lint` — exit 0; ESLint clean.
+- `corepack pnpm typecheck` — exit 0; all three workspace projects passed.
+- Build with test-only `NEXT_PUBLIC_SUPABASE_URL`, anonymous key, and service-role key values — exit 0; Next compiled and generated all routes.
+- `git diff --check` and explicit secret/unsafe-TypeScript/trailing-whitespace scans — no findings.
+
+### Deferred concurrency note
+
+- The current application only inserts billing schedule items. If schedule-item UPDATE or reassignment is added later, its locking protocol must be designed and stress-tested with a deterministic global parent-lock order. The current child-row-then-parent lock path could otherwise deadlock against parent deletion/cascade or cross-engagement moves. This is deliberately deferred rather than broadening Task 5; add it to the dependency ledger when schedule editing enters scope.

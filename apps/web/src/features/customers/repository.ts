@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-import { repositoryError } from "../repository-error";
+import { repositoryError, RepositoryError } from "../repository-error";
 import type { CustomerCommand } from "./schema";
 
 const customerRowSchema = z.object({
@@ -94,13 +94,19 @@ export async function deleteCustomer(
   ownerUserId: string,
   customerId: string,
 ): Promise<void> {
-  const { error } = await client
+  const { data, error } = await client
     .from("customers")
     .delete()
     .eq("id", customerId)
-    .eq("owner_user_id", ownerUserId);
+    .eq("owner_user_id", ownerUserId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     throw repositoryError(error);
+  }
+
+  if (!data) {
+    throw new RepositoryError("FC_CUSTOMER_NOT_FOUND");
   }
 }

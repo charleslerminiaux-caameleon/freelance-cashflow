@@ -17,11 +17,18 @@ export const opportunityStatusSchema = z.enum([
   "lost",
 ]);
 
+const editableOpportunityStatusSchema = z.enum([
+  "lead",
+  "qualified",
+  "proposal",
+  "lost",
+]);
+
 export const opportunityFormSchema = z
   .object({
     customerId: z.string().uuid(),
     name: z.string().trim().min(1, "Le nom de l’opportunité est requis.").max(200),
-    status: opportunityStatusSchema,
+    status: editableOpportunityStatusSchema,
     estimatedAmountHt: moneyInputSchema.refine((value) => value >= 0, "Le montant doit être positif."),
     probabilityPercent: percentBasisPointsSchema,
     expectedCloseDate: optionalBusinessDateSchema,

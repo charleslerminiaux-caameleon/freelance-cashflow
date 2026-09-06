@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
 import type { CommercialActionState } from "../opportunities/opportunity-form";
+import { RepositoryError } from "../repository-error";
 import { createCustomer, deleteCustomer, updateCustomer } from "./repository";
 import { customerFormSchema } from "./schema";
 
@@ -55,7 +56,18 @@ export async function updateCustomerAction(
   }
 }
 
-export async function deleteCustomerAction(formData: FormData): Promise<void> {
+function deletionErrorMessage(error: unknown): string {
+  if (error instanceof RepositoryError && error.code === "23503") {
+    return "Ce client ne peut pas être supprimé tant qu’il est lié à des données commerciales.";
+  }
+
+  return "Impossible de supprimer ce client.";
+}
+
+export async function deleteCustomerAction(
+  _state: CommercialActionState,
+  formData: FormData,
+): Promise<CommercialActionState> {
   const { userId } = await requireOwner();
 
   try {
@@ -63,7 +75,8 @@ export async function deleteCustomerAction(formData: FormData): Promise<void> {
     const client = await createClient();
     await deleteCustomer(client, userId, customerId);
     revalidatePath("/opportunities");
-  } catch {
-    // A referenced or invalid customer remains unchanged; the list is safe to render again.
+    return { message: "Client supprimé.", success: true };
+  } catch (error) {
+    return { message: deletionErrorMessage(error), success: false };
   }
 }

@@ -85,7 +85,7 @@ values
 select has_function(
   'public',
   'convert_opportunity',
-  array['uuid', 'text', 'date', 'bigint', 'integer'],
+  array['uuid', 'text', 'date', 'integer', 'integer'],
   'the conversion RPC exists with the public contract'
 );
 
@@ -93,7 +93,7 @@ select is(
   (
     select prosecdef
     from pg_proc
-    where oid = 'public.convert_opportunity(uuid,text,date,bigint,integer)'::regprocedure
+    where oid = 'public.convert_opportunity(uuid,text,date,integer,integer)'::regprocedure
   ),
   false,
   'conversion is SECURITY INVOKER'
@@ -103,7 +103,7 @@ select is(
   (
     select proconfig
     from pg_proc
-    where oid = 'public.convert_opportunity(uuid,text,date,bigint,integer)'::regprocedure
+    where oid = 'public.convert_opportunity(uuid,text,date,integer,integer)'::regprocedure
   ),
   array['search_path=""']::text[],
   'conversion locks its search path'
@@ -112,7 +112,7 @@ select is(
 select ok(
   has_function_privilege(
     'authenticated',
-    'public.convert_opportunity(uuid,text,date,bigint,integer)',
+    'public.convert_opportunity(uuid,text,date,integer,integer)',
     'EXECUTE'
   ),
   'authenticated callers may execute conversion'
@@ -121,7 +121,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'anon',
-    'public.convert_opportunity(uuid,text,date,bigint,integer)',
+    'public.convert_opportunity(uuid,text,date,integer,integer)',
     'EXECUTE'
   ),
   'anonymous callers cannot execute conversion'
@@ -130,7 +130,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'service_role',
-    'public.convert_opportunity(uuid,text,date,bigint,integer)',
+    'public.convert_opportunity(uuid,text,date,integer,integer)',
     'EXECUTE'
   ),
   'the service role receives no conversion privilege'
@@ -149,7 +149,7 @@ select lives_ok(
       '33333333-cccc-4333-8333-333333333333',
       'CMD-2026-001',
       '2026-09-05',
-      720000,
+      2000,
       45
     )
   $$,
@@ -214,7 +214,7 @@ select throws_ok(
       '33333333-cccc-4333-8333-333333333333',
       'CMD-2026-001-BIS',
       '2026-09-06',
-      720000,
+      2000,
       45
     )
   $$,
@@ -235,7 +235,7 @@ select throws_ok(
       '44444444-dddd-4444-8444-444444444444',
       'CMD-PERDUE',
       '2026-09-05',
-      120000,
+      2000,
       30
     )
   $$,
@@ -250,13 +250,13 @@ select throws_ok(
       '55555555-eeee-4555-8555-555555555555',
       'CMD-INVALIDE',
       '2026-09-05',
-      99999,
+      10001,
       30
     )
   $$,
   '22023',
   'FC_INVALID_CONVERSION_INPUT',
-  'a TTC amount below HT is rejected as invalid input'
+  'an invalid VAT rate is rejected as invalid input'
 );
 
 select is(
@@ -381,7 +381,7 @@ select throws_ok(
       '44444444-dddd-4444-8444-444444444444',
       'FUITE-INTERDITE',
       '2026-09-05',
-      120000,
+      2000,
       30
     )
   $$,
@@ -396,7 +396,7 @@ select throws_ok(
       '66666666-ffff-4666-8666-666666666666',
       'COMMANDE-EXTERIEURE',
       '2026-09-05',
-      240000,
+      2000,
       30
     )
   $$,

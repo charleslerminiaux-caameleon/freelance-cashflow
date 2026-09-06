@@ -47,6 +47,22 @@ describe("opportunityFormSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("reserves won status for the atomic conversion flow", () => {
+    expect(
+      opportunityFormSchema.safeParse({
+        customerId,
+        name: "Audit SI",
+        status: "won",
+        estimatedAmountHt: "1000",
+        probabilityPercent: "100",
+        expectedCloseDate: "",
+        expectedStartDate: "",
+        expectedEndDate: "",
+        notes: "",
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("conversionFormSchema", () => {
