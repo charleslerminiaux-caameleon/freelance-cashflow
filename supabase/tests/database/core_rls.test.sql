@@ -51,8 +51,20 @@ select is(
         permissive,
         array_to_string(roles, ','),
         cmd,
-        (qual = '(( SELECT auth.uid() AS uid) = owner_user_id)')::text,
-        (with_check = '(( SELECT auth.uid() AS uid) = owner_user_id)')::text
+        (
+          regexp_replace(qual, E'\\s+', ' ', 'g') = case
+            when tablename = 'app_settings'
+              then '(( SELECT auth.uid() AS uid) = owner_user_id)'
+            else '((( SELECT auth.uid() AS uid) = owner_user_id) AND (EXISTS ( SELECT 1 FROM app_settings WHERE (app_settings.owner_user_id = ( SELECT auth.uid() AS uid)))))'
+          end
+        )::text,
+        (
+          regexp_replace(with_check, E'\\s+', ' ', 'g') = case
+            when tablename = 'app_settings'
+              then '(( SELECT auth.uid() AS uid) = owner_user_id)'
+            else '((( SELECT auth.uid() AS uid) = owner_user_id) AND (EXISTS ( SELECT 1 FROM app_settings WHERE (app_settings.owner_user_id = ( SELECT auth.uid() AS uid)))))'
+          end
+        )::text
       )
       order by tablename, policyname
     )
