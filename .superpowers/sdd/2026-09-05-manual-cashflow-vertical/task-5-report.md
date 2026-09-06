@@ -127,3 +127,31 @@ DONE. Implemented from base `1dd4d8f80d4f83d977ac68a121b8187b93df0eae` in the as
 ### Deferred concurrency note
 
 - The current application only inserts billing schedule items. If schedule-item UPDATE or reassignment is added later, its locking protocol must be designed and stress-tested with a deterministic global parent-lock order. The current child-row-then-parent lock path could otherwise deadlock against parent deletion/cascade or cross-engagement moves. This is deliberately deferred rather than broadening Task 5; add it to the dependency ledger when schedule editing enters scope.
+
+## Fix round 2 — reciprocal links and destructive-action confirmation
+
+### Review findings verified
+
+1. The opportunity-side immutability trigger alone did not protect the reciprocal link: an authenticated owner could clear or reassign `engagements.opportunity_id` directly. A new additive migration guards UPDATE and DELETE of an engagement only when its old row has the exact reciprocal opportunity link. It has no client-controlled bypass and intentionally has no INSERT trigger, so the conversion RPC can still create the engagement before linking the opportunity.
+2. Customer and opportunity deletion controls submitted on their first click. Both controls now expose an accessible, inline two-step confirmation with explicit confirm and cancel actions. The first click and cancellation do not submit; only the confirmation button invokes the existing structured deletion action.
+
+### Fix-round-2 TDD evidence
+
+- Reciprocal-link RED: after adding `reciprocal_conversion_links.test.sql` but before the migration, 5/9 assertions failed. Clearing and reassignment succeeded and broke their links; deletion was refused only indirectly with the opportunity-side error instead of the dedicated reciprocal-link refusal.
+- Reciprocal-link GREEN: after `202609060003_protect_reciprocal_conversion_links.sql`, 9/9 assertions passed. The suite proves RPC conversion still succeeds, all three conversions establish exact reciprocal links, NULL/reassignment/delete are rejected with `FC_CONVERSION_LINK_IMMUTABLE`, rejected mutations preserve rows and links, and unrelated engagement fields remain editable.
+- Deletion-confirmation RED: the focused customer/opportunity component run failed 7 tests before the two-step UI existed; first clicks submitted immediately and confirm/cancel controls were absent.
+- Deletion-confirmation GREEN: the focused component run passed 13/13 tests after implementation, including first-click non-submission, confirmed submission, cancellation/restoration, success status, and sanitized refusal alert.
+
+### Final fix-round-2 verification
+
+- `corepack pnpm dlx supabase db reset --local && corepack pnpm dlx supabase test db` — exit 0; all six migrations replayed and 133/133 assertions passed across 9 files.
+- Focused conversion and reciprocity pgTAP run — exit 0; 52/52 assertions passed across 3 files.
+- `corepack pnpm test:run` — exit 0; shared 10/10, domain 15/15, web 78/78 (103/103 total).
+- `corepack pnpm lint` — exit 0; ESLint clean.
+- `corepack pnpm typecheck` — exit 0; all three workspace projects passed.
+- Build with test-only `NEXT_PUBLIC_SUPABASE_URL`, anonymous key, and service-role key values — exit 0; optimized Next build compiled and generated all routes.
+- `git diff --check` and explicit changed-file scans for secret-shaped values, unsafe TypeScript `any`, trailing whitespace, and `window.confirm` — no findings.
+
+### Deferred concurrency note
+
+- Unchanged from the first fix round: schedule-item UPDATE/reassignment remains outside the current insert-only application path. Before that path is introduced, define and stress-test a deterministic global parent-lock order to avoid deadlock with parent deletion/cascade or cross-engagement moves, and record that work in the dependency ledger.

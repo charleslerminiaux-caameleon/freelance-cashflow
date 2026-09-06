@@ -25,18 +25,68 @@ it("offers an accessible deletion control for a customer", () => {
   expect(screen.getByRole("button", { name: "Supprimer le client Atelier Atlas" })).toBeInTheDocument();
 });
 
-it("announces successful customer deletion", async () => {
-  const successAction = async () => ({ message: "Client supprimé.", success: true });
+it("requires explicit confirmation before customer deletion", () => {
+  let submissions = 0;
+  const action = async () => {
+    submissions += 1;
+    return { message: "Client supprimé.", success: true };
+  };
   render(
     <CustomerDeleteForm
-      action={successAction}
+      action={action}
       customerId="customer-1"
       customerName="Atelier Atlas"
     />,
   );
 
-  const form = screen.getByRole("button", { name: "Supprimer le client Atelier Atlas" }).closest("form");
-  fireEvent.submit(form!);
+  fireEvent.click(screen.getByRole("button", { name: "Supprimer le client Atelier Atlas" }));
+
+  expect(submissions).toBe(0);
+  expect(
+    screen.getByRole("button", { name: "Confirmer la suppression du client Atelier Atlas" }),
+  ).toBeInTheDocument();
+});
+
+it("submits customer deletion after confirmation", async () => {
+  const action = async () => ({ message: "Client supprimé.", success: true });
+  render(
+    <CustomerDeleteForm
+      action={action}
+      customerId="customer-1"
+      customerName="Atelier Atlas"
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Supprimer le client Atelier Atlas" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Confirmer la suppression du client Atelier Atlas" }),
+  );
 
   expect(await screen.findByRole("status")).toHaveTextContent("Client supprimé.");
+});
+
+it("cancels customer deletion confirmation", () => {
+  let submissions = 0;
+  const action = async () => {
+    submissions += 1;
+    return { message: "Client supprimé.", success: true };
+  };
+  render(
+    <CustomerDeleteForm
+      action={action}
+      customerId="customer-1"
+      customerName="Atelier Atlas"
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Supprimer le client Atelier Atlas" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Annuler la suppression du client Atelier Atlas" }),
+  );
+
+  expect(submissions).toBe(0);
+  expect(
+    screen.queryByRole("button", { name: "Confirmer la suppression du client Atelier Atlas" }),
+  ).toBeNull();
+  expect(screen.getByRole("button", { name: "Supprimer le client Atelier Atlas" })).toBeInTheDocument();
 });

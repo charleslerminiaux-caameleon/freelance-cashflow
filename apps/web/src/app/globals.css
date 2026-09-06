@@ -486,6 +486,31 @@ details.panel[open] > summary {
   color: #31652d;
 }
 
+.commercial-delete-confirmation {
+  background: #fff8f6;
+  border: 1px solid #e9b3aa;
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem;
+}
+
+.commercial-delete-confirmation > p {
+  color: #8a382c;
+  margin: 0;
+}
+
+.commercial-delete-confirmation > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.commercial-delete-form .commercial-delete-cancel {
+  border-color: var(--fc-border);
+  color: var(--fc-muted);
+}
+
 .compact-form .form-grid {
   grid-template-columns: 1fr;
 }

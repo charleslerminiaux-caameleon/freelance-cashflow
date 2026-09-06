@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, useState } from "react";
 
 import type { OpportunityStatus } from "./schema";
 
@@ -217,6 +217,7 @@ export function DeleteOpportunityForm({
   opportunityName: string;
 }) {
   const [state, submit, pending] = useActionState(action, initialState);
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <form action={submit} className="commercial-delete-form">
@@ -224,13 +225,41 @@ export function DeleteOpportunityForm({
       {state.message ? (
         <p role={state.success ? "status" : "alert"}>{state.message}</p>
       ) : null}
-      <button
-        type="submit"
-        aria-label={`Supprimer l’opportunité ${opportunityName}`}
-        disabled={pending}
-      >
-        Supprimer
-      </button>
+      {confirming ? (
+        <div
+          className="commercial-delete-confirmation"
+          role="group"
+          aria-label={`Confirmation de suppression de l’opportunité ${opportunityName}`}
+        >
+          <p>Cette suppression est définitive.</p>
+          <div>
+            <button
+              type="submit"
+              aria-label={`Confirmer la suppression de l’opportunité ${opportunityName}`}
+              disabled={pending}
+            >
+              Confirmer la suppression
+            </button>
+            <button
+              type="button"
+              className="commercial-delete-cancel"
+              aria-label={`Annuler la suppression de l’opportunité ${opportunityName}`}
+              disabled={pending}
+              onClick={() => setConfirming(false)}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-label={`Supprimer l’opportunité ${opportunityName}`}
+          onClick={() => setConfirming(true)}
+        >
+          Supprimer
+        </button>
+      )}
     </form>
   );
 }

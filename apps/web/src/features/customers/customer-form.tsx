@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useActionState, useId, useState } from "react";
 
 import type { CommercialFormAction } from "../opportunities/opportunity-form";
 
@@ -81,6 +81,7 @@ export function CustomerDeleteForm({
   customerName: string;
 }) {
   const [state, submit, pending] = useActionState(action, initialState);
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <form action={submit} className="commercial-delete-form">
@@ -88,13 +89,41 @@ export function CustomerDeleteForm({
       {state.message ? (
         <p role={state.success ? "status" : "alert"}>{state.message}</p>
       ) : null}
-      <button
-        type="submit"
-        aria-label={`Supprimer le client ${customerName}`}
-        disabled={pending}
-      >
-        Supprimer
-      </button>
+      {confirming ? (
+        <div
+          className="commercial-delete-confirmation"
+          role="group"
+          aria-label={`Confirmation de suppression du client ${customerName}`}
+        >
+          <p>Cette suppression est définitive.</p>
+          <div>
+            <button
+              type="submit"
+              aria-label={`Confirmer la suppression du client ${customerName}`}
+              disabled={pending}
+            >
+              Confirmer la suppression
+            </button>
+            <button
+              type="button"
+              className="commercial-delete-cancel"
+              aria-label={`Annuler la suppression du client ${customerName}`}
+              disabled={pending}
+              onClick={() => setConfirming(false)}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-label={`Supprimer le client ${customerName}`}
+          onClick={() => setConfirming(true)}
+        >
+          Supprimer
+        </button>
+      )}
     </form>
   );
 }
