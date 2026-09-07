@@ -445,6 +445,18 @@ details.panel[open] > summary {
   padding: 0.75rem;
 }
 
+.commercial-form [role="status"] {
+  background: #e7f4e6;
+  border-left: 3px solid #4f8a49;
+  color: #31652d;
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.form-grid-wide {
+  grid-column: 1 / -1;
+}
+
 .commercial-delete-form {
   display: grid;
   gap: 0.6rem;
@@ -729,6 +741,99 @@ details.panel[open] > summary {
   padding-bottom: 0;
 }
 
+.invoice-entry-grid {
+  align-items: start;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1.5fr) minmax(20rem, 1fr);
+  margin-bottom: 1.5rem;
+}
+
+.invoice-csv-columns {
+  overflow-wrap: anywhere;
+}
+
+.invoice-empty {
+  margin-bottom: 1.5rem;
+}
+
+.invoice-pipeline {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(5, minmax(15rem, 1fr));
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.invoice-group {
+  min-width: 0;
+}
+
+.invoice-group .section-heading h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.invoice-group-overdue {
+  border-color: #e9b3aa;
+}
+
+.invoice-group-list {
+  display: grid;
+}
+
+.invoice-row {
+  align-items: center;
+  border-top: 1px solid var(--fc-border);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.85rem 0;
+}
+
+.invoice-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.invoice-row:last-child {
+  padding-bottom: 0;
+}
+
+.invoice-row > span {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.invoice-row > span:last-child {
+  text-align: right;
+}
+
+.invoice-row small {
+  color: var(--fc-muted);
+  line-height: 1.35;
+}
+
+.invoice-row strong {
+  font-size: 0.875rem;
+}
+
+.invoice-group-empty {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.payment-balance {
+  align-items: center;
+  background: #eef6f4;
+  border-radius: 0.6rem;
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0.8rem;
+}
+
 @media (max-width: 720px) {
   .sidebar {
     display: none;
@@ -793,10 +898,16 @@ details.panel[open] > summary {
   .detail-grid,
   .contract-grid,
   .engagement-grid,
+  .invoice-entry-grid,
+  .invoice-pipeline,
   .record-actions,
   .conversion-form,
   .record-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .form-grid-wide {
+    grid-column: auto;
   }
 
   .conversion-form [role="alert"],
