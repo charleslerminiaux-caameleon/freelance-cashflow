@@ -36,6 +36,7 @@ import {
 const initialState = { message: null, success: false };
 const customerId = "11111111-1111-4111-8111-111111111111";
 const invoiceId = "22222222-2222-4222-8222-222222222222";
+const paymentIdempotencyKey = "33333333-3333-4333-8333-333333333333";
 const header =
   "invoice_number;customer_name;issued_at;due_at;amount_ht;vat;amount_ttc";
 
@@ -55,6 +56,7 @@ function manualInvoiceFormData() {
 function paymentFormData() {
   const formData = new FormData();
   formData.set("invoiceId", invoiceId);
+  formData.set("idempotencyKey", paymentIdempotencyKey);
   formData.set("amount", "1 200,01");
   formData.set("paidAt", "2026-09-20");
   return formData;
@@ -168,9 +170,14 @@ describe("importInvoiceCsvAction", () => {
 it("records a payment in exact cents and revalidates list and detail", async () => {
   const result = await recordInvoicePaymentAction(initialState, paymentFormData());
 
-  expect(result).toEqual({ message: "Paiement enregistré.", success: true });
+  expect(result).toEqual({
+    completedIdempotencyKey: paymentIdempotencyKey,
+    message: "Paiement enregistré.",
+    success: true,
+  });
   expect(recordInvoicePayment).toHaveBeenCalledWith({}, "owner-1", {
     invoiceId,
+    idempotencyKey: paymentIdempotencyKey,
     amountCents: 120_001,
     paidAt: "2026-09-20",
   });

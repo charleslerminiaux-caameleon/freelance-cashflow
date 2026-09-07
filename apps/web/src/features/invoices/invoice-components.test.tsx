@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { localDate } from "@fc/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CsvImportForm } from "./csv-import-form";
 import { InvoiceForm } from "./invoice-form";
@@ -8,6 +8,7 @@ import { InvoiceGroups } from "./invoice-groups";
 import { PaymentForm } from "./payment-form";
 
 const idleAction = async () => ({ message: null, success: false });
+const paymentIdempotencyKey = "55555555-5555-4555-8555-555555555555";
 
 it("collects a manual invoice and can link one billing schedule item", () => {
   render(
@@ -57,6 +58,7 @@ it("defaults a payment to the exact remaining balance", () => {
     <PaymentForm
       action={idleAction}
       invoiceId="invoice-1"
+      initialIdempotencyKey={paymentIdempotencyKey}
       remainingCents={120_001}
       today="2026-09-20"
     />,
@@ -69,7 +71,62 @@ it("defaults a payment to the exact remaining balance", () => {
   ).toBeInTheDocument();
   expect(screen.getByLabelText("Montant du paiement")).toHaveValue("1200,01");
   expect(screen.getByLabelText("Date du paiement")).toHaveValue("2026-09-20");
+  expect(
+    screen.getByDisplayValue(paymentIdempotencyKey, { exact: true }),
+  ).toHaveAttribute("name", "idempotencyKey");
   expect(screen.getByRole("button", { name: "Enregistrer le paiement" })).toBeInTheDocument();
+});
+
+it("keeps the same payment idempotency key when a failed submission is retried", async () => {
+  const submittedKeys: FormDataEntryValue[] = [];
+  const failedAction = async (_state: unknown, formData: FormData) => {
+    submittedKeys.push(formData.get("idempotencyKey") as FormDataEntryValue);
+    return { message: "Réessayez.", success: false };
+  };
+  render(
+    <PaymentForm
+      action={failedAction}
+      invoiceId="invoice-1"
+      initialIdempotencyKey={paymentIdempotencyKey}
+      remainingCents={120_001}
+      today="2026-09-20"
+    />,
+  );
+  const form = screen.getByRole("button", { name: "Enregistrer le paiement" }).closest("form")!;
+
+  fireEvent.submit(form);
+  await waitFor(() => expect(submittedKeys).toHaveLength(1));
+  fireEvent.submit(form);
+
+  await waitFor(() => {
+    expect(submittedKeys).toEqual([paymentIdempotencyKey, paymentIdempotencyKey]);
+  });
+});
+
+it("rotates the payment idempotency key after a confirmed payment", async () => {
+  const nextKey = "77777777-7777-4777-8777-777777777777";
+  const randomUUID = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(nextKey);
+  const confirmedAction = async () => ({
+    completedIdempotencyKey: paymentIdempotencyKey,
+    message: "Paiement enregistré.",
+    success: true,
+  });
+  render(
+    <PaymentForm
+      action={confirmedAction}
+      invoiceId="invoice-1"
+      initialIdempotencyKey={paymentIdempotencyKey}
+      remainingCents={120_001}
+      today="2026-09-20"
+    />,
+  );
+
+  fireEvent.submit(screen.getByRole("button", { name: "Enregistrer le paiement" }).closest("form")!);
+
+  await waitFor(() => {
+    expect(screen.getByDisplayValue(nextKey, { exact: true })).toBeInTheDocument();
+  });
+  randomUUID.mockRestore();
 });
 
 describe("InvoiceGroups", () => {

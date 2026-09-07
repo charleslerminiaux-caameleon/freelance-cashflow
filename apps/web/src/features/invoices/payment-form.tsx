@@ -1,7 +1,7 @@
 "use client";
 
 import { formatMoney, moneyCents } from "@fc/shared";
-import { useActionState, useId } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 
 import type { InvoiceFormAction } from "./invoice-form";
 
@@ -14,20 +14,30 @@ const initialState = { message: null, success: false };
 export function PaymentForm({
   action,
   invoiceId,
+  initialIdempotencyKey,
   remainingCents,
   today,
 }: {
   action: InvoiceFormAction;
   invoiceId: string;
+  initialIdempotencyKey: string;
   remainingCents: number;
   today: string;
 }) {
   const [state, submit, pending] = useActionState(action, initialState);
+  const [idempotencyKey, setIdempotencyKey] = useState(initialIdempotencyKey);
   const fieldId = useId();
+
+  useEffect(() => {
+    if (state.success && state.completedIdempotencyKey === idempotencyKey) {
+      setIdempotencyKey(crypto.randomUUID());
+    }
+  }, [idempotencyKey, state.completedIdempotencyKey, state.success]);
 
   return (
     <form action={submit} className="commercial-form">
       <input type="hidden" name="invoiceId" value={invoiceId} />
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <p className="payment-balance">
         Solde restant <strong>{formatMoney(moneyCents(remainingCents))}</strong>
       </p>

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { invoiceFormSchema, paymentFormSchema } from "./schema";
 
 const customerId = "11111111-1111-4111-8111-111111111111";
+const paymentIdempotencyKey = "33333333-3333-4333-8333-333333333333";
 
 describe("invoiceFormSchema", () => {
   it("parses manual invoice amounts into exact integer cents", () => {
@@ -59,11 +60,13 @@ describe("paymentFormSchema", () => {
     expect(
       paymentFormSchema.parse({
         invoiceId: "22222222-2222-4222-8222-222222222222",
+        idempotencyKey: paymentIdempotencyKey,
         amount: "1 200,01",
         paidAt: "2026-09-20",
       }),
     ).toEqual({
       invoiceId: "22222222-2222-4222-8222-222222222222",
+      idempotencyKey: paymentIdempotencyKey,
       amountCents: 120_001,
       paidAt: "2026-09-20",
     });
@@ -73,9 +76,23 @@ describe("paymentFormSchema", () => {
     expect(
       paymentFormSchema.safeParse({
         invoiceId: "22222222-2222-4222-8222-222222222222",
+        idempotencyKey: paymentIdempotencyKey,
         amount,
         paidAt: "2026-09-20",
       }).success,
     ).toBe(false);
+  });
+
+  it("rejects a missing or malformed payment idempotency key", () => {
+    const input = {
+      invoiceId: "22222222-2222-4222-8222-222222222222",
+      amount: "1,00",
+      paidAt: "2026-09-20",
+    };
+
+    expect(paymentFormSchema.safeParse(input).success).toBe(false);
+    expect(paymentFormSchema.safeParse({ ...input, idempotencyKey: "retry-1" }).success).toBe(
+      false,
+    );
   });
 });

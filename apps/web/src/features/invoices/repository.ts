@@ -213,10 +213,17 @@ type InvoiceRpcCommand = {
   rawPayloadHash: string | null;
 };
 
+const invoiceRpcResultSchema = z.object({
+  invoice_id: z.string().uuid(),
+  created: z.boolean(),
+});
+
+type InvoiceRpcResult = z.infer<typeof invoiceRpcResultSchema>;
+
 async function createInvoiceRpc(
   client: SupabaseClient,
   command: InvoiceRpcCommand,
-): Promise<string> {
+): Promise<InvoiceRpcResult> {
   const { data, error } = await client.rpc("create_invoice", {
     p_customer_id: command.customerId,
     p_billing_schedule_item_id: command.billingScheduleItemId,
@@ -232,7 +239,7 @@ async function createInvoiceRpc(
   });
 
   if (error) throw repositoryError(error);
-  return z.string().uuid().parse(data);
+  return invoiceRpcResultSchema.parse(data);
 }
 
 export async function createInvoice(
@@ -252,11 +259,12 @@ export async function createInvoice(
     );
   }
 
-  return createInvoiceRpc(client, {
+  const result = await createInvoiceRpc(client, {
     ...command,
     provider: "manual",
     rawPayloadHash: null,
   });
+  return result.invoice_id;
 }
 
 const importCustomerSchema = z.object({ id: z.string().uuid(), name: z.string() });
@@ -313,31 +321,83 @@ function isSameImportedInvoice(
   );
 }
 
+const preflightPageSize = 500;
+const preflightFilterChunkSize = 100;
+
+function uniqueChunks(values: string[]): string[][] {
+  const uniqueValues = [...new Set(values)];
+  const chunks: string[][] = [];
+  for (let index = 0; index < uniqueValues.length; index += preflightFilterChunkSize) {
+    chunks.push(uniqueValues.slice(index, index + preflightFilterChunkSize));
+  }
+  return chunks;
+}
+
+async function fetchImportCustomers(
+  client: SupabaseClient,
+  ownerUserId: string,
+  customerNames: string[],
+): Promise<z.infer<typeof importCustomerSchema>[]> {
+  const customers: z.infer<typeof importCustomerSchema>[] = [];
+  for (const names of uniqueChunks(customerNames)) {
+    for (let offset = 0; ; offset += preflightPageSize) {
+      const { data, error } = await client
+        .from("customers")
+        .select("id, name")
+        .eq("owner_user_id", ownerUserId)
+        .in("name", names)
+        .order("id", { ascending: true })
+        .range(offset, offset + preflightPageSize - 1);
+      if (error) throw repositoryError(error);
+
+      const page = z.array(importCustomerSchema).parse(data);
+      customers.push(...page);
+      if (page.length < preflightPageSize) break;
+    }
+  }
+  return customers;
+}
+
+async function fetchImportInvoices(
+  client: SupabaseClient,
+  ownerUserId: string,
+  invoiceNumbers: string[],
+): Promise<z.infer<typeof persistedImportInvoiceSchema>[]> {
+  const invoices: z.infer<typeof persistedImportInvoiceSchema>[] = [];
+  for (const numbers of uniqueChunks(invoiceNumbers)) {
+    for (let offset = 0; ; offset += preflightPageSize) {
+      const { data, error } = await client
+        .from("invoices")
+        .select(
+          "id, customer_id, billing_schedule_item_id, provider, invoice_number, issued_at, due_at, expected_payment_date, amount_ht_cents, vat_cents, amount_ttc_cents, raw_payload_hash",
+        )
+        .eq("owner_user_id", ownerUserId)
+        .in("invoice_number", numbers)
+        .order("id", { ascending: true })
+        .range(offset, offset + preflightPageSize - 1);
+      if (error) throw repositoryError(error);
+
+      const page = z.array(persistedImportInvoiceSchema).parse(data);
+      invoices.push(...page);
+      if (page.length < preflightPageSize) break;
+    }
+  }
+  return invoices;
+}
+
 export async function importInvoiceRows(
   client: SupabaseClient,
   ownerUserId: string,
   rows: ParsedInvoiceCsvRow[],
 ): Promise<{ createdCount: number; unchangedCount: number }> {
-  const { data: customerData, error: customerError } = await client
-    .from("customers")
-    .select("id, name")
-    .eq("owner_user_id", ownerUserId);
-  if (customerError) throw repositoryError(customerError);
-
-  const customers = z.array(importCustomerSchema).parse(customerData);
+  const customers = await fetchImportCustomers(
+    client,
+    ownerUserId,
+    rows.map((row) => row.customerName),
+  );
   const customerIds = resolveImportCustomers(customers, rows);
   const invoiceNumbers = rows.map((row) => row.invoiceNumber);
-
-  const { data: invoiceData, error: invoiceError } = await client
-    .from("invoices")
-    .select(
-      "id, customer_id, billing_schedule_item_id, provider, invoice_number, issued_at, due_at, expected_payment_date, amount_ht_cents, vat_cents, amount_ttc_cents, raw_payload_hash",
-    )
-    .eq("owner_user_id", ownerUserId)
-    .in("invoice_number", invoiceNumbers);
-  if (invoiceError) throw repositoryError(invoiceError);
-
-  const existing = z.array(persistedImportInvoiceSchema).parse(invoiceData);
+  const existing = await fetchImportInvoices(client, ownerUserId, invoiceNumbers);
   const existingByNumber = new Map(existing.map((invoice) => [invoice.invoice_number, invoice]));
 
   for (const row of rows) {
@@ -349,8 +409,10 @@ export async function importInvoiceRows(
   }
 
   const missingRows = rows.filter((row) => !existingByNumber.has(row.invoiceNumber));
+  let createdCount = 0;
+  let unchangedCount = rows.length - missingRows.length;
   for (const row of missingRows) {
-    await createInvoiceRpc(client, {
+    const result = await createInvoiceRpc(client, {
       customerId: customerIds.get(row.customerName) as string,
       billingScheduleItemId: null,
       provider: "csv",
@@ -363,9 +425,11 @@ export async function importInvoiceRows(
       amountTtcCents: row.amountTtcCents,
       rawPayloadHash: row.rawPayloadHash,
     });
+    if (result.created) createdCount += 1;
+    else unchangedCount += 1;
   }
 
-  return { createdCount: missingRows.length, unchangedCount: rows.length - missingRows.length };
+  return { createdCount, unchangedCount };
 }
 
 export async function recordInvoicePayment(
@@ -383,6 +447,7 @@ export async function recordInvoicePayment(
 
   const { data, error } = await client.rpc("record_invoice_payment", {
     p_invoice_id: command.invoiceId,
+    p_idempotency_key: command.idempotencyKey,
     p_amount_cents: command.amountCents,
     p_paid_at: command.paidAt,
   });

@@ -1,9 +1,28 @@
 create extension if not exists dblink with schema extensions;
 set search_path = public, extensions;
 
-select plan(5);
+select plan(7);
 
-drop role if exists fc_payment_concurrency_login;
+-- A prior interrupted run may leave only a disabled fixture role behind. Remove it
+-- before recreating the fixture so the next run is always self-healing.
+do $cleanup_stale_fixture$
+declare
+  v_role_oid oid;
+begin
+  select oid into v_role_oid
+  from pg_roles
+  where rolname = 'fc_payment_concurrency_login';
+
+  if found then
+    perform pg_terminate_backend(pid)
+    from pg_stat_activity
+    where usesysid = v_role_oid
+      and pid <> pg_backend_pid();
+    execute 'drop role fc_payment_concurrency_login';
+  end if;
+end;
+$cleanup_stale_fixture$;
+
 create role fc_payment_concurrency_login login;
 grant authenticated to fc_payment_concurrency_login;
 
@@ -70,23 +89,49 @@ values (
   'issued'
 );
 
-select extensions.dblink_connect(
-  'payment_one',
-  format(
-    'host=db.supabase.internal port=%s dbname=%I user=fc_payment_concurrency_login password=%L',
-    current_setting('port'),
-    current_database(),
-    (select password from payment_concurrency_runtime)
-  )
-);
-select extensions.dblink_connect(
-  'payment_two',
-  format(
-    'host=db.supabase.internal port=%s dbname=%I user=fc_payment_concurrency_login password=%L',
-    current_setting('port'),
-    current_database(),
-    (select password from payment_concurrency_runtime)
-  )
+-- LOGIN exists only for the two connection handshakes. If either connection fails,
+-- the exception handler disables the role and closes any connection already opened.
+do $establish_connections$
+begin
+  perform extensions.dblink_connect(
+    'payment_one',
+    format(
+      'host=db.supabase.internal port=%s dbname=%I user=fc_payment_concurrency_login password=%L',
+      current_setting('port'),
+      current_database(),
+      (select password from payment_concurrency_runtime)
+    )
+  );
+  perform extensions.dblink_connect(
+    'payment_two',
+    format(
+      'host=db.supabase.internal port=%s dbname=%I user=fc_payment_concurrency_login password=%L',
+      current_setting('port'),
+      current_database(),
+      (select password from payment_concurrency_runtime)
+    )
+  );
+  execute 'alter role fc_payment_concurrency_login nologin';
+exception when others then
+  execute 'alter role fc_payment_concurrency_login nologin';
+  begin
+    perform extensions.dblink_disconnect('payment_one');
+  exception when others then
+    null;
+  end;
+  begin
+    perform extensions.dblink_disconnect('payment_two');
+  exception when others then
+    null;
+  end;
+  raise;
+end;
+$establish_connections$;
+
+select is(
+  (select rolcanlogin from pg_roles where rolname = 'fc_payment_concurrency_login'),
+  false,
+  'the random-password fixture role is NOLOGIN once both sessions are established'
 );
 
 select extensions.dblink_exec(
@@ -119,6 +164,7 @@ select extensions.dblink_send_query(
   'payment_one',
   $$select public.record_invoice_payment(
     '43434343-4343-4434-8434-434343434343',
+    '45454545-4545-4545-8545-454545454545',
     600,
     '2026-09-20'
   )$$
@@ -135,6 +181,7 @@ select extensions.dblink_send_query(
   'payment_two',
   $$select public.record_invoice_payment(
     '43434343-4343-4434-8434-434343434343',
+    '46464646-4646-4646-8646-464646464646',
     600,
     '2026-09-20'
   )$$
@@ -174,6 +221,13 @@ select extensions.dblink_disconnect('payment_one');
 select extensions.dblink_disconnect('payment_two');
 
 drop role fc_payment_concurrency_login;
+
+select ok(
+  not exists (
+    select 1 from pg_roles where rolname = 'fc_payment_concurrency_login'
+  ),
+  'the concurrency fixture role is absent after the happy-path cleanup'
+);
 
 select * from finish();
 

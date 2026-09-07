@@ -170,18 +170,15 @@ function rejectUnsafeCell(value: string, rowNumber: number) {
 }
 
 function canonicalHash(row: Omit<ParsedInvoiceCsvRow, "rawPayloadHash">): string {
-  const canonical = [
-    "invoice_number;customer_name;issued_at;due_at;amount_ht_cents;vat_cents;amount_ttc_cents",
-    [
-      row.invoiceNumber,
-      row.customerName,
-      row.issuedAt,
-      row.dueAt,
-      row.amountHtCents,
-      row.vatCents,
-      row.amountTtcCents,
-    ].join(";"),
-  ].join("\n");
+  const canonical = JSON.stringify([
+    row.invoiceNumber,
+    row.customerName,
+    row.issuedAt,
+    row.dueAt,
+    row.amountHtCents,
+    row.vatCents,
+    row.amountTtcCents,
+  ]);
 
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }

@@ -59,6 +59,7 @@ export const invoiceFormSchema = z
 export const paymentFormSchema = z
   .object({
     invoiceId: z.string().uuid(),
+    idempotencyKey: z.string().uuid(),
     amount: moneyInputSchema.refine(
       (value) => value > 0,
       "Le paiement doit être supérieur à zéro.",

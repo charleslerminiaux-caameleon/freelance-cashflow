@@ -1,9 +1,11 @@
 import { deriveInvoiceStatus } from "@fc/domain";
-import { formatMoney, localDate, moneyCents } from "@fc/shared";
+import { formatMoney, moneyCents } from "@fc/shared";
+import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import { recordInvoicePaymentAction } from "@/features/invoices/actions";
+import { getOwnerBusinessDate } from "@/features/invoices/business-date";
 import { PaymentForm } from "@/features/invoices/payment-form";
 import {
   getInvoice,
@@ -23,12 +25,6 @@ const statusLabels = {
   cancelled: "Annulée",
 } as const;
 
-function parisToday() {
-  return localDate(
-    new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris" }).format(new Date()),
-  );
-}
-
 export default async function InvoiceDetailPage({
   params,
 }: {
@@ -42,8 +38,10 @@ export default async function InvoiceDetailPage({
   const invoice = await getInvoice(client, userId, parsedId.data);
   if (!invoice) notFound();
 
-  const payments = await listInvoicePayments(client, userId, invoice.id);
-  const today = parisToday();
+  const [payments, today] = await Promise.all([
+    listInvoicePayments(client, userId, invoice.id),
+    getOwnerBusinessDate(client, userId),
+  ]);
   const currentStatus =
     invoice.status === "draft"
       ? "draft"
@@ -124,6 +122,7 @@ export default async function InvoiceDetailPage({
             <PaymentForm
               action={recordInvoicePaymentAction}
               invoiceId={invoice.id}
+              initialIdempotencyKey={randomUUID()}
               remainingCents={remainingCents}
               today={today}
             />

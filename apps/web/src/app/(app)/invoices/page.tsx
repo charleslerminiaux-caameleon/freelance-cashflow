@@ -1,5 +1,3 @@
-import { localDate } from "@fc/shared";
-
 import { listCustomers } from "@/features/customers/repository";
 import {
   createInvoiceAction,
@@ -8,6 +6,7 @@ import {
 import { CsvImportForm } from "@/features/invoices/csv-import-form";
 import { InvoiceForm } from "@/features/invoices/invoice-form";
 import { InvoiceGroups } from "@/features/invoices/invoice-groups";
+import { getOwnerBusinessDate } from "@/features/invoices/business-date";
 import {
   listInvoiceableScheduleItems,
   listInvoices,
@@ -15,21 +14,15 @@ import {
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
 
-function parisToday() {
-  return localDate(
-    new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris" }).format(new Date()),
-  );
-}
-
 export default async function InvoicesPage() {
   const { userId } = await requireOwner();
   const client = await createClient();
-  const [customers, invoices, scheduleItems] = await Promise.all([
+  const [customers, invoices, scheduleItems, today] = await Promise.all([
     listCustomers(client, userId),
     listInvoices(client, userId),
     listInvoiceableScheduleItems(client, userId),
+    getOwnerBusinessDate(client, userId),
   ]);
-  const today = parisToday();
 
   return (
     <div className="commercial-page invoice-page">

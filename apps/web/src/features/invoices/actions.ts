@@ -10,6 +10,7 @@ import { createInvoice, importInvoiceRows, recordInvoicePayment } from "./reposi
 import { invoiceFormSchema, paymentFormSchema } from "./schema";
 
 export type InvoiceActionState = {
+  completedIdempotencyKey?: string;
   message: string | null;
   success: boolean;
 };
@@ -157,6 +158,7 @@ export async function recordInvoicePaymentAction(
   try {
     const command = paymentFormSchema.parse({
       invoiceId: formData.get("invoiceId"),
+      idempotencyKey: formData.get("idempotencyKey"),
       amount: formData.get("amount"),
       paidAt: formData.get("paidAt"),
     });
@@ -164,7 +166,11 @@ export async function recordInvoicePaymentAction(
     await recordInvoicePayment(client, userId, command);
     revalidatePath(`/invoices/${command.invoiceId}`);
     revalidatePath("/invoices");
-    return { message: "Paiement enregistré.", success: true };
+    return {
+      completedIdempotencyKey: command.idempotencyKey,
+      message: "Paiement enregistré.",
+      success: true,
+    };
   } catch (error) {
     return { message: paymentErrorMessage(error), success: false };
   }

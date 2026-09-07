@@ -21,7 +21,7 @@ describe("parseInvoiceCsv", () => {
       amountTtcCents: 120_000,
     });
     expect(row?.rawPayloadHash).toBe(
-      "6ae702f20e8b15ad8ad434980accdb7cffb3ed31e290c6f086ea14971a8c195f",
+      "816681480867799f07ad79e9970217ad68926251df733bf18dda9e97315da7bb",
     );
   });
 
@@ -42,6 +42,17 @@ describe("parseInvoiceCsv", () => {
     );
 
     expect(row?.customerName).toBe('Atelier; "Bleu"');
+  });
+
+  it("hashes the structured row without semicolon boundary collisions", () => {
+    const [first] = parseInvoiceCsv(
+      `${header}\n"F;001";Atelier Bleu;2026-09-01;2026-09-30;10;2;12`,
+    );
+    const [second] = parseInvoiceCsv(
+      `${header}\nF;"001;Atelier Bleu";2026-09-01;2026-09-30;10;2;12`,
+    );
+
+    expect(first?.rawPayloadHash).not.toBe(second?.rawPayloadHash);
   });
 
   it("rejects any missing, duplicate, unknown, or case-changed column", () => {
