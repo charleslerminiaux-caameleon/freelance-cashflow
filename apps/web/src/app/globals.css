@@ -834,6 +834,194 @@ details.panel[open] > summary {
   padding: 0.8rem;
 }
 
+.checkbox-field {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+}
+
+.commercial-form .checkbox-field input {
+  min-height: auto;
+  width: auto;
+}
+
+.planning-notice {
+  align-items: flex-start;
+  background: #fff8f6;
+  border: 1px solid #e9b3aa;
+  border-radius: 0.8rem;
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.15rem;
+}
+
+.planning-notice strong {
+  color: #8a382c;
+  white-space: nowrap;
+}
+
+.planning-notice p {
+  color: var(--fc-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.expense-entry-grid,
+.expense-lists {
+  align-items: start;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.expense-entry-grid,
+.expense-empty {
+  margin-bottom: 1.5rem;
+}
+
+.expense-record-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.expense-record {
+  border-top: 1px solid var(--fc-border);
+  padding-top: 1rem;
+}
+
+.expense-record:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.expense-record > header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.expense-record h3 {
+  font-size: 1rem;
+  letter-spacing: -0.015em;
+  margin: 0.5rem 0 0.2rem;
+}
+
+.expense-record header p {
+  color: var(--fc-muted);
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+.expense-metrics {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1rem 0 0;
+}
+
+.expense-metrics div {
+  border-left: 2px solid var(--fc-border);
+  min-width: 0;
+  padding-left: 0.65rem;
+}
+
+.expense-metrics dt {
+  color: var(--fc-muted);
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.expense-metrics dd {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.expense-record-actions {
+  align-items: start;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 1rem;
+}
+
+.expense-record-actions .commercial-delete-form {
+  margin-top: 0;
+}
+
+.category-panel {
+  margin-top: 1.5rem;
+}
+
+.category-layout {
+  align-items: start;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.5fr);
+}
+
+.category-list {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.category-list > li {
+  align-items: center;
+  border-top: 1px solid var(--fc-border);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.8rem 0;
+}
+
+.category-list > li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.category-list > li > span {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.category-list small {
+  color: var(--fc-muted);
+}
+
+.category-list .commercial-delete-form {
+  margin-top: 0;
+}
+
+.settings-page {
+  max-width: 64rem;
+}
+
+.settings-panel {
+  max-width: 56rem;
+}
+
+.settings-notice {
+  background: #eef6f4;
+  border-left: 3px solid var(--fc-petrol);
+  color: var(--fc-muted);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0.85rem 1rem;
+}
+
+@media (max-width: 1100px) {
+  .expense-lists,
+  .category-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 720px) {
   .sidebar {
     display: none;
@@ -900,10 +1088,27 @@ details.panel[open] > summary {
   .engagement-grid,
   .invoice-entry-grid,
   .invoice-pipeline,
+  .expense-entry-grid,
+  .expense-lists,
+  .category-layout,
+  .expense-record-actions,
+  .expense-metrics,
   .record-actions,
   .conversion-form,
   .record-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .planning-notice,
+  .expense-record > header,
+  .category-list > li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .planning-notice strong,
+  .expense-record .money-value {
+    white-space: normal;
   }
 
   .form-grid-wide {

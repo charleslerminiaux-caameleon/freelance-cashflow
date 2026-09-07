@@ -9,3 +9,15 @@ export { calculateForecast } from "./forecast";
 export type { ForecastInput, ForecastPoint, ForecastResult } from "./forecast";
 export { applyPayment, deriveInvoiceStatus } from "./invoices";
 export type { InvoiceStatus, InvoiceStatusInput } from "./invoices";
+export { generateOccurrences } from "./recurrence";
+export type { GenerateOccurrencesInput, RecurrenceFrequency } from "./recurrence";
+export { buildCashflowEvents } from "./event-builder";
+export type {
+  BillingScheduleForecastSource,
+  CashflowEventRange,
+  CashflowSnapshot,
+  InvoiceForecastSource,
+  OpportunityForecastSource,
+  PlannedForecastSource,
+  RecurringForecastSource,
+} from "./event-builder";
