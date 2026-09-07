@@ -2,6 +2,8 @@
 
 import { useActionState, useId } from "react";
 
+import type { ForecastHorizonDays } from "./schema";
+
 export type SettingsActionState = {
   message: string | null;
   success: boolean;
@@ -16,7 +18,7 @@ export type SettingsFormValue = {
   safetyThreshold: string;
   timezone: string;
   legalForm: string;
-  defaultForecastHorizonDays: number;
+  defaultForecastHorizonDays: ForecastHorizonDays | null;
   defaultScenario: "certain" | "committed" | "probable";
 };
 
@@ -70,12 +72,17 @@ export function SettingsForm({
           <select
             id={`${fieldId}-horizon`}
             name="defaultForecastHorizonDays"
-            defaultValue={value.defaultForecastHorizonDays}
+            defaultValue={value.defaultForecastHorizonDays ?? ""}
+            required
           >
+            {value.defaultForecastHorizonDays === null ? (
+              <option value="" disabled>
+                Choisissez un horizon pris en charge
+              </option>
+            ) : null}
             <option value="30">30 jours</option>
             <option value="90">90 jours</option>
             <option value="180">6 mois</option>
-            <option value="366">1 an</option>
           </select>
         </div>
         <div>

@@ -20,11 +20,21 @@ it("parses only the owner-editable settings", () => {
   });
 });
 
-it("rejects unknown IANA timezones and out-of-range horizons", () => {
+it("accepts only the three dashboard horizons", () => {
+  for (const horizon of ["30", "90", "180"] as const) {
+    expect(settingsFormSchema.parse({ ...validSettings, defaultForecastHorizonDays: horizon }))
+      .toMatchObject({ defaultForecastHorizonDays: Number(horizon) });
+  }
+
+  for (const horizon of ["1", "366"]) {
+    expect(() =>
+      settingsFormSchema.parse({ ...validSettings, defaultForecastHorizonDays: horizon }),
+    ).toThrow();
+  }
+});
+
+it("rejects unknown IANA timezones", () => {
   expect(() => settingsFormSchema.parse({ ...validSettings, timezone: "Paris" })).toThrow(
     "Saisissez un fuseau horaire IANA valide.",
   );
-  expect(() =>
-    settingsFormSchema.parse({ ...validSettings, defaultForecastHorizonDays: "367" }),
-  ).toThrow();
 });

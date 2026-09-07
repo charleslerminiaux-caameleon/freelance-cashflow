@@ -134,6 +134,26 @@ export async function createCategory(
   return categoryRowSchema.parse(data);
 }
 
+export async function updateCategory(
+  client: SupabaseClient,
+  ownerUserId: string,
+  categoryId: string,
+  command: CategoryCommand,
+): Promise<CashflowCategory> {
+  const { data, error } = await client
+    .from("cashflow_categories")
+    .update({ name: command.name })
+    .eq("id", categoryId)
+    .eq("owner_user_id", ownerUserId)
+    .eq("system_category", false)
+    .select(categoryColumns)
+    .maybeSingle();
+
+  if (error) throw repositoryError(error);
+  if (!data) throw new RepositoryError("FC_CATEGORY_NOT_FOUND");
+  return categoryRowSchema.parse(data);
+}
+
 export async function deleteCategory(
   client: SupabaseClient,
   ownerUserId: string,

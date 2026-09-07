@@ -72,3 +72,14 @@ it("returns a safe validation message for an invalid timezone", async () => {
   });
   expect(updateOwnerSettings).not.toHaveBeenCalled();
 });
+
+it.each(["1", "366"])("rejects a forged %s-day horizon before persistence", async (horizon) => {
+  const formData = settingsFormData();
+  formData.set("defaultForecastHorizonDays", horizon);
+
+  const result = await updateSettingsAction(initialState, formData);
+
+  expect(createClient).not.toHaveBeenCalled();
+  expect(updateOwnerSettings).not.toHaveBeenCalled();
+  expect(result.success).toBe(false);
+});

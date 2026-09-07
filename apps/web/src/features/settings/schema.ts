@@ -2,6 +2,16 @@ import { z } from "zod";
 
 import { moneyInputSchema, optionalTextSchema } from "../commercial-schema";
 
+export const forecastHorizonDaysSchema = z.union([
+  z.literal(30),
+  z.literal(90),
+  z.literal(180),
+]);
+
+const forecastHorizonFormSchema = z
+  .enum(["30", "90", "180"])
+  .transform((value) => forecastHorizonDaysSchema.parse(Number(value)));
+
 function isIanaTimezone(value: string): boolean {
   try {
     new Intl.DateTimeFormat("fr-FR", { timeZone: value }).format();
@@ -24,11 +34,7 @@ export const settingsFormSchema = z
       .max(100)
       .refine(isIanaTimezone, "Saisissez un fuseau horaire IANA valide."),
     legalForm: optionalTextSchema(80),
-    defaultForecastHorizonDays: z
-      .string()
-      .regex(/^\d+$/, "Saisissez un nombre entier de jours.")
-      .transform(Number)
-      .pipe(z.number().int().min(1).max(366)),
+    defaultForecastHorizonDays: forecastHorizonFormSchema,
     defaultScenario: z.enum(["certain", "committed", "probable"]),
   })
   .transform(
@@ -39,3 +45,4 @@ export const settingsFormSchema = z
   );
 
 export type SettingsCommand = z.output<typeof settingsFormSchema>;
+export type ForecastHorizonDays = z.infer<typeof forecastHorizonDaysSchema>;

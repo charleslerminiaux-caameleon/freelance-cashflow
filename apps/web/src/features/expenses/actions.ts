@@ -13,6 +13,7 @@ import {
   deleteCategory,
   deletePlannedExpense,
   deleteRecurringExpense,
+  updateCategory,
   updatePlannedExpense,
   updateRecurringExpense,
 } from "./repository";
@@ -148,6 +149,24 @@ export async function createCategoryAction(
     return { message: "Catégorie ajoutée.", success: true };
   } catch {
     return { message: "Impossible d’ajouter cette catégorie.", success: false };
+  }
+}
+
+export async function updateCategoryAction(
+  _state: ExpenseActionState,
+  formData: FormData,
+): Promise<ExpenseActionState> {
+  const { userId } = await requireOwner();
+
+  try {
+    const categoryId = idSchema.parse(formData.get("categoryId"));
+    const command = categoryFormSchema.parse({ name: formData.get("name") });
+    const client = await createClient();
+    await updateCategory(client, userId, categoryId, command);
+    revalidatePath("/expenses");
+    return { message: "Catégorie renommée.", success: true };
+  } catch {
+    return { message: "Impossible de renommer cette catégorie.", success: false };
   }
 }
 

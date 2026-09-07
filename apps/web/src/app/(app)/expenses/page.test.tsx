@@ -35,6 +35,14 @@ beforeEach(() => {
         system_category: false,
         created_at: "2026-09-07T10:00:00Z",
       },
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        owner_user_id: ownerUserId,
+        name: "Fiscalité",
+        type: "outflow",
+        system_category: true,
+        created_at: "2026-09-07T10:00:00Z",
+      },
     ],
     recurringExpenses: [
       {
@@ -90,6 +98,9 @@ it("renders persisted recurring and planned outflows with owner-scoped CRUD cont
   expect(screen.getByRole("button", { name: "Créer la sortie ponctuelle" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Supprimer la sortie Hébergement" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Supprimer la catégorie Logiciels" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Renommer la catégorie Logiciels" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Renommer la catégorie Fiscalité" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Supprimer la catégorie Fiscalité" })).toBeNull();
   expect(screen.getByText(/ne constituent pas un calcul fiscal ou social officiel/i)).toBeInTheDocument();
 });
 

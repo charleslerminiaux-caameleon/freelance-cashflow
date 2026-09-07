@@ -304,6 +304,45 @@ export function CategoryForm({ action }: { action: ExpenseFormAction }) {
   );
 }
 
+export function UpdateCategoryForm({
+  action,
+  categoryId,
+  categoryName,
+}: {
+  action: ExpenseFormAction;
+  categoryId: string;
+  categoryName: string;
+}) {
+  const [state, submit, pending] = useActionState(action, initialState);
+  const fieldId = useId();
+
+  return (
+    <form action={submit} className="commercial-form compact-form category-update-form">
+      <input type="hidden" name="categoryId" value={categoryId} />
+      <div>
+        <label htmlFor={`${fieldId}-category-name`}>
+          Nouveau nom de la catégorie {categoryName}
+        </label>
+        <input
+          id={`${fieldId}-category-name`}
+          name="name"
+          defaultValue={categoryName}
+          maxLength={80}
+          required
+        />
+      </div>
+      {state.message ? <p role={state.success ? "status" : "alert"}>{state.message}</p> : null}
+      <button
+        type="submit"
+        aria-label={`Renommer la catégorie ${categoryName}`}
+        disabled={pending}
+      >
+        Renommer
+      </button>
+    </form>
+  );
+}
+
 export function DeleteCategoryForm({
   action,
   categoryId,

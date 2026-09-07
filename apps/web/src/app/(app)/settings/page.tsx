@@ -1,5 +1,6 @@
 import { updateSettingsAction } from "@/features/settings/actions";
 import { getOwnerSettings } from "@/features/settings/repository";
+import { forecastHorizonDaysSchema } from "@/features/settings/schema";
 import { SettingsForm } from "@/features/settings/settings-form";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +13,9 @@ export default async function SettingsPage() {
   const { userId } = await requireOwner();
   const client = await createClient();
   const settings = await getOwnerSettings(client, userId);
+  const storedHorizon = forecastHorizonDaysSchema.safeParse(
+    settings.default_forecast_horizon_days,
+  );
 
   return (
     <div className="commercial-page settings-page">
@@ -39,7 +43,7 @@ export default async function SettingsPage() {
             safetyThreshold: centsToInput(settings.safety_cash_threshold_cents),
             timezone: settings.timezone,
             legalForm: settings.legal_form ?? "",
-            defaultForecastHorizonDays: settings.default_forecast_horizon_days,
+            defaultForecastHorizonDays: storedHorizon.success ? storedHorizon.data : null,
             defaultScenario: settings.default_scenario,
           }}
         />

@@ -10,6 +10,7 @@ const {
   deleteRecurringExpense,
   requireOwner,
   revalidatePath,
+  updateCategory,
   updatePlannedExpense,
   updateRecurringExpense,
 } = vi.hoisted(() => ({
@@ -22,6 +23,7 @@ const {
   deleteRecurringExpense: vi.fn(),
   requireOwner: vi.fn(),
   revalidatePath: vi.fn(),
+  updateCategory: vi.fn(),
   updatePlannedExpense: vi.fn(),
   updateRecurringExpense: vi.fn(),
 }));
@@ -37,6 +39,7 @@ vi.mock("./repository", () => ({
   deletePlannedExpense,
   deleteRecurringExpense,
   updatePlannedExpense,
+  updateCategory,
   updateRecurringExpense,
 }));
 
@@ -44,8 +47,10 @@ import {
   createCategoryAction,
   createExpenseAction,
   deleteExpenseAction,
+  updateCategoryAction,
   updateExpenseAction,
 } from "./actions";
+import { RepositoryError } from "../repository-error";
 
 const initialState = { message: null, success: false };
 const expenseId = "22222222-2222-4222-8222-222222222222";
@@ -93,6 +98,7 @@ beforeEach(() => {
     deletePlannedExpense,
     deleteRecurringExpense,
     updatePlannedExpense,
+    updateCategory,
     updateRecurringExpense,
   ]) mutation.mockResolvedValue({});
 });
@@ -173,4 +179,56 @@ it("creates a validated owner category", async () => {
 
   expect(createCategory).toHaveBeenCalledWith({}, "owner-1", { name: "Logiciels" });
   expect(result).toEqual({ message: "Catégorie ajoutée.", success: true });
+});
+
+it("validates and renames an owner category", async () => {
+  const formData = new FormData();
+  formData.set("categoryId", expenseId);
+  formData.set("name", "  Outils numériques  ");
+
+  const result = await updateCategoryAction(initialState, formData);
+
+  expect(updateCategory).toHaveBeenCalledWith({}, "owner-1", expenseId, {
+    name: "Outils numériques",
+  });
+  expect(result).toEqual({ message: "Catégorie renommée.", success: true });
+  expect(revalidatePath).toHaveBeenCalledWith("/expenses");
+});
+
+it("rejects a forged category id before persistence", async () => {
+  const formData = new FormData();
+  formData.set("categoryId", "not-a-uuid");
+  formData.set("name", "Outils numériques");
+
+  const result = await updateCategoryAction(initialState, formData);
+
+  expect(updateCategory).not.toHaveBeenCalled();
+  expect(result).toEqual({ message: "Impossible de renommer cette catégorie.", success: false });
+});
+
+it("rejects an empty category name before persistence", async () => {
+  const formData = new FormData();
+  formData.set("categoryId", expenseId);
+  formData.set("name", "   ");
+
+  const result = await updateCategoryAction(initialState, formData);
+
+  expect(updateCategory).not.toHaveBeenCalled();
+  expect(result).toEqual({ message: "Impossible de renommer cette catégorie.", success: false });
+});
+
+it.each([
+  new RepositoryError("FC_CATEGORY_NOT_FOUND"),
+  new RepositoryError("23503"),
+  new Error("private database outage detail"),
+])("sanitizes category rename failures", async (failure) => {
+  updateCategory.mockRejectedValueOnce(failure);
+  const formData = new FormData();
+  formData.set("categoryId", expenseId);
+  formData.set("name", "Outils numériques");
+
+  const result = await updateCategoryAction(initialState, formData);
+
+  expect(result).toEqual({ message: "Impossible de renommer cette catégorie.", success: false });
+  expect(JSON.stringify(result)).not.toContain("private database outage detail");
 });

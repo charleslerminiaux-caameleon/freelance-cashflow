@@ -10,6 +10,7 @@ import {
   createRecurringExpense,
   deletePlannedExpense,
   listExpenseWorkspace,
+  updateCategory,
   updateRecurringExpense,
 } from "./repository";
 import { RepositoryError } from "../repository-error";
@@ -222,5 +223,45 @@ describe("expense repositories", () => {
       type: "outflow",
       system_category: false,
     });
+  });
+
+  it("renames only a personal category in the owner scope", async () => {
+    const row = {
+      id: categoryId,
+      owner_user_id: ownerUserId,
+      name: "Outils numériques",
+      type: "outflow",
+      system_category: false,
+      created_at: "2026-09-07T10:00:00Z",
+    };
+    const { client, queries } = clientWith({ cashflow_categories: { data: row, error: null } });
+
+    await updateCategory(client, ownerUserId, categoryId, { name: "Outils numériques" });
+
+    expect(queries.cashflow_categories.update).toHaveBeenCalledWith({ name: "Outils numériques" });
+    expect(queries.cashflow_categories.eq).toHaveBeenCalledWith("id", categoryId);
+    expect(queries.cashflow_categories.eq).toHaveBeenCalledWith("owner_user_id", ownerUserId);
+    expect(queries.cashflow_categories.eq).toHaveBeenCalledWith("system_category", false);
+  });
+
+  it("reports a system or inaccessible category as not found", async () => {
+    const { client } = clientWith({ cashflow_categories: { data: null, error: null } });
+
+    await expect(
+      updateCategory(client, ownerUserId, categoryId, { name: "Outils numériques" }),
+    ).rejects.toEqual(new RepositoryError("FC_CATEGORY_NOT_FOUND"));
+  });
+
+  it("sanitizes database failures while renaming a category", async () => {
+    const { client } = clientWith({
+      cashflow_categories: {
+        data: null,
+        error: { code: "23503", message: "private foreign-key detail" },
+      },
+    });
+
+    await expect(
+      updateCategory(client, ownerUserId, categoryId, { name: "Outils numériques" }),
+    ).rejects.toEqual(new RepositoryError("23503"));
   });
 });

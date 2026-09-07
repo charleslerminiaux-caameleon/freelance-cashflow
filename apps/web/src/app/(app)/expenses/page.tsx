@@ -5,6 +5,7 @@ import {
   createExpenseAction,
   deleteCategoryAction,
   deleteExpenseAction,
+  updateCategoryAction,
   updateExpenseAction,
 } from "@/features/expenses/actions";
 import {
@@ -12,6 +13,7 @@ import {
   DeleteCategoryForm,
   DeleteExpenseForm,
   ExpenseForm,
+  UpdateCategoryForm,
 } from "@/features/expenses/expense-form";
 import { listExpenseWorkspace } from "@/features/expenses/repository";
 import { getOwnerBusinessDate } from "@/features/invoices/business-date";
@@ -316,11 +318,18 @@ export default async function ExpensesPage() {
                     <small>{category.system_category ? "Catégorie système" : "Catégorie personnelle"}</small>
                   </span>
                   {category.system_category ? null : (
-                    <DeleteCategoryForm
-                      action={deleteCategoryAction}
-                      categoryId={category.id}
-                      categoryName={category.name}
-                    />
+                    <div className="category-record-actions">
+                      <UpdateCategoryForm
+                        action={updateCategoryAction}
+                        categoryId={category.id}
+                        categoryName={category.name}
+                      />
+                      <DeleteCategoryForm
+                        action={deleteCategoryAction}
+                        categoryId={category.id}
+                        categoryName={category.name}
+                      />
+                    </div>
                   )}
                 </li>
               ))}

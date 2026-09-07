@@ -6,6 +6,7 @@ import {
   DeleteCategoryForm,
   DeleteExpenseForm,
   ExpenseForm,
+  UpdateCategoryForm,
 } from "./expense-form";
 
 const idleAction = async () => ({ message: null, success: false });
@@ -65,6 +66,21 @@ it("offers creation of a useful expense category", () => {
 
   expect(screen.getByLabelText("Nom de la catégorie")).toBeRequired();
   expect(screen.getByRole("button", { name: "Ajouter la catégorie" })).toBeInTheDocument();
+});
+
+it("offers an accessible rename form with action feedback", async () => {
+  const action = async () => ({ message: "Catégorie renommée.", success: true });
+  render(
+    <UpdateCategoryForm
+      action={action}
+      categoryId="category-1"
+      categoryName="Logiciels"
+    />,
+  );
+
+  expect(screen.getByLabelText("Nouveau nom de la catégorie Logiciels")).toHaveValue("Logiciels");
+  fireEvent.click(screen.getByRole("button", { name: "Renommer la catégorie Logiciels" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Catégorie renommée.");
 });
 
 it("requires explicit confirmation before deleting a category", () => {

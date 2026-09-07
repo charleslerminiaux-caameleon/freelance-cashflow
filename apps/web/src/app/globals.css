@@ -998,6 +998,22 @@ details.panel[open] > summary {
   margin-top: 0;
 }
 
+.category-record-actions {
+  align-items: end;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.category-update-form {
+  align-items: end;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.category-update-form p {
+  margin: 0;
+}
+
 .settings-page {
   max-width: 64rem;
 }
@@ -1101,7 +1117,9 @@ details.panel[open] > summary {
 
   .planning-notice,
   .expense-record > header,
-  .category-list > li {
+  .category-list > li,
+  .category-record-actions,
+  .category-update-form {
     align-items: flex-start;
     flex-direction: column;
   }

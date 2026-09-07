@@ -14,26 +14,27 @@ vi.mock("@/lib/supabase/server", () => ({ createClient }));
 import SettingsPage from "./page";
 
 const ownerUserId = "11111111-1111-4111-8111-111111111111";
+const ownerSettings = {
+  singleton_key: true,
+  owner_user_id: ownerUserId,
+  currency: "EUR",
+  timezone: "Europe/Paris",
+  country: "FR",
+  legal_form: "SASU",
+  manual_current_balance_cents: 423_800,
+  manual_balance_as_of: "2026-09-07",
+  safety_cash_threshold_cents: 200_000,
+  default_forecast_horizon_days: 90,
+  default_scenario: "committed",
+  created_at: "2026-09-05T10:00:00Z",
+  updated_at: "2026-09-07T10:00:00Z",
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
   requireOwner.mockResolvedValue({ userId: ownerUserId });
   createClient.mockResolvedValue({ kind: "SSR client" });
-  getOwnerSettings.mockResolvedValue({
-    singleton_key: true,
-    owner_user_id: ownerUserId,
-    currency: "EUR",
-    timezone: "Europe/Paris",
-    country: "FR",
-    legal_form: "SASU",
-    manual_current_balance_cents: 423_800,
-    manual_balance_as_of: "2026-09-07",
-    safety_cash_threshold_cents: 200_000,
-    default_forecast_horizon_days: 90,
-    default_scenario: "committed",
-    created_at: "2026-09-05T10:00:00Z",
-    updated_at: "2026-09-07T10:00:00Z",
-  });
+  getOwnerSettings.mockResolvedValue(ownerSettings);
 });
 
 it("loads the owner singleton through SSR and edits only supported preferences", async () => {
@@ -52,4 +53,16 @@ it("loads the owner singleton through SSR and edits only supported preferences",
   expect(container.querySelector('[name="currency"]')).toBeNull();
   expect(container.querySelector('[name="country"]')).toBeNull();
   expect(screen.getByText(/ne sont pas des calculs fiscaux officiels/i)).toBeInTheDocument();
+});
+
+it("does not silently replace a legacy unsupported stored horizon", async () => {
+  getOwnerSettings.mockResolvedValueOnce({
+    ...ownerSettings,
+    default_forecast_horizon_days: 366,
+  });
+
+  render(await SettingsPage());
+
+  expect(screen.getByLabelText("Horizon par défaut")).toHaveValue("");
+  expect(screen.getByRole("option", { name: "Choisissez un horizon pris en charge" })).toBeDisabled();
 });
