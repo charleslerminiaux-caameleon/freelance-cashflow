@@ -63,7 +63,9 @@ export function CustomerForm({
         <label htmlFor={`${fieldId}-notes`}>Notes client</label>
         <textarea id={`${fieldId}-notes`} name="notes" defaultValue={value?.notes} maxLength={2_000} />
       </div>
-      {state.message ? <p role="alert">{state.message}</p> : null}
+      {state.message ? (
+        <p role={state.success ? "status" : "alert"}>{state.message}</p>
+      ) : null}
       <button type="submit" disabled={pending}>
         {value ? "Enregistrer le client" : "Créer le client"}
       </button>

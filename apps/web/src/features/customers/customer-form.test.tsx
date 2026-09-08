@@ -13,6 +13,18 @@ it("collects the customer fields used by opportunities", () => {
   expect(screen.getByRole("button", { name: "Créer le client" })).toBeInTheDocument();
 });
 
+it("announces a successful customer creation without using an alert", async () => {
+  const action = async () => ({ message: "Client créé.", success: true });
+  render(<CustomerForm action={action} />);
+
+  const form = screen.getByRole("button", { name: "Créer le client" }).closest("form");
+  expect(form).not.toBeNull();
+  fireEvent.submit(form!);
+
+  expect(await screen.findByRole("status")).toHaveTextContent("Client créé.");
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
 it("offers an accessible deletion control for a customer", () => {
   render(
     <CustomerDeleteForm

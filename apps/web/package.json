@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "e2e": "bash e2e/run-local.sh"
   },
   "dependencies": {
     "@fc/domain": "workspace:*",

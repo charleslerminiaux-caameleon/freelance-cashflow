@@ -50,7 +50,9 @@ export function BillingScheduleForm({
         </div>
       </div>
       <p className="form-hint">Le total TTC des échéances ne peut pas dépasser la commande.</p>
-      {state.message ? <p role="alert">{state.message}</p> : null}
+      {state.message ? (
+        <p role={state.success ? "status" : "alert"}>{state.message}</p>
+      ) : null}
       <button type="submit" disabled={pending}>
         Ajouter l’échéance
       </button>

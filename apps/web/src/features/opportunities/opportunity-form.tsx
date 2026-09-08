@@ -136,7 +136,9 @@ export function OpportunityForm({
         <label htmlFor={`${fieldId}-notes`}>Notes</label>
         <textarea id={`${fieldId}-notes`} name="notes" defaultValue={value?.notes} maxLength={2_000} />
       </div>
-      {state.message ? <p role="alert">{state.message}</p> : null}
+      {state.message ? (
+        <p role={state.success ? "status" : "alert"}>{state.message}</p>
+      ) : null}
       <button type="submit" disabled={pending || customers.length === 0}>
         {editing ? "Enregistrer les modifications" : "Créer l’opportunité"}
       </button>
@@ -199,7 +201,9 @@ export function ConversionForm({
           required
         />
       </div>
-      {state.message ? <p role="alert">{state.message}</p> : null}
+      {state.message ? (
+        <p role={state.success ? "status" : "alert"}>{state.message}</p>
+      ) : null}
       <button type="submit" disabled={pending}>
         Convertir en commande
       </button>

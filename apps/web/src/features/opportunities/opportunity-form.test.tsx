@@ -24,6 +24,23 @@ it("collects the customer, commercial amount, probability and business dates", (
   expect(screen.getByRole("button", { name: "Créer l’opportunité" })).toBeInTheDocument();
 });
 
+it("announces a successful opportunity creation without using an alert", async () => {
+  const action = async () => ({ message: "Opportunité créée.", success: true });
+  render(
+    <OpportunityForm
+      action={action}
+      customers={[{ id: "customer-1", name: "Atelier Atlas" }]}
+    />,
+  );
+
+  const form = screen.getByRole("button", { name: "Créer l’opportunité" }).closest("form");
+  expect(form).not.toBeNull();
+  fireEvent.submit(form!);
+
+  expect(await screen.findByRole("status")).toHaveTextContent("Opportunité créée.");
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
 it("shows conversion controls only for an eligible opportunity", () => {
   const { rerender } = render(
     <ConversionForm
@@ -53,6 +70,33 @@ it("shows conversion controls only for an eligible opportunity", () => {
   );
 
   expect(screen.queryByRole("button", { name: "Convertir en commande" })).toBeNull();
+});
+
+it("announces a successful conversion without using an alert", async () => {
+  const action = async () => ({
+    message: "Opportunité convertie en commande.",
+    success: true,
+  });
+  render(
+    <ConversionForm
+      action={action}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+      paymentTermsDays={30}
+      status="proposal"
+      today="2026-09-08"
+      convertedEngagementId={null}
+    />,
+  );
+
+  const form = screen.getByRole("button", { name: "Convertir en commande" }).closest("form");
+  expect(form).not.toBeNull();
+  fireEvent.submit(form!);
+
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "Opportunité convertie en commande.",
+  );
+  expect(screen.queryByRole("alert")).toBeNull();
 });
 
 it("offers an accessible deletion control for an unconverted opportunity", () => {
