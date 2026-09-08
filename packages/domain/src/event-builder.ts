@@ -79,9 +79,9 @@ function inRange(date: LocalDate, range: CashflowEventRange): boolean {
   return date >= range.startDate && date <= range.endDate;
 }
 
-function amount(value: MoneyCents): MoneyCents {
+function nonNegativeAmount(value: MoneyCents): MoneyCents {
   const checked = moneyCents(value);
-  if (checked <= 0) throw new Error("Forecast source amount must be positive");
+  if (checked < 0) throw new Error("Forecast source amount must not be negative");
   return checked;
 }
 
@@ -149,10 +149,10 @@ export function buildCashflowEvents(
     const plannedDate = localDate(invoice.expectedPaymentDate);
     if (!inRange(plannedDate, range)) continue;
 
-    const total = amount(invoice.amountTtcCents);
+    const total = nonNegativeAmount(invoice.amountTtcCents);
     const paid = moneyCents(invoice.paidAmountCents);
     if (paid < 0 || paid > total) throw new Error("Invoice paid amount must be within its total");
-    if (paid === total) continue;
+    if (total === 0 || paid === total) continue;
 
     const id = sourceEventId("invoice", invoice.id, plannedDate);
     add({
@@ -175,6 +175,8 @@ export function buildCashflowEvents(
     if (linkedScheduleIds.has(schedule.id)) continue;
     const plannedDate = localDate(schedule.expectedPaymentDate);
     if (!inRange(plannedDate, range)) continue;
+    const amountCents = nonNegativeAmount(schedule.amountTtcCents);
+    if (amountCents === 0) continue;
 
     const id = sourceEventId("billing_schedule", schedule.id, plannedDate);
     add({
@@ -183,7 +185,7 @@ export function buildCashflowEvents(
       sourceType: "billing_schedule",
       sourceId: schedule.id,
       label: schedule.label,
-      amountCents: amount(schedule.amountTtcCents),
+      amountCents,
       plannedDate,
       certainty: "committed",
       probabilityBasisPoints: 10_000,
@@ -197,6 +199,8 @@ export function buildCashflowEvents(
     if (opportunity.expectedCloseDate === null) continue;
     const plannedDate = localDate(opportunity.expectedCloseDate);
     if (!inRange(plannedDate, range)) continue;
+    const amountCents = nonNegativeAmount(opportunity.estimatedAmountHtCents);
+    if (amountCents === 0) continue;
 
     const id = sourceEventId("opportunity", opportunity.id, plannedDate);
     add({
@@ -205,7 +209,7 @@ export function buildCashflowEvents(
       sourceType: "opportunity",
       sourceId: opportunity.id,
       label: opportunity.label,
-      amountCents: amount(opportunity.estimatedAmountHtCents),
+      amountCents,
       plannedDate,
       certainty: "probable",
       probabilityBasisPoints: basisPoints(opportunity.probabilityBasisPoints),
@@ -220,6 +224,8 @@ export function buildCashflowEvents(
     if (sourceEnd < range.startDate || sourceStart > range.endDate) continue;
     const expansionEnd = sourceEnd < range.endDate ? sourceEnd : range.endDate;
     const sourceType = eventSourceType(recurring.cashflowKind, "recurring_cashflow");
+    const amountCents = nonNegativeAmount(recurring.amountCents);
+    if (amountCents === 0) continue;
 
     for (const plannedDate of generateOccurrences({
       frequency: recurring.frequency,
@@ -240,7 +246,7 @@ export function buildCashflowEvents(
         sourceType,
         sourceId: recurring.id,
         label: recurring.label,
-        amountCents: amount(recurring.amountCents),
+        amountCents,
         plannedDate,
         certainty: recurring.certainty,
         probabilityBasisPoints: eventProbability(
@@ -256,6 +262,8 @@ export function buildCashflowEvents(
     if (planned.status !== "planned") continue;
     const plannedDate = localDate(planned.plannedDate);
     if (!inRange(plannedDate, range)) continue;
+    const amountCents = nonNegativeAmount(planned.amountCents);
+    if (amountCents === 0) continue;
     const sourceType = eventSourceType(planned.cashflowKind, "planned_cashflow");
     const id = cashflowSourceEventId(
       "planned_cashflow",
@@ -269,7 +277,7 @@ export function buildCashflowEvents(
       sourceType,
       sourceId: planned.id,
       label: planned.label,
-      amountCents: amount(planned.amountCents),
+      amountCents,
       plannedDate,
       certainty: planned.certainty,
       probabilityBasisPoints: eventProbability(planned.certainty, planned.probabilityBasisPoints),

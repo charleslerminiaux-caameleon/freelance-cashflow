@@ -359,6 +359,55 @@ describe("buildCashflowEvents", () => {
     ]);
   });
 
+  it("ignores zero-value open invoices and opportunities", () => {
+    const events = buildCashflowEvents(
+      snapshot({
+        invoices: [{
+          id: "zero-invoice",
+          billingScheduleItemId: null,
+          label: "Facture gratuite",
+          expectedPaymentDate: localDate("2026-09-15"),
+          amountTtcCents: moneyCents(0),
+          paidAmountCents: moneyCents(0),
+          status: "issued",
+        }],
+        opportunities: [{
+          id: "zero-opportunity",
+          label: "Mission gratuite",
+          expectedCloseDate: localDate("2026-09-20"),
+          estimatedAmountHtCents: moneyCents(0),
+          probabilityBasisPoints: 4_000,
+          status: "proposal",
+          convertedEngagementId: null,
+        }],
+      }),
+      range,
+    );
+
+    expect(events).toEqual([]);
+  });
+
+  it("still rejects negative forecast source amounts", () => {
+    expect(() =>
+      buildCashflowEvents(
+        snapshot({
+          plannedCashflows: [{
+            id: "negative-expense",
+            direction: "outflow",
+            cashflowKind: "expense",
+            label: "Montant invalide",
+            amountCents: moneyCents(-1),
+            plannedDate: localDate("2026-09-15"),
+            certainty: "certain",
+            probabilityBasisPoints: 10_000,
+            status: "planned",
+          }],
+        }),
+        range,
+      )
+    ).toThrow("Forecast source amount must not be negative");
+  });
+
   it("rejects invalid ranges and unsafe source amounts", () => {
     expect(() =>
       buildCashflowEvents(snapshot(), {

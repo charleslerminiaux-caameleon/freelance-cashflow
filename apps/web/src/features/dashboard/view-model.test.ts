@@ -265,6 +265,27 @@ describe("buildDashboardViewModel", () => {
       .toBe(-50_000);
   });
 
+  it("renders a stable dashboard when an open opportunity has zero value", () => {
+    const data = sourceData();
+    data.invoices = [];
+    data.billingScheduleItems = [];
+    data.plannedCashflows = [];
+    data.opportunities = [{
+      ...data.opportunities[0]!,
+      id: "zero-opportunity",
+      estimatedAmountHtCents: moneyCents(0),
+    }];
+
+    const model = buildDashboardViewModel(data, {
+      ...referenceOptions,
+      scenario: "probable",
+    });
+
+    expect(model.treasuryEvents).toEqual([]);
+    expect(model.kpis.inflows30DaysCents).toBe(0);
+    expect(model.kpis.projected30DaysCents).toBe(4_238_000);
+  });
+
   it("keeps normalized events chronological and exposes their running balances", () => {
     const model = buildDashboardViewModel(sourceData(), referenceOptions);
 
