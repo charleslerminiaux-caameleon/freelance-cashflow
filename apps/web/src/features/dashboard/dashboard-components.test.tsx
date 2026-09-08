@@ -127,6 +127,10 @@ describe("dashboard detail panels", () => {
     expect(chart).toHaveAccessibleDescription(
       "Le scénario certain reste au-dessus du seuil sur 90 jours.",
     );
+    expect(chart.querySelector(".recharts-responsive-container")).toHaveStyle({
+      minWidth: "0",
+      width: "100%",
+    });
     expect(screen.getByText("Certain")).toBeInTheDocument();
     expect(screen.getByText("Engagé")).toBeInTheDocument();
     expect(screen.getByText("Probable pondéré")).toBeInTheDocument();
@@ -171,6 +175,16 @@ describe("dashboard detail panels", () => {
       <UpcomingLists
         inflows={[event("invoice-1", "inflow", 600_000)]}
         outflows={[event("reserve-1", "outflow", 510_000)]}
+        state={{
+          horizonDays: 90,
+          scenario: "probable",
+          inclusions: {
+            invoices: false,
+            expenses: true,
+            signedOrders: false,
+            weightedOpportunities: true,
+          },
+        }}
       />,
     );
 
@@ -180,5 +194,11 @@ describe("dashboard detail panels", () => {
     expect(within(screen.getByRole("region", { name: "Prochaines sorties" })).getByText(
       "Réserve TVA",
     )).toBeInTheDocument();
+    for (const link of screen.getAllByRole("link", { name: "Voir toute la trésorerie →" })) {
+      expect(link).toHaveAttribute(
+        "href",
+        "/cashflow?horizon=90&scenario=probable&filters=1&expenses=1&weightedOpportunities=1",
+      );
+    }
   });
 });

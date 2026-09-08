@@ -1,15 +1,18 @@
 import { formatMoney } from "@fc/shared";
 
+import { dashboardStateHref, type DashboardNavigationState } from "./url-state";
 import type { DashboardTreasuryEvent } from "./view-model";
 
 function UpcomingList({
   title,
   events,
   direction,
+  cashflowHref,
 }: {
   title: string;
   events: DashboardTreasuryEvent[];
   direction: "inflow" | "outflow";
+  cashflowHref: string;
 }) {
   return (
     <section className="dashboard-panel upcoming-panel" aria-label={title}>
@@ -31,7 +34,7 @@ function UpcomingList({
           ))}
         </ul>
       )}
-      <a className="dashboard-panel-link" href="/cashflow">Voir toute la trésorerie →</a>
+      <a className="dashboard-panel-link" href={cashflowHref}>Voir toute la trésorerie →</a>
     </section>
   );
 }
@@ -39,14 +42,28 @@ function UpcomingList({
 export function UpcomingLists({
   inflows,
   outflows,
+  state,
 }: {
   inflows: DashboardTreasuryEvent[];
   outflows: DashboardTreasuryEvent[];
+  state: DashboardNavigationState;
 }) {
+  const cashflowHref = dashboardStateHref("/cashflow", state);
+
   return (
     <>
-      <UpcomingList title="Prochaines entrées" events={inflows} direction="inflow" />
-      <UpcomingList title="Prochaines sorties" events={outflows} direction="outflow" />
+      <UpcomingList
+        title="Prochaines entrées"
+        events={inflows}
+        direction="inflow"
+        cashflowHref={cashflowHref}
+      />
+      <UpcomingList
+        title="Prochaines sorties"
+        events={outflows}
+        direction="outflow"
+        cashflowHref={cashflowHref}
+      />
     </>
   );
 }

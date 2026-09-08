@@ -199,6 +199,72 @@ describe("buildDashboardViewModel", () => {
     ]);
   });
 
+  it("offers invoicing actions only for active or completed engagements", () => {
+    const data = sourceData();
+    const schedule = data.billingScheduleItems[0]!;
+    data.billingScheduleItems = [
+      { ...schedule, id: "schedule-active", engagementStatus: "active" },
+      { ...schedule, id: "schedule-completed", engagementStatus: "completed" },
+      { ...schedule, id: "schedule-draft", engagementStatus: "draft" },
+      { ...schedule, id: "schedule-cancelled", engagementStatus: "cancelled" },
+    ];
+
+    const model = buildDashboardViewModel(data, referenceOptions);
+
+    expect(model.itemsToInvoice.map(({ id }) => id)).toEqual([
+      "schedule-active",
+      "schedule-completed",
+    ]);
+  });
+
+  it("includes J+30 but excludes J+31 from the 30-day KPI", () => {
+    const data = sourceData();
+    const invoice = data.invoices[1]!;
+    data.invoices = [
+      {
+        ...invoice,
+        id: "invoice-j-plus-30",
+        expectedPaymentDate: localDate("2026-10-05"),
+        amountTtcCents: moneyCents(100_000),
+      },
+      {
+        ...invoice,
+        id: "invoice-j-plus-31",
+        expectedPaymentDate: localDate("2026-10-06"),
+        amountTtcCents: moneyCents(200_000),
+      },
+    ];
+    data.billingScheduleItems = [];
+    data.opportunities = [];
+    data.plannedCashflows = [];
+
+    const model = buildDashboardViewModel(data, referenceOptions);
+
+    expect(model.kpis.inflows30DaysCents).toBe(100_000);
+    expect(model.kpis.projected30DaysCents).toBe(4_338_000);
+  });
+
+  it("preserves negative projected balances without clamping", () => {
+    const data = sourceData();
+    data.settings.manualCurrentBalanceCents = moneyCents(100_000);
+    data.settings.safetyThresholdCents = moneyCents(0);
+    data.invoices = [];
+    data.billingScheduleItems = [];
+    data.opportunities = [];
+    data.plannedCashflows = [{
+      ...data.plannedCashflows[1]!,
+      id: "large-expense",
+      plannedDate: localDate("2026-09-06"),
+      amountCents: moneyCents(150_000),
+    }];
+
+    const model = buildDashboardViewModel(data, referenceOptions);
+
+    expect(model.kpis.projected30DaysCents).toBe(-50_000);
+    expect(model.chart.points.find(({ date }) => date === "2026-09-06")?.certainBalanceCents)
+      .toBe(-50_000);
+  });
+
   it("keeps normalized events chronological and exposes their running balances", () => {
     const model = buildDashboardViewModel(sourceData(), referenceOptions);
 

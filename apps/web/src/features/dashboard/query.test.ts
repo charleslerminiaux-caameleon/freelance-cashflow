@@ -7,13 +7,48 @@ const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient }));
 
 import {
+  businessDateForTimezone,
   loadDashboardSourceData,
+  readAllPages,
   type DashboardRepositoryAdapter,
 } from "./query";
 
 const ownerUserId = "11111111-1111-4111-8111-111111111111";
-const customerId = "22222222-2222-4222-8222-222222222222";
 const engagementId = "33333333-3333-4333-8333-333333333333";
+const expectedRange = {
+  startDate: localDate("2026-09-05"),
+  endDate: localDate("2026-12-04"),
+};
+
+function requireExpectedRange(range: { startDate: string; endDate: string }) {
+  if (range.startDate !== expectedRange.startDate || range.endDate !== expectedRange.endDate) {
+    throw new Error("Unexpected dashboard range");
+  }
+}
+
+describe("readAllPages", () => {
+  it("returns rows beyond the Supabase API maximum page size", async () => {
+    const rows = Array.from({ length: 2_005 }, (_, index) => ({ id: index + 1 }));
+
+    const result = await readAllPages(
+      async (from, to) => rows.slice(from, to + 1),
+      1_000,
+    );
+
+    expect(result).toHaveLength(2_005);
+    expect(result[1_000]).toEqual({ id: 1_001 });
+    expect(result.at(-1)).toEqual({ id: 2_005 });
+  });
+});
+
+describe("businessDateForTimezone", () => {
+  it("uses the Europe/Paris business day across the daylight-saving boundary", () => {
+    expect(businessDateForTimezone(
+      "Europe/Paris",
+      new Date("2026-03-28T23:30:00.000Z"),
+    )).toBe("2026-03-29");
+  });
+});
 
 function repositoryAdapter(): DashboardRepositoryAdapter {
   return {
@@ -32,74 +67,57 @@ function repositoryAdapter(): DashboardRepositoryAdapter {
       created_at: "2026-09-01T10:00:00.000Z",
       updated_at: "2026-09-01T10:00:00.000Z",
     }),
-    listInvoices: async () => [{
+    listRelevantInvoices: async (_client, _ownerId, range) => {
+      requireExpectedRange(range);
+      return [{
       id: "44444444-4444-4444-8444-444444444444",
       owner_user_id: ownerUserId,
-      customer_id: customerId,
       billing_schedule_item_id: null,
-      provider: "manual",
-      external_id: null,
       invoice_number: "F-001",
       issued_at: localDate("2026-09-01"),
       due_at: localDate("2026-09-15"),
       expected_payment_date: localDate("2026-09-20"),
-      amount_ht_cents: 100_000,
-      vat_cents: 20_000,
       amount_ttc_cents: 120_000,
       paid_amount_cents: 20_000,
       status: "partially_paid",
-      paid_at: null,
-      raw_payload_hash: null,
-      created_at: "2026-09-01T10:00:00.000Z",
-      updated_at: "2026-09-01T10:00:00.000Z",
       customer: { name: "Atelier Bleu" },
-    }],
-    listOpportunities: async () => [{
+      }];
+    },
+    listRelevantOpportunities: async (_client, _ownerId, range) => {
+      requireExpectedRange(range);
+      return [{
       id: "55555555-5555-4555-8555-555555555555",
       owner_user_id: ownerUserId,
-      customer_id: customerId,
       name: "Mission automne",
       status: "proposal",
       estimated_amount_ht_cents: 500_000,
       probability_basis_points: 4_000,
       expected_close_date: localDate("2026-10-01"),
-      expected_start_date: null,
-      expected_end_date: null,
-      notes: null,
       converted_engagement_id: null,
-      customer: { name: "Atelier Bleu", payment_terms_days: 30 },
-    }],
-    listEngagements: async () => [{
-      id: engagementId,
-      owner_user_id: ownerUserId,
-      customer_id: customerId,
-      opportunity_id: null,
-      reference: "CMD-001",
-      signed_at: localDate("2026-09-01"),
-      start_date: null,
-      end_date: null,
-      amount_ht_cents: 100_000,
-      amount_ttc_cents: 120_000,
-      status: "active",
-      payment_terms_days: 30,
       customer: { name: "Atelier Bleu" },
-    }],
-    listBillingScheduleItems: async () => [{
+      }];
+    },
+    listRelevantBillingScheduleItems: async (_client, _ownerId, range) => {
+      requireExpectedRange(range);
+      return [{
       id: "66666666-6666-4666-8666-666666666666",
       owner_user_id: ownerUserId,
       engagement_id: engagementId,
       label: "Acompte",
       planned_invoice_date: localDate("2026-09-10"),
-      amount_ht_cents: 100_000,
-      vat_cents: 20_000,
       amount_ttc_cents: 120_000,
-      payment_terms_days: 30,
       expected_payment_date: localDate("2026-10-10"),
       status: "planned",
-    }],
-    listExpenseWorkspace: async () => ({
-      categories: [],
-      recurringExpenses: [{
+      engagement: {
+        reference: "CMD-001",
+        status: "active",
+        customer: { name: "Atelier Bleu" },
+      },
+      }];
+    },
+    listRelevantRecurringCashflows: async (_client, _ownerId, range) => {
+      requireExpectedRange(range);
+      return [{
         id: "77777777-7777-4777-8777-777777777777",
         owner_user_id: ownerUserId,
         direction: "outflow",
@@ -114,10 +132,11 @@ function repositoryAdapter(): DashboardRepositoryAdapter {
         certainty: "certain",
         probability_basis_points: 10_000,
         active: true,
-        created_at: "2026-09-01T10:00:00.000Z",
-        updated_at: "2026-09-01T10:00:00.000Z",
-      }],
-      plannedExpenses: [{
+      }];
+    },
+    listRelevantPlannedCashflows: async (_client, _ownerId, range) => {
+      requireExpectedRange(range);
+      return [{
         id: "88888888-8888-4888-8888-888888888888",
         owner_user_id: ownerUserId,
         direction: "outflow",
@@ -129,19 +148,20 @@ function repositoryAdapter(): DashboardRepositoryAdapter {
         certainty: "committed",
         probability_basis_points: 10_000,
         status: "planned",
-        created_at: "2026-09-01T10:00:00.000Z",
-        updated_at: "2026-09-01T10:00:00.000Z",
-      }],
-    }),
+      }];
+    },
   };
 }
 
 describe("loadDashboardSourceData", () => {
   it("maps owner-scoped repository rows into a complete domain snapshot", async () => {
+    const adapter = repositoryAdapter();
+    const scheduleRead = vi.spyOn(adapter, "listRelevantBillingScheduleItems");
     const data = await loadDashboardSourceData(
       {} as SupabaseClient,
       ownerUserId,
-      repositoryAdapter(),
+      expectedRange,
+      adapter,
     );
 
     expect(data.settings).toEqual({
@@ -177,12 +197,14 @@ describe("loadDashboardSourceData", () => {
       cashflowKind: "reserve",
       plannedDate: "2026-09-22",
     });
+    expect(scheduleRead).toHaveBeenCalledOnce();
   });
 
   it("rejects a malformed owner id before loading financial data", async () => {
     await expect(loadDashboardSourceData(
       {} as SupabaseClient,
       "not-an-owner-id",
+      expectedRange,
       repositoryAdapter(),
     )).rejects.toThrow("Invalid owner identifier");
   });

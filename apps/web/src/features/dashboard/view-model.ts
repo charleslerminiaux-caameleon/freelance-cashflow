@@ -275,7 +275,11 @@ export function buildDashboardViewModel(
       || compareMoneyDescending(left.remainingCents, right.remainingCents),
     );
   const itemsToInvoice = data.billingScheduleItems
-    .filter((item) => item.status === "planned" && item.plannedInvoiceDate <= endDate)
+    .filter((item) =>
+      item.status === "planned"
+      && ["active", "completed"].includes(item.engagementStatus)
+      && item.plannedInvoiceDate <= endDate,
+    )
     .map((item) => ({
       id: item.id,
       engagementId: item.engagementId,

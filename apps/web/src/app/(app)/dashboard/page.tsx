@@ -67,6 +67,7 @@ export default async function DashboardPage({
           <UpcomingLists
             inflows={model.upcomingInflows}
             outflows={model.upcomingOutflows}
+            state={model}
           />
         </aside>
       </div>

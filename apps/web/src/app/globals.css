@@ -1208,6 +1208,28 @@ details.panel[open] > summary {
 
 .cashflow-chart-panel {
   min-width: 0;
+  overflow: hidden;
+}
+
+.route-error {
+  margin: 2rem auto;
+  max-width: 38rem;
+}
+
+.route-error h1 {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.route-error button {
+  background: var(--fc-petrol);
+  border: 0;
+  border-radius: 0.6rem;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  margin-top: 0.65rem;
+  padding: 0.7rem 1rem;
 }
 
 .chart-heading {
