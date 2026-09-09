@@ -1,0 +1,224 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+
+import {
+  ConversionForm,
+  DeleteOpportunityForm,
+  OpportunityForm,
+} from "./opportunity-form";
+
+const idleAction = async () => ({ message: null, success: false });
+
+it("collects the customer, commercial amount, probability and business dates", () => {
+  render(
+    <OpportunityForm
+      action={idleAction}
+      customers={[{ id: "customer-1", name: "Atelier Atlas" }]}
+    />,
+  );
+
+  expect(screen.getByLabelText("Client")).toHaveValue("customer-1");
+  expect(screen.getByLabelText("Montant HT")).toHaveAttribute("inputmode", "decimal");
+  expect(screen.getByLabelText("Probabilité (%)")).toHaveAttribute("inputmode", "decimal");
+  expect(screen.getByLabelText("Date de clôture prévue")).toHaveAttribute("type", "date");
+  expect(screen.queryByRole("option", { name: "Gagnée" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Créer l’opportunité" })).toBeInTheDocument();
+});
+
+it("announces a successful opportunity creation without using an alert", async () => {
+  const action = async () => ({ message: "Opportunité créée.", success: true });
+  render(
+    <OpportunityForm
+      action={action}
+      customers={[{ id: "customer-1", name: "Atelier Atlas" }]}
+    />,
+  );
+
+  const form = screen.getByRole("button", { name: "Créer l’opportunité" }).closest("form");
+  expect(form).not.toBeNull();
+  fireEvent.submit(form!);
+
+  expect(await screen.findByRole("status")).toHaveTextContent("Opportunité créée.");
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("shows conversion controls only for an eligible opportunity", () => {
+  const { rerender } = render(
+    <ConversionForm
+      action={idleAction}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+      paymentTermsDays={30}
+      status="proposal"
+      today="2026-09-05"
+      convertedEngagementId={null}
+    />,
+  );
+
+  expect(screen.getByLabelText("Référence de commande")).toHaveValue("Audit SI");
+  expect(screen.getByRole("button", { name: "Convertir en commande" })).toBeInTheDocument();
+
+  rerender(
+    <ConversionForm
+      action={idleAction}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+      paymentTermsDays={30}
+      status="proposal"
+      today="2026-09-05"
+      convertedEngagementId="engagement-1"
+    />,
+  );
+
+  expect(screen.queryByRole("button", { name: "Convertir en commande" })).toBeNull();
+});
+
+it("announces a successful conversion without using an alert", async () => {
+  const action = async () => ({
+    message: "Opportunité convertie en commande.",
+    success: true,
+  });
+  render(
+    <ConversionForm
+      action={action}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+      paymentTermsDays={30}
+      status="proposal"
+      today="2026-09-08"
+      convertedEngagementId={null}
+    />,
+  );
+
+  const form = screen.getByRole("button", { name: "Convertir en commande" }).closest("form");
+  expect(form).not.toBeNull();
+  fireEvent.submit(form!);
+
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "Opportunité convertie en commande.",
+  );
+  expect(screen.queryByRole("alert")).toBeNull();
+});
+
+it("offers an accessible deletion control for an unconverted opportunity", () => {
+  render(
+    <DeleteOpportunityForm
+      action={idleAction}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+    />,
+  );
+
+  expect(screen.getByRole("button", { name: "Supprimer l’opportunité Audit SI" })).toBeInTheDocument();
+});
+
+it("requires explicit confirmation before opportunity deletion", () => {
+  let submissions = 0;
+  const action = async () => {
+    submissions += 1;
+    return { message: "Opportunité supprimée.", success: true };
+  };
+  render(
+    <DeleteOpportunityForm
+      action={action}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Supprimer l’opportunité Audit SI" }));
+
+  expect(submissions).toBe(0);
+  expect(
+    screen.getByRole("button", { name: "Confirmer la suppression de l’opportunité Audit SI" }),
+  ).toBeInTheDocument();
+});
+
+it("submits opportunity deletion after confirmation", async () => {
+  const action = async () => ({ message: "Opportunité supprimée.", success: true });
+  render(
+    <DeleteOpportunityForm
+      action={action}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Supprimer l’opportunité Audit SI" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Confirmer la suppression de l’opportunité Audit SI" }),
+  );
+
+  expect(await screen.findByRole("status")).toHaveTextContent("Opportunité supprimée.");
+});
+
+it("cancels opportunity deletion confirmation", () => {
+  let submissions = 0;
+  const action = async () => {
+    submissions += 1;
+    return { message: "Opportunité supprimée.", success: true };
+  };
+  render(
+    <DeleteOpportunityForm
+      action={action}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Supprimer l’opportunité Audit SI" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Annuler la suppression de l’opportunité Audit SI" }),
+  );
+
+  expect(submissions).toBe(0);
+  expect(
+    screen.queryByRole("button", {
+      name: "Confirmer la suppression de l’opportunité Audit SI",
+    }),
+  ).toBeNull();
+  expect(screen.getByRole("button", { name: "Supprimer l’opportunité Audit SI" })).toBeInTheDocument();
+});
+
+it("announces an opportunity deletion refusal", async () => {
+  const rejectedAction = async () => ({
+    message: "Une opportunité convertie ne peut pas être supprimée.",
+    success: false,
+  });
+  render(
+    <DeleteOpportunityForm
+      action={rejectedAction}
+      opportunityId="opportunity-1"
+      opportunityName="Audit SI"
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Supprimer l’opportunité Audit SI" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Confirmer la suppression de l’opportunité Audit SI" }),
+  );
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Une opportunité convertie ne peut pas être supprimée.",
+  );
+});
+
+it("renders an inline validation error returned by the action", async () => {
+  const rejectedAction = async () => ({
+    message: "Vérifiez les informations de l’opportunité.",
+    success: false,
+  });
+  render(
+    <OpportunityForm
+      action={rejectedAction}
+      customers={[{ id: "customer-1", name: "Atelier Atlas" }]}
+    />,
+  );
+
+  const form = screen.getByRole("button", { name: "Créer l’opportunité" }).closest("form");
+  expect(form).not.toBeNull();
+  fireEvent.submit(form!);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Vérifiez les informations de l’opportunité.",
+  );
+});

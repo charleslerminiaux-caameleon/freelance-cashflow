@@ -1,0 +1,2 @@
+-- Owner-scoped seed data is created during onboarding.
+-- Keep this file free of auth users, credentials, and installation-specific data.
