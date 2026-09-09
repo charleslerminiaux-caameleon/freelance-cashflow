@@ -9,7 +9,8 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "test:run": "pnpm -r test:run",
+    "test:run": "pnpm -r test:run && pnpm test:tooling",
+    "test:tooling": "node --test scripts/check-supabase-cli-version.test.mjs",
     "e2e": "pnpm --filter @fc/web e2e"
   }
 }

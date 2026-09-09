@@ -8,7 +8,7 @@ const localCommandFiles = [
   "apps/web/e2e/run-local.sh",
 ];
 const localInvocationPattern =
-  /\b(?:corepack\s+)?pnpm\s+dlx\s+supabase(?:@([0-9]+\.[0-9]+\.[0-9]+))?\b/gu;
+  /\b(?:corepack\s+)?pnpm\s+dlx\s+(supabase(?:@[^\s`"'\\]+)?)(?=\s)/gu;
 const failures = [];
 
 for (const file of localCommandFiles) {
@@ -21,23 +21,70 @@ for (const file of localCommandFiles) {
   }
 
   for (const invocation of invocations) {
-    if (invocation[1] !== expectedVersion) {
+    if (invocation[1] !== `supabase@${expectedVersion}`) {
       failures.push(`${file}: Supabase CLI doit utiliser @${expectedVersion}`);
     }
   }
 }
 
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-const ciVersions = [
-  ...workflow.matchAll(
-    /uses:\s*supabase\/setup-cli@v1\s+with:\s+version:\s*([^\s]+)/gu,
-  ),
-].map((match) => match[1]);
+const workflowLines = workflow.split(/\r?\n/u);
+const setupLineIndexes = workflowLines.flatMap((line, index) =>
+  /^\s*uses:\s*supabase\/setup-cli@[^\s#]+\s*(?:#.*)?$/u.test(line)
+    ? [index]
+    : [],
+);
 
-if (ciVersions.length === 0) {
+if (setupLineIndexes.length === 0) {
   failures.push(".github/workflows/ci.yml: aucun setup Supabase CLI trouvé");
-} else if (ciVersions.some((version) => version !== expectedVersion)) {
-  failures.push(`.github/workflows/ci.yml: Supabase CLI doit utiliser ${expectedVersion}`);
+}
+
+for (const [setupIndex, setupLineIndex] of setupLineIndexes.entries()) {
+  const usesIndent = workflowLines[setupLineIndex].length
+    - workflowLines[setupLineIndex].trimStart().length;
+  let stepEnd = workflowLines.length;
+
+  for (let index = setupLineIndex + 1; index < workflowLines.length; index += 1) {
+    const line = workflowLines[index];
+    const trimmed = line.trim();
+    const indent = line.length - line.trimStart().length;
+
+    if (trimmed.startsWith("- ") && indent < usesIndent) {
+      stepEnd = index;
+      break;
+    }
+  }
+
+  const stepLines = workflowLines.slice(setupLineIndex + 1, stepEnd);
+  const withLineOffset = stepLines.findIndex((line) => {
+    const indent = line.length - line.trimStart().length;
+    return line.trim() === "with:" && indent === usesIndent;
+  });
+  let version;
+
+  if (withLineOffset >= 0) {
+    const withLineIndex = setupLineIndex + 1 + withLineOffset;
+
+    for (let index = withLineIndex + 1; index < stepEnd; index += 1) {
+      const line = workflowLines[index];
+      const trimmed = line.trim();
+      const indent = line.length - line.trimStart().length;
+
+      if (trimmed.length > 0 && indent <= usesIndent) break;
+
+      const versionMatch = trimmed.match(/^version:\s*([^\s#]+)\s*(?:#.*)?$/u);
+      if (versionMatch) {
+        version = versionMatch[1];
+        break;
+      }
+    }
+  }
+
+  if (version !== expectedVersion) {
+    failures.push(
+      `.github/workflows/ci.yml: setup Supabase CLI #${setupIndex + 1} doit définir version: ${expectedVersion}`,
+    );
+  }
 }
 
 if (failures.length > 0) {
