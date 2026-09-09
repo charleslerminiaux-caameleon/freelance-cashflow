@@ -1,6 +1,6 @@
 begin;
 
-select plan(11);
+select plan(27);
 
 select is(
   (select prosecdef from pg_proc where oid = 'public.preserve_converted_opportunity()'::regprocedure),
@@ -48,6 +48,150 @@ select is(
   (select proconfig from pg_proc where oid = 'public.synchronize_invoice_schedule_status()'::regprocedure),
   array['search_path=""']::text[],
   'the schedule-status trigger locks its search path'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.preserve_converted_opportunity()',
+    'execute'
+  ),
+  'anon cannot execute the converted-opportunity trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.preserve_converted_opportunity()',
+    'execute'
+  ),
+  'authenticated cannot execute the converted-opportunity trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'service_role',
+    'public.preserve_converted_opportunity()',
+    'execute'
+  ),
+  'service_role cannot execute the converted-opportunity trigger function'
+);
+
+select ok(
+  has_function_privilege(
+    'postgres',
+    'public.preserve_converted_opportunity()',
+    'execute'
+  ),
+  'postgres retains execution authority for the converted-opportunity trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.preserve_engagement_conversion_link()',
+    'execute'
+  ),
+  'anon cannot execute the reciprocal-link trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.preserve_engagement_conversion_link()',
+    'execute'
+  ),
+  'authenticated cannot execute the reciprocal-link trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'service_role',
+    'public.preserve_engagement_conversion_link()',
+    'execute'
+  ),
+  'service_role cannot execute the reciprocal-link trigger function'
+);
+
+select ok(
+  has_function_privilege(
+    'postgres',
+    'public.preserve_engagement_conversion_link()',
+    'execute'
+  ),
+  'postgres retains execution authority for the reciprocal-link trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.protect_invoiced_schedule_identity()',
+    'execute'
+  ),
+  'anon cannot execute the invoiced-schedule trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.protect_invoiced_schedule_identity()',
+    'execute'
+  ),
+  'authenticated cannot execute the invoiced-schedule trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'service_role',
+    'public.protect_invoiced_schedule_identity()',
+    'execute'
+  ),
+  'service_role cannot execute the invoiced-schedule trigger function'
+);
+
+select ok(
+  has_function_privilege(
+    'postgres',
+    'public.protect_invoiced_schedule_identity()',
+    'execute'
+  ),
+  'postgres retains execution authority for the invoiced-schedule trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.synchronize_invoice_schedule_status()',
+    'execute'
+  ),
+  'anon cannot execute the schedule-status trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.synchronize_invoice_schedule_status()',
+    'execute'
+  ),
+  'authenticated cannot execute the schedule-status trigger function'
+);
+
+select ok(
+  not has_function_privilege(
+    'service_role',
+    'public.synchronize_invoice_schedule_status()',
+    'execute'
+  ),
+  'service_role cannot execute the schedule-status trigger function'
+);
+
+select ok(
+  has_function_privilege(
+    'postgres',
+    'public.synchronize_invoice_schedule_status()',
+    'execute'
+  ),
+  'postgres retains execution authority for the schedule-status trigger function'
 );
 
 insert into auth.users (id, email)
