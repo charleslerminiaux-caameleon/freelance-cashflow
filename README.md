@@ -33,12 +33,12 @@ Prérequis : Node.js 24, pnpm 10 via Corepack, Docker et une connexion nécessai
 ```bash
 corepack enable
 corepack pnpm install --frozen-lockfile
-corepack pnpm dlx supabase start
-corepack pnpm dlx supabase db reset --local
+corepack pnpm dlx supabase@2.116.0 start
+corepack pnpm dlx supabase@2.116.0 db reset --local
 cp .env.example apps/web/.env.local
 ```
 
-Renseignez ensuite dans `apps/web/.env.local` les trois valeurs locales indiquées par `corepack pnpm dlx supabase status --output env`, puis lancez :
+Renseignez ensuite dans `apps/web/.env.local` les trois valeurs locales indiquées par `corepack pnpm dlx supabase@2.116.0 status --output env`, puis lancez :
 
 ```bash
 corepack pnpm dev
@@ -53,7 +53,7 @@ corepack pnpm lint
 corepack pnpm typecheck
 corepack pnpm test:run
 corepack pnpm build
-corepack pnpm dlx supabase test db
+corepack pnpm dlx supabase@2.116.0 test db
 corepack pnpm e2e
 ```
 

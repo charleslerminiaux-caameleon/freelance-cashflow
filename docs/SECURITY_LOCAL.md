@@ -45,4 +45,4 @@ git diff --cached
 
 Si un secret est exposé, considérez-le comme compromis même après suppression du fichier : révoquez-le chez le fournisseur, créez une nouvelle valeur, mettez à jour les environnements autorisés et auditez l’historique Git.
 
-Pour une compromission locale, détruisez les données de la stack concernée si nécessaire avec `supabase stop --no-backup`. Pour Supabase hébergé ou Qonto, suivez la procédure de rotation du fournisseur ; modifier seulement un fichier `.env` ne révoque pas l’ancienne clé.
+Pour une compromission locale, détruisez les données de la stack concernée si nécessaire avec `corepack pnpm dlx supabase@2.116.0 stop --no-backup`. Pour Supabase hébergé ou Qonto, suivez la procédure de rotation du fournisseur ; modifier seulement un fichier `.env` ne révoque pas l’ancienne clé.

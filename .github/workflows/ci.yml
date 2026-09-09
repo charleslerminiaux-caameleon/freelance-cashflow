@@ -36,6 +36,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Check Supabase CLI version contract
+        run: pnpm check:supabase-cli
       - name: Lint
         run: pnpm lint
       - name: Typecheck

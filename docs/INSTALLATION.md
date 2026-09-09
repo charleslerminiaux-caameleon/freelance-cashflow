@@ -32,8 +32,8 @@ corepack pnpm install --frozen-lockfile
 Le projet utilise les ports dédiés définis dans `supabase/config.toml` afin de ne pas interférer avec une autre stack locale.
 
 ```bash
-corepack pnpm dlx supabase start
-corepack pnpm dlx supabase db reset --local
+corepack pnpm dlx supabase@2.116.0 start
+corepack pnpm dlx supabase@2.116.0 db reset --local
 ```
 
 La remise à zéro recrée uniquement la base de cette stack locale, applique toutes les migrations et charge le seed fictif.
@@ -44,7 +44,7 @@ Créez un fichier local ignoré par Git :
 
 ```bash
 cp .env.example apps/web/.env.local
-corepack pnpm dlx supabase status --output env
+corepack pnpm dlx supabase@2.116.0 status --output env
 ```
 
 Reportez les valeurs locales sans les publier ni les copier dans un ticket :
@@ -79,8 +79,8 @@ corepack pnpm build
 Les migrations et contraintes PostgreSQL :
 
 ```bash
-corepack pnpm dlx supabase db reset --local
-corepack pnpm dlx supabase test db
+corepack pnpm dlx supabase@2.116.0 db reset --local
+corepack pnpm dlx supabase@2.116.0 test db
 ```
 
 Le parcours complet Chromium :
@@ -97,13 +97,13 @@ Le lanceur E2E récupère les clés de la stack locale en mémoire si elles ne s
 Conservez les données locales :
 
 ```bash
-corepack pnpm dlx supabase stop
+corepack pnpm dlx supabase@2.116.0 stop
 ```
 
 Supprimez les volumes et données de cette stack locale :
 
 ```bash
-corepack pnpm dlx supabase stop --no-backup
+corepack pnpm dlx supabase@2.116.0 stop --no-backup
 ```
 
 Cette dernière commande est destructive pour la stack du repository courant. Vérifiez toujours le `project_id` avant de l’utiliser.

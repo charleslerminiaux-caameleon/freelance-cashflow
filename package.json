@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "pnpm --filter @fc/web dev",
     "build": "pnpm -r build",
+    "check:supabase-cli": "node scripts/check-supabase-cli-version.mjs",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",

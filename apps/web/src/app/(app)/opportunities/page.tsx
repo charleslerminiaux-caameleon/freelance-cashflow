@@ -7,6 +7,7 @@ import {
   updateCustomerAction,
 } from "@/features/customers/actions";
 import { listCustomers } from "@/features/customers/repository";
+import { getOwnerBusinessDate } from "@/features/invoices/business-date";
 import {
   convertOpportunityAction,
   createOpportunityAction,
@@ -48,13 +49,11 @@ function displayDate(value: string | null): string {
 export default async function OpportunitiesPage() {
   const { userId } = await requireOwner();
   const client = await createClient();
-  const [customers, opportunities] = await Promise.all([
+  const [customers, opportunities, today] = await Promise.all([
     listCustomers(client, userId),
     listOpportunities(client, userId),
+    getOwnerBusinessDate(client, userId),
   ]);
-  const today = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Europe/Paris",
-  }).format(new Date());
 
   return (
     <div className="commercial-page">
