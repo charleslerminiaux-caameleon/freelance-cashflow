@@ -12,5 +12,8 @@
     "test:run": "pnpm -r test:run && pnpm test:tooling",
     "test:tooling": "node --test scripts/check-supabase-cli-version.test.mjs",
     "e2e": "pnpm --filter @fc/web e2e"
+  },
+  "devDependencies": {
+    "yaml": "2.9.0"
   }
 }

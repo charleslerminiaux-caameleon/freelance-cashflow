@@ -124,3 +124,73 @@ test("accepts an inline CI setup step with the exact version", async () => {
 
   assert.equal(result.status, 0, result.stderr);
 });
+
+test("rejects version-like text inside a multiline scalar", async () => {
+  const result = await runContract({
+    workflow: `jobs:
+  database:
+    steps:
+      - name: |
+          This text is not step configuration.
+          with:
+            version: 2.116.0
+        uses: supabase/setup-cli@v1
+`,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /ci\.yml/u);
+});
+
+test("rejects an invalid workflow document without echoing parser details", async () => {
+  const result = await runContract({ workflow: "jobs: [" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /document YAML invalide/u);
+});
+
+test("rejects malformed workflow jobs", async () => {
+  const result = await runContract({ workflow: "jobs: []" });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /jobs doit être un objet/u);
+});
+
+test("rejects malformed workflow steps", async () => {
+  const result = await runContract({
+    workflow: `jobs:
+  database:
+    steps: invalid
+`,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /steps du job #1 doit être une liste/u);
+});
+
+test("rejects a valid workflow with no Supabase setup step", async () => {
+  const result = await runContract({
+    workflow: `jobs:
+  quality:
+    steps:
+      - run: corepack pnpm lint
+`,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /aucun setup Supabase CLI trouvé/u);
+});
+
+test("accepts quoted setup values with YAML comments", async () => {
+  const result = await runContract({
+    workflow: `jobs:
+  database:
+    steps:
+      - uses: "supabase/setup-cli@v1" # action pin
+        with:
+          version: "2.116.0" # CLI pin
+`,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+});
