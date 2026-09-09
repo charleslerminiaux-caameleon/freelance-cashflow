@@ -16,6 +16,11 @@ const exactSetupStep = `
         with:
           version: 2.116.0
 `;
+const exactInlineSetupStep = `
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.116.0
+`;
 
 async function runContract({
   readmeCommand = exactLocalCommand,
@@ -94,4 +99,28 @@ test("rejects an additional CI setup step without a Supabase version", async () 
 
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /ci\.yml/u);
+});
+
+test("rejects an inline CI setup step without a version beside a pinned named step", async () => {
+  const result = await runContract({
+    workflow: `jobs:
+  database:
+    steps:
+      - uses: supabase/setup-cli@v1
+  e2e:
+    steps:${exactSetupStep}`,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /ci\.yml/u);
+});
+
+test("accepts an inline CI setup step with the exact version", async () => {
+  const result = await runContract({
+    workflow: `jobs:
+  database:
+    steps:${exactInlineSetupStep}`,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
 });

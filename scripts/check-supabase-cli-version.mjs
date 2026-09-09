@@ -29,48 +29,66 @@ for (const file of localCommandFiles) {
 
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 const workflowLines = workflow.split(/\r?\n/u);
-const setupLineIndexes = workflowLines.flatMap((line, index) =>
-  /^\s*uses:\s*supabase\/setup-cli@[^\s#]+\s*(?:#.*)?$/u.test(line)
-    ? [index]
+const setupSteps = workflowLines.flatMap((line, index) =>
+  /^\s*(?:-\s+)?uses:\s*supabase\/setup-cli@[^\s#]+\s*(?:#.*)?$/u.test(line)
+    ? [{ inline: /^\s*-\s+uses:/u.test(line), usesLineIndex: index }]
     : [],
 );
 
-if (setupLineIndexes.length === 0) {
+if (setupSteps.length === 0) {
   failures.push(".github/workflows/ci.yml: aucun setup Supabase CLI trouvé");
 }
 
-for (const [setupIndex, setupLineIndex] of setupLineIndexes.entries()) {
-  const usesIndent = workflowLines[setupLineIndex].length
-    - workflowLines[setupLineIndex].trimStart().length;
+for (const [setupIndex, setupStep] of setupSteps.entries()) {
+  const usesLine = workflowLines[setupStep.usesLineIndex];
+  const usesIndent = usesLine.length - usesLine.trimStart().length;
+  let stepStart = setupStep.usesLineIndex;
+  let stepIndent = usesIndent;
+
+  if (!setupStep.inline) {
+    for (let index = setupStep.usesLineIndex - 1; index >= 0; index -= 1) {
+      const line = workflowLines[index];
+      const indent = line.length - line.trimStart().length;
+
+      if (line.trim().startsWith("- ") && indent < usesIndent) {
+        stepStart = index;
+        stepIndent = indent;
+        break;
+      }
+    }
+  }
+
   let stepEnd = workflowLines.length;
 
-  for (let index = setupLineIndex + 1; index < workflowLines.length; index += 1) {
+  for (let index = stepStart + 1; index < workflowLines.length; index += 1) {
     const line = workflowLines[index];
     const trimmed = line.trim();
     const indent = line.length - line.trimStart().length;
 
-    if (trimmed.startsWith("- ") && indent < usesIndent) {
+    if (trimmed.length > 0 && indent <= stepIndent) {
       stepEnd = index;
       break;
     }
   }
 
-  const stepLines = workflowLines.slice(setupLineIndex + 1, stepEnd);
+  const stepLines = workflowLines.slice(stepStart + 1, stepEnd);
   const withLineOffset = stepLines.findIndex((line) => {
     const indent = line.length - line.trimStart().length;
-    return line.trim() === "with:" && indent === usesIndent;
+    return line.trim() === "with:" && indent > stepIndent;
   });
   let version;
 
   if (withLineOffset >= 0) {
-    const withLineIndex = setupLineIndex + 1 + withLineOffset;
+    const withLineIndex = stepStart + 1 + withLineOffset;
+    const withLine = workflowLines[withLineIndex];
+    const withIndent = withLine.length - withLine.trimStart().length;
 
     for (let index = withLineIndex + 1; index < stepEnd; index += 1) {
       const line = workflowLines[index];
       const trimmed = line.trim();
       const indent = line.length - line.trimStart().length;
 
-      if (trimmed.length > 0 && indent <= usesIndent) break;
+      if (trimmed.length > 0 && indent <= withIndent) break;
 
       const versionMatch = trimmed.match(/^version:\s*([^\s#]+)\s*(?:#.*)?$/u);
       if (versionMatch) {
