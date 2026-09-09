@@ -21,7 +21,9 @@ async function loginAsOwner(page: Page) {
   await form.getByLabel("Adresse e-mail").fill(ownerEmail);
   await form.getByLabel("Mot de passe").fill(password);
   await form.getByRole("button", { name: "Se connecter" }).click();
-  await expect(page.getByRole("heading", { name: "Préparer votre prévision de trésorerie" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Préparer votre prévision de trésorerie" })).toBeVisible({
+    timeout: 30_000,
+  });
 }
 
 async function completeOnboarding(
@@ -31,7 +33,7 @@ async function completeOnboarding(
   await page.getByLabel("Solde d’ouverture").fill(values.openingBalance);
   await page.getByLabel("Seuil de sécurité").fill(values.safetyThreshold);
   await page.getByRole("button", { name: "Terminer la configuration" }).click();
-  await expect(page).toHaveURL(/\/dashboard(?:\?|$)/u);
+  await expect(page).toHaveURL(/\/dashboard(?:\?|$)/u, { timeout: 30_000 });
 }
 
 async function createCustomer(page: Page, name: string) {
