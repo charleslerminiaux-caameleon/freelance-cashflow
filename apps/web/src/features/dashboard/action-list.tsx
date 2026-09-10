@@ -1,4 +1,4 @@
-import { formatMoney } from "@fc/shared";
+import { formatMoney, formatShortLocalDate } from "@fc/shared";
 
 import type { DashboardViewModel } from "./view-model";
 
@@ -34,7 +34,7 @@ export function ActionList({
               <a href={`/engagements/${item.engagementId}`}>
                 <span>
                   <strong>Facturer {item.customerName}</strong>
-                  <small>{item.engagementReference} · prévu le {item.plannedInvoiceDate}</small>
+                  <small>{item.engagementReference} · prévu le {formatShortLocalDate(item.plannedInvoiceDate)}</small>
                 </span>
                 <b>{formatMoney(item.amountCents)}</b>
               </a>

@@ -14,14 +14,14 @@ function scheduleErrorMessage(error: unknown): string {
     error instanceof RepositoryError &&
     error.code === "FC_BILLING_SCHEDULE_EXCEEDS_ENGAGEMENT"
   ) {
-    return "Le total TTC des échéances dépasserait le montant TTC de la commande.";
+    return "Le total TTC des étapes de facturation dépasserait le montant TTC de la commande.";
   }
 
   if (error instanceof RepositoryError && error.code === "FC_ENGAGEMENT_NOT_FOUND") {
     return "Cette commande est introuvable.";
   }
 
-  return "Vérifiez le montant, la TVA et les dates de l’échéance.";
+  return "Vérifiez le montant, la TVA et les dates de l’étape de facturation.";
 }
 
 export async function createBillingScheduleItemAction(
@@ -43,7 +43,7 @@ export async function createBillingScheduleItemAction(
     await createBillingScheduleItem(client, userId, command);
     revalidatePath(`/engagements/${command.engagementId}`);
     revalidatePath("/engagements");
-    return { message: "Échéance ajoutée.", success: true };
+    return { message: "Étape de facturation ajoutée.", success: true };
   } catch (error) {
     return { message: scheduleErrorMessage(error), success: false };
   }

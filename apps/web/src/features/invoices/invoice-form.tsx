@@ -85,7 +85,7 @@ export function InvoiceForm({
           </select>
         </div>
         <div className="form-grid-wide">
-          <label htmlFor={`${fieldId}-schedule`}>Échéance de commande (facultative)</label>
+          <label htmlFor={`${fieldId}-schedule`}>Étape de facturation (facultative)</label>
           <select
             id={`${fieldId}-schedule`}
             name="billingScheduleItemId"

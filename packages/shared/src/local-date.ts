@@ -26,3 +26,7 @@ export function localDate(value: string): LocalDate {
 
   return value as LocalDate;
 }
+
+export function formatShortLocalDate(value: LocalDate): string {
+  return `${value.slice(8, 10)}/${value.slice(5, 7)}`;
+}

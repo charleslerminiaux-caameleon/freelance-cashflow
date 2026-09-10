@@ -10,7 +10,13 @@ import {
   type PlannedForecastSource,
   type RecurringForecastSource,
 } from "@fc/domain";
-import { localDate, moneyCents, type LocalDate, type MoneyCents } from "@fc/shared";
+import {
+  formatShortLocalDate,
+  localDate,
+  moneyCents,
+  type LocalDate,
+  type MoneyCents,
+} from "@fc/shared";
 
 export type DashboardHorizonDays = 30 | 90 | 180;
 
@@ -339,7 +345,7 @@ export function buildDashboardViewModel(
       })),
       riskDate: riskPoint?.date ?? null,
       summary: riskPoint
-        ? `Le scénario ${options.scenario} passe sous le seuil de sécurité le ${riskPoint.date}.`
+        ? `Le scénario ${options.scenario} passe sous le seuil de sécurité le ${formatShortLocalDate(riskPoint.date)}.`
         : `Le scénario ${options.scenario} reste au-dessus du seuil sur ${options.horizonDays} jours.`,
     },
     overdueInvoices,

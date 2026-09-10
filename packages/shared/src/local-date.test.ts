@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { localDate } from "./local-date";
+import { formatShortLocalDate, localDate } from "./local-date";
 
 describe("localDate", () => {
   it("rejects dates that JavaScript would roll over", () => {
@@ -13,5 +13,9 @@ describe("localDate", () => {
 
   it("rejects non-ISO calendar strings", () => {
     expect(() => localDate("2028-2-29")).toThrow("valid ISO date");
+  });
+
+  it("formats a LocalDate as a French short date", () => {
+    expect(formatShortLocalDate(localDate("2026-12-31"))).toBe("31/12");
   });
 });

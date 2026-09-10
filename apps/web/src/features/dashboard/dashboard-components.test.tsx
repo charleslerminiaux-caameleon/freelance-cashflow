@@ -1,9 +1,13 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { localDate, moneyCents } from "@fc/shared";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { ActionList } from "./action-list";
-import { CashflowChart } from "./cashflow-chart";
+import {
+  CashflowChart,
+  formatCashflowChartTick,
+  formatCashflowChartTooltipLabel,
+} from "./cashflow-chart";
 import { HorizonSelector } from "./horizon-selector";
 import { KpiStrip } from "./kpi-strip";
 import { ScenarioControls } from "./scenario-controls";
@@ -25,6 +29,21 @@ const inclusions: DashboardInclusions = {
   signedOrders: false,
   weightedOpportunities: false,
 };
+
+const scenarioHelp = [
+  {
+    label: "Facturé",
+    description: "Factures émises restant à encaisser; les sorties certaines continuent d’être prises en compte dans la trésorerie.",
+  },
+  {
+    label: "Commandes signées",
+    description: "Facturé plus les facturations planifiées des commandes signées; les opportunités sont exclues.",
+  },
+  {
+    label: "Pipeline pondéré",
+    description: "Commandes signées plus les opportunités ouvertes pondérées par leur probabilité (exemple : 10 000 € à 60 % compte pour 6 000 €).",
+  },
+] as const;
 
 function event(
   id: string,
@@ -69,6 +88,7 @@ describe("dashboard controls", () => {
       element?.tagName === "STRONG" && element.textContent === "42 380,00 €",
     )).toBeInTheDocument();
     expect(within(strip).getByText("69 jours")).toBeInTheDocument();
+    expect(within(strip).getByText("Facturé")).toBeInTheDocument();
   });
 
   it("keeps scenario and inclusions in linkable horizon URLs", () => {
@@ -88,7 +108,7 @@ describe("dashboard controls", () => {
     expect(screen.getByRole("link", { name: "90 j" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("submits an explicit filter marker so unchecked sources remain excluded", () => {
+  it("offers named scenarios with accessible explanations", () => {
     render(
       <ScenarioControls
         horizonDays={90}
@@ -100,15 +120,217 @@ describe("dashboard controls", () => {
     expect(document.querySelector('input[name="filters"]')).toHaveValue("1");
     expect(screen.getByRole("checkbox", { name: "Factures émises" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Commandes signées" })).not.toBeChecked();
-    expect(screen.getByLabelText("Scénario")).toHaveValue("certain");
+    expect(screen.getByRole("radio", { name: "Facturé" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Facturé" }).closest("form")).toHaveFormValues({
+      scenario: "certain",
+    });
+    expect(screen.getByRole("radio", { name: "Facturé" })).toHaveAccessibleDescription(
+      "Factures émises restant à encaisser; les sorties certaines continuent d’être prises en compte dans la trésorerie.",
+    );
+    expect(screen.getByRole("radio", { name: "Commandes signées" })).toHaveAccessibleDescription(
+      "Facturé plus les facturations planifiées des commandes signées; les opportunités sont exclues.",
+    );
+    expect(screen.getByRole("radio", { name: "Pipeline pondéré" })).toHaveAccessibleDescription(
+      "Commandes signées plus les opportunités ouvertes pondérées par leur probabilité (exemple : 10 000 € à 60 % compte pour 6 000 €).",
+    );
+    expect(screen.queryByRole("button", { name: "Mettre à jour" })).not.toBeInTheDocument();
+  });
+
+  it("shows each scenario help while its choice is hovered", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    for (const { description } of scenarioHelp) {
+      const tooltip = screen.getByText(description);
+
+      expect(tooltip).not.toBeVisible();
+      fireEvent.mouseEnter(tooltip.parentElement!);
+      expect(tooltip).toBeVisible();
+      fireEvent.mouseLeave(tooltip.parentElement!);
+      expect(tooltip).not.toBeVisible();
+    }
+  });
+
+  it("keeps each scenario help open while the pointer enters its text", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    for (const { label, description } of scenarioHelp) {
+      const radio = screen.getByRole("radio", { name: label });
+      const tooltip = screen.getByText(description);
+      const choice = tooltip.parentElement!;
+
+      fireEvent.mouseEnter(radio.closest("label")!);
+      fireEvent.mouseLeave(radio.closest("label")!, { relatedTarget: tooltip });
+      fireEvent.mouseEnter(tooltip, { relatedTarget: radio });
+
+      expect(tooltip).toBeVisible();
+      fireEvent.mouseLeave(choice);
+      expect(tooltip).not.toBeVisible();
+    }
+  });
+
+  it("shows each scenario help while its choice has keyboard focus", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    for (const { label, description } of scenarioHelp) {
+      const radio = screen.getByRole("radio", { name: label });
+      const tooltip = screen.getByText(description);
+
+      expect(tooltip).not.toBeVisible();
+      fireEvent.focus(radio);
+      expect(tooltip).toBeVisible();
+      fireEvent.blur(radio);
+      expect(tooltip).not.toBeVisible();
+    }
+  });
+
+  it("closes focused scenario help with Escape and reopens it after refocus", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    for (const { label, description } of scenarioHelp) {
+      const radio = screen.getByRole("radio", { name: label });
+      const tooltip = screen.getByText(description);
+
+      act(() => radio.focus());
+      expect(tooltip).toBeVisible();
+      fireEvent.keyDown(radio, { key: "Escape" });
+      expect(tooltip).not.toBeVisible();
+      expect(radio).toHaveFocus();
+      act(() => radio.blur());
+      act(() => radio.focus());
+      expect(tooltip).toBeVisible();
+      act(() => radio.blur());
+    }
+  });
+
+  it("submits each scenario's stable GET value automatically", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    const form = screen.getByRole("radio", { name: "Facturé" }).closest("form")!;
+    const submittedScenarios: string[] = [];
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submittedScenarios.push(String(new FormData(form).get("scenario")));
+    });
+
+    fireEvent.click(screen.getByRole("radio", { name: "Commandes signées" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Pipeline pondéré" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Facturé" }));
+
+    expect(submittedScenarios).toEqual(["committed", "probable", "certain"]);
+    expect(new FormData(form).get("horizon")).toBe("90");
+    expect(new FormData(form).get("filters")).toBe("1");
+  });
+
+  it("submits unchecked and restored inclusions in the GET payload", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    const form = screen.getByRole("radio", { name: "Facturé" }).closest("form")!;
+    const payloads: FormData[] = [];
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      payloads.push(new FormData(form));
+    });
+
+    const invoices = screen.getByRole("checkbox", { name: "Factures émises" });
+    fireEvent.click(invoices);
+    fireEvent.click(invoices);
+
+    expect(payloads[0]?.get("invoices")).toBeNull();
+    expect(payloads[1]?.get("invoices")).toBe("1");
+    for (const payload of payloads) {
+      expect(payload.get("scenario")).toBe("certain");
+      expect(payload.get("horizon")).toBe("90");
+      expect(payload.get("filters")).toBe("1");
+    }
   });
 });
 
 describe("dashboard detail panels", () => {
+  it("formats cashflow chart ticks as French short dates", () => {
+    expect(formatCashflowChartTick(localDate("2026-12-31"))).toBe("31/12");
+  });
+
+  it("formats cashflow chart tooltip labels as French short dates", () => {
+    expect(formatCashflowChartTooltipLabel(localDate("2026-12-31"))).toBe("Date : 31/12");
+  });
+
   it("exposes a textual chart legend and accessible risk summary", () => {
     render(
       <CashflowChart
         currency="EUR"
+        horizonDays={90}
+        scenario="certain"
+        chart={{
+          points: [{
+            date: localDate("2026-09-05"),
+            certainBalanceCents: moneyCents(4_238_000),
+            committedBalanceCents: moneyCents(4_238_000),
+            probableBalanceCents: moneyCents(4_238_000),
+            safetyThresholdCents: moneyCents(2_000_000),
+          }],
+          riskDate: localDate("2026-11-13"),
+          summary: "Une copie de résumé obsolète ne doit pas être affichée.",
+        }}
+      />,
+    );
+
+    const chart = screen.getByRole("img", { name: "Projection de trésorerie" });
+    expect(chart).toHaveAccessibleDescription(
+      "Facturé · passe sous le seuil de sécurité le 13/11.",
+    );
+    expect(chart.querySelector(".recharts-responsive-container")).toHaveStyle({
+      minWidth: "0",
+      width: "100%",
+    });
+    const legend = screen.getByRole("list", { name: "Légende du graphique" });
+    expect(within(legend).getByText("Facturé")).toBeInTheDocument();
+    expect(within(legend).getByText("Commandes signées")).toBeInTheDocument();
+    expect(within(legend).getByText("Pipeline pondéré")).toBeInTheDocument();
+    expect(screen.getByText("Seuil de sécurité")).toBeInTheDocument();
+  });
+
+  it("builds the safe chart summary from the structured horizon", () => {
+    render(
+      <CashflowChart
+        currency="EUR"
+        horizonDays={180}
+        scenario="probable"
         chart={{
           points: [{
             date: localDate("2026-09-05"),
@@ -118,23 +340,14 @@ describe("dashboard detail panels", () => {
             safetyThresholdCents: moneyCents(2_000_000),
           }],
           riskDate: null,
-          summary: "Le scénario certain reste au-dessus du seuil sur 90 jours.",
+          summary: "Une copie de résumé obsolète ne doit pas être affichée.",
         }}
       />,
     );
 
-    const chart = screen.getByRole("img", { name: "Projection de trésorerie" });
-    expect(chart).toHaveAccessibleDescription(
-      "Le scénario certain reste au-dessus du seuil sur 90 jours.",
+    expect(screen.getByRole("img", { name: "Projection de trésorerie" })).toHaveAccessibleDescription(
+      "Pipeline pondéré · reste au-dessus du seuil sur 180 jours.",
     );
-    expect(chart.querySelector(".recharts-responsive-container")).toHaveStyle({
-      minWidth: "0",
-      width: "100%",
-    });
-    expect(screen.getByText("Certain")).toBeInTheDocument();
-    expect(screen.getByText("Engagé")).toBeInTheDocument();
-    expect(screen.getByText("Probable pondéré")).toBeInTheDocument();
-    expect(screen.getByText("Seuil de sécurité")).toBeInTheDocument();
   });
 
   it("links overdue invoices and invoiceable schedules to their work screens", () => {
@@ -170,6 +383,25 @@ describe("dashboard detail panels", () => {
     );
   });
 
+  it("renders invoiceable schedule dates in French short format", () => {
+    render(
+      <ActionList
+        overdueInvoices={[]}
+        itemsToInvoice={[{
+          id: "schedule-1",
+          engagementId: "engagement-1",
+          label: "Acompte",
+          engagementReference: "CMD-001",
+          customerName: "Studio Vermeil",
+          plannedInvoiceDate: localDate("2026-09-15"),
+          amountCents: moneyCents(300_000),
+        }]}
+      />,
+    );
+
+    expect(screen.getByText("CMD-001 · prévu le 15/09")).toBeInTheDocument();
+  });
+
   it("shows upcoming inflows and outflows in separate named regions", () => {
     render(
       <UpcomingLists
@@ -200,5 +432,17 @@ describe("dashboard detail panels", () => {
         "/cashflow?horizon=90&scenario=probable&filters=1&expenses=1&weightedOpportunities=1",
       );
     }
+  });
+
+  it("renders upcoming cashflow dates in French short format", () => {
+    render(
+      <UpcomingLists
+        inflows={[event("invoice-1", "inflow", 600_000)]}
+        outflows={[]}
+        state={{ horizonDays: 90, scenario: "certain", inclusions }}
+      />,
+    );
+
+    expect(screen.getByText("20/09 · certain")).toBeInTheDocument();
   });
 });

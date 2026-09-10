@@ -52,11 +52,16 @@ export default async function DashboardPage({
 
       <div className="dashboard-layout">
         <div className="dashboard-primary">
-          <CashflowChart chart={model.chart} currency={model.currency} />
           <ScenarioControls
             horizonDays={model.horizonDays}
             scenario={model.scenario}
             inclusions={model.inclusions}
+          />
+          <CashflowChart
+            chart={model.chart}
+            currency={model.currency}
+            horizonDays={model.horizonDays}
+            scenario={model.scenario}
           />
         </div>
         <aside className="dashboard-secondary" aria-label="Suivi à court terme">

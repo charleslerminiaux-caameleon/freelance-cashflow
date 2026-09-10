@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+
+import { scenarioCopy } from "./scenario-copy";
 import type { DashboardViewModel } from "./view-model";
 
 export function ScenarioControls({
@@ -5,18 +10,63 @@ export function ScenarioControls({
   scenario,
   inclusions,
 }: Pick<DashboardViewModel, "horizonDays" | "scenario" | "inclusions">) {
+  const [hoveredScenario, setHoveredScenario] = useState<string | null>(null);
+  const [focusedScenario, setFocusedScenario] = useState<string | null>(null);
+  const [dismissedScenario, setDismissedScenario] = useState<string | null>(null);
+
   return (
-    <form className="scenario-controls" method="get" action="/dashboard">
+    <form
+      className="scenario-controls"
+      method="get"
+      action="/dashboard"
+      onChange={(event) => event.currentTarget.requestSubmit()}
+    >
       <input type="hidden" name="horizon" value={horizonDays} />
       <input type="hidden" name="filters" value="1" />
-      <div className="scenario-field">
-        <label htmlFor="dashboard-scenario">Scénario</label>
-        <select id="dashboard-scenario" name="scenario" defaultValue={scenario}>
-          <option value="certain">Certain</option>
-          <option value="committed">Engagé</option>
-          <option value="probable">Probable pondéré</option>
-        </select>
-      </div>
+      <fieldset className="scenario-choices">
+        <legend>Scénario</legend>
+        {Object.entries(scenarioCopy).map(([value, copy]) => (
+          <span
+            className="scenario-choice"
+            key={value}
+            onBlur={() => setFocusedScenario(null)}
+            onFocus={() => {
+              setFocusedScenario(value);
+              setDismissedScenario(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setDismissedScenario(value);
+            }}
+            onMouseEnter={() => {
+              setHoveredScenario(value);
+              setDismissedScenario(null);
+            }}
+            onMouseLeave={() => setHoveredScenario(null)}
+          >
+            <label>
+              <input
+                aria-describedby={`scenario-${value}-description`}
+                defaultChecked={scenario === value}
+                name="scenario"
+                type="radio"
+                value={value}
+              />
+              <span>{copy.label}</span>
+            </label>
+            <span
+              className="scenario-tooltip"
+              hidden={
+                dismissedScenario === value
+                || (hoveredScenario !== value && focusedScenario !== value)
+              }
+              id={`scenario-${value}-description`}
+              role="tooltip"
+            >
+              {copy.description}
+            </span>
+          </span>
+        ))}
+      </fieldset>
       <fieldset>
         <legend>Inclure</legend>
         <label>
@@ -41,7 +91,6 @@ export function ScenarioControls({
           Opportunités pondérées
         </label>
       </fieldset>
-      <button type="submit">Mettre à jour</button>
     </form>
   );
 }

@@ -34,10 +34,10 @@ function invoiceErrorMessage(error: unknown): string {
       return "Ce numéro existe déjà avec des informations différentes.";
     }
     if (error.code === "FC_SCHEDULE_ALREADY_INVOICED") {
-      return "Cette échéance a déjà été facturée.";
+      return "Cette étape de facturation a déjà été facturée.";
     }
     if (error.code === "FC_SCHEDULE_INVOICE_MISMATCH") {
-      return "Le client et les montants doivent correspondre à l’échéance sélectionnée.";
+      return "Le client et les montants doivent correspondre à l’étape de facturation sélectionnée.";
     }
     if (error.code === "FC_CUSTOMER_NOT_FOUND") {
       return "Le client sélectionné est introuvable.";

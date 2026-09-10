@@ -1,4 +1,4 @@
-import { formatMoney } from "@fc/shared";
+import { formatMoney, formatShortLocalDate } from "@fc/shared";
 
 import { dashboardStateHref, type DashboardNavigationState } from "./url-state";
 import type { DashboardTreasuryEvent } from "./view-model";
@@ -25,7 +25,7 @@ function UpcomingList({
             <li key={event.id}>
               <span>
                 <strong>{event.label}</strong>
-                <small>{event.plannedDate} · {event.certainty}</small>
+                <small>{formatShortLocalDate(event.plannedDate)} · {event.certainty}</small>
               </span>
               <b className={direction === "inflow" ? "positive" : "negative"}>
                 {direction === "inflow" ? "+" : "−"}{formatMoney(event.amountCents)}
