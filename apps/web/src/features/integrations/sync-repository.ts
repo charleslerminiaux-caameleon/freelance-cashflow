@@ -20,6 +20,7 @@ const acquireSchema = z
     integration_id: z.string().uuid(),
     run_id: z.string().uuid(),
     initial_created_from: isoDateSchema,
+    initial_created_from_instant: instantSchema,
     updated_from: instantSchema,
     updated_to: instantSchema,
   })
@@ -46,11 +47,15 @@ function isTransientDatabaseCode(code: unknown): boolean {
   );
 }
 
-function rpcError(error: RpcError): SyncStoreError {
+function rpcError(error: RpcError, status: number): SyncStoreError {
   if (error.code === "P0001" && error.message === "SYNC_LOCKED") {
     return new SyncStoreError("SYNC_LOCKED", false);
   }
-  return new SyncStoreError("DATABASE_ERROR", isTransientDatabaseCode(error.code));
+  const transportFailed = status === 0 && error.code === "";
+  return new SyncStoreError(
+    "DATABASE_ERROR",
+    transportFailed || isTransientDatabaseCode(error.code),
+  );
 }
 
 function invalidOutput(): SyncStoreError {
@@ -89,8 +94,8 @@ function transactionPayload(transaction: NormalizedBankTransaction) {
 export function createBankingSyncStore(client: SupabaseClient): BankingSyncStore {
   async function call(name: string, parameters: Record<string, unknown>): Promise<unknown> {
     try {
-      const { data, error } = await client.rpc(name, parameters);
-      if (error) throw rpcError(error);
+      const { data, error, status } = await client.rpc(name, parameters);
+      if (error) throw rpcError(error, status);
       return data;
     } catch (error) {
       if (error instanceof SyncStoreError) throw error;
@@ -109,6 +114,9 @@ export function createBankingSyncStore(client: SupabaseClient): BankingSyncStore
       return {
         integrationId: parsed.data.integration_id,
         initialCreatedFrom: parsed.data.initial_created_from,
+        initialCreatedFromInstant: new Date(
+          parsed.data.initial_created_from_instant,
+        ).toISOString(),
         updatedFrom: new Date(parsed.data.updated_from).toISOString(),
         updatedTo: new Date(parsed.data.updated_to).toISOString(),
       };

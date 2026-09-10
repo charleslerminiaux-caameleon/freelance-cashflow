@@ -107,10 +107,27 @@ select public.acquire_banking_sync('10000000-0000-4000-8000-000000000002','30000
 update public.integrations set initial_created_from='2026-01-01',lease_expires_at=clock_timestamp()-interval '1 second';
 create temp table retry_acquisition as select public.acquire_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000008') result;
 select is((select result->>'initial_created_from' from retry_acquisition),'2026-01-01','retry JSON retains original history bound');
+select is((select result->>'initial_created_from_instant' from retry_acquisition),'2025-12-31T23:00:00+00:00','acquisition returns Paris winter history instant');
 select is((select initial_created_from from public.sync_runs where id='30000000-0000-4000-8000-000000000008'),'2026-01-01'::date,'retry preserves original history date');
 select is((select updated_from from public.sync_runs where id='30000000-0000-4000-8000-000000000008'),'2025-12-31T23:00:00Z'::timestamptz,'retry initial window uses owner timezone');
 select throws_ok($$select public.fail_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000008','unsafe diagnostic',true)$$,'P0001','DATABASE_ERROR','only stable error codes may persist');
 select public.fail_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000008','PROVIDER_AUTH_EXPIRED',false);
 select is((select last_connection_succeeded from public.integrations),false,'failed connection recorded separately');
+
+update public.integrations set initial_created_from='2026-07-10';
+create temp table paris_summer_acquisition as select public.acquire_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000009') result;
+select is((select result->>'initial_created_from_instant' from paris_summer_acquisition),'2026-07-09T22:00:00+00:00','acquisition returns Paris summer history instant');
+select public.fail_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000009','PROVIDER_UNAVAILABLE',false);
+
+update public.app_settings set timezone='America/Havana' where owner_user_id='10000000-0000-4000-8000-000000000002';
+update public.integrations set initial_created_from='2026-03-08';
+create temp table havana_gap_acquisition as select public.acquire_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000010') result;
+select is((select result->>'initial_created_from_instant' from havana_gap_acquisition),'2026-03-08T05:00:00+00:00','acquisition resolves Havana midnight gap with PostgreSQL semantics');
+select public.fail_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000010','PROVIDER_UNAVAILABLE',false);
+
+update public.integrations set initial_created_from='2025-11-02';
+create temp table havana_overlap_acquisition as select public.acquire_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000011') result;
+select is((select result->>'initial_created_from_instant' from havana_overlap_acquisition),'2025-11-02T05:00:00+00:00','acquisition resolves Havana midnight overlap with PostgreSQL semantics');
+select public.fail_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000011','PROVIDER_UNAVAILABLE',false);
 select * from finish();
 rollback;

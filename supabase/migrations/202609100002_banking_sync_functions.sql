@@ -52,7 +52,14 @@ begin
     values(p_run_id,p_owner_user_id,v.id,v_initial,v_from,v_now);
   update public.integrations set lease_run_id=p_run_id,lease_expires_at=v_now+interval '60 seconds',
     initial_created_from=v_initial,status='syncing',last_error_code=null where id=v.id;
-  return jsonb_build_object('integration_id',v.id,'run_id',p_run_id,'initial_created_from',v_initial,'updated_from',v_from,'updated_to',v_now);
+  return jsonb_build_object(
+    'integration_id',v.id,
+    'run_id',p_run_id,
+    'initial_created_from',v_initial,
+    'initial_created_from_instant',v_initial::timestamp at time zone v_timezone,
+    'updated_from',v_from,
+    'updated_to',v_now
+  );
 exception when sqlstate '42501' or raise_exception then raise;
   when others then raise exception using errcode='P0001',message='DATABASE_ERROR';
 end;

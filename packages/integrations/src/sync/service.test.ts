@@ -63,6 +63,7 @@ class FakeStore implements BankingSyncStore {
     return {
       integrationId: "33333333-3333-4333-8333-333333333333",
       initialCreatedFrom: "2026-03-10",
+      initialCreatedFromInstant: "2026-03-09T23:00:00.000Z",
       updatedFrom: "2026-09-01T00:00:00.000Z",
       updatedTo: "2026-09-10T09:00:00.000Z",
     };
@@ -339,7 +340,7 @@ describe("synchronizeBanking", () => {
         2: { items: [], nextPage: null },
       },
     });
-    const ticks = [0, 0, 120_001];
+    const ticks = [0, 0, 0, 0, 120_001];
     const { result, store } = synchronize(bankingProvider, new FakeStore(), () => ticks.shift() ?? 120_001);
 
     await expect(result).resolves.toEqual({
@@ -366,6 +367,25 @@ describe("synchronizeBanking", () => {
       code: "PROVIDER_UNAVAILABLE",
     });
     expect(store.calls).not.toContain("stage-accounts-1");
+    expect(store.calls).not.toContain("publish");
+  });
+
+  it("does not start a provider request when lease renewal crosses the overall deadline", async () => {
+    const bankingProvider = provider({
+      accounts: { 1: { items: [], nextPage: null } },
+    });
+    const store = new FakeStore();
+    let time = 0;
+    store.renew = vi.fn(async () => {
+      store.calls.push("renew");
+      time = 120_001;
+    });
+
+    await expect(synchronize(bankingProvider, store, () => time).result).resolves.toEqual({
+      success: false,
+      code: "PROVIDER_UNAVAILABLE",
+    });
+    expect(bankingProvider.accountRequests).toEqual([]);
     expect(store.calls).not.toContain("publish");
   });
 
@@ -433,26 +453,6 @@ describe("synchronizeBanking", () => {
     ).resolves.toEqual({ success: true, created: 1, updated: 2 });
   });
 
-  it("sanitizes invalid initial date and timezone as an invalid provider window", async () => {
-    const bankingProvider = provider({
-      accounts: { 1: { items: [account("account-a")], nextPage: null } },
-      transactions: { "account-a": { 1: { items: [], nextPage: null } } },
-    });
-    const store = new FakeStore();
-    store.acquire = vi.fn().mockResolvedValue({
-      integrationId: "33333333-3333-4333-8333-333333333333",
-      initialCreatedFrom: "2026-02-30",
-      updatedFrom: "2026-09-01T00:00:00.000Z",
-      updatedTo: "2026-09-10T09:00:00.000Z",
-    });
-
-    await expect(synchronize(bankingProvider, store).result).resolves.toEqual({
-      success: false,
-      code: "PROVIDER_INVALID_RESPONSE",
-    });
-    expect(bankingProvider.transactionRequests).toEqual([]);
-  });
-
   it("uses the owner timezone offset at the stored summer date", async () => {
     const bankingProvider = provider({
       accounts: { 1: { items: [account("account-a")], nextPage: null } },
@@ -462,6 +462,7 @@ describe("synchronizeBanking", () => {
     store.acquire = vi.fn().mockResolvedValue({
       integrationId: "33333333-3333-4333-8333-333333333333",
       initialCreatedFrom: "2026-07-10",
+      initialCreatedFromInstant: "2026-07-09T22:00:00.000Z",
       updatedFrom: "2026-09-01T00:00:00.000Z",
       updatedTo: "2026-09-10T09:00:00.000Z",
     });
@@ -470,6 +471,34 @@ describe("synchronizeBanking", () => {
 
     expect(bankingProvider.transactionRequests[0]?.initialCreatedFrom).toBe(
       "2026-07-09T22:00:00.000Z",
+    );
+  });
+
+  it("uses the first valid owner-timezone instant when local midnight is skipped", async () => {
+    const bankingProvider = provider({
+      accounts: { 1: { items: [account("account-a")], nextPage: null } },
+      transactions: { "account-a": { 1: { items: [], nextPage: null } } },
+    });
+    const store = new FakeStore();
+    store.acquire = vi.fn().mockResolvedValue({
+      integrationId: "33333333-3333-4333-8333-333333333333",
+      initialCreatedFrom: "2026-03-08",
+      initialCreatedFromInstant: "2026-03-08T05:00:00.000Z",
+      updatedFrom: "2026-09-01T00:00:00.000Z",
+      updatedTo: "2026-09-10T09:00:00.000Z",
+    });
+
+    const result = await synchronizeBanking({
+      ownerUserId,
+      runId,
+      timezone: "America/Havana",
+      provider: bankingProvider,
+      store,
+    });
+
+    expect(result).toEqual({ success: true, created: 1, updated: 2 });
+    expect(bankingProvider.transactionRequests[0]?.initialCreatedFrom).toBe(
+      "2026-03-08T05:00:00.000Z",
     );
   });
 

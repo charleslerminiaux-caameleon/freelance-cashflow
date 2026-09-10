@@ -44,55 +44,6 @@ function validateNextPage(page: number, nextPage: number | null): void {
   }
 }
 
-function localPartsAt(instantMs: number, timezone: string): string {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    calendar: "gregory",
-    numberingSystem: "latn",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  });
-  const parts = Object.fromEntries(
-    formatter
-      .formatToParts(new Date(instantMs))
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, part.value]),
-  );
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;
-}
-
-function initialDateToInstant(initialDate: string, timezone: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(initialDate);
-  if (!match) throw providerError("PROVIDER_INVALID_RESPONSE");
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const target = Date.UTC(year, month - 1, day);
-  if (new Date(target).toISOString().slice(0, 10) !== initialDate) {
-    throw providerError("PROVIDER_INVALID_RESPONSE");
-  }
-
-  try {
-    let candidate = target;
-    const wanted = `${initialDate}T00:00:00`;
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      const local = localPartsAt(candidate, timezone);
-      if (local === wanted) return new Date(candidate).toISOString();
-      const localAsUtc = Date.parse(`${local}Z`);
-      if (!Number.isFinite(localAsUtc)) break;
-      candidate += target - localAsUtc;
-    }
-  } catch {
-    // The public result below intentionally contains no timezone or parser detail.
-  }
-  throw providerError("PROVIDER_INVALID_RESPONSE");
-}
-
 function safeLog(log: ((event: SyncLogEvent) => void) | undefined, event: SyncLogEvent): void {
   try {
     log?.(event);
@@ -118,6 +69,7 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
     if (requestedPages >= MAX_PAGES) throw providerError("PROVIDER_INVALID_RESPONSE");
     requestedPages += 1;
     await databaseCall(() => input.store.renew(input.ownerUserId, input.runId));
+    assertWithinBudget();
   };
 
   safeLog(input.log, { event: "sync_started", runId: input.runId });
@@ -127,10 +79,6 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
       input.store.acquire(input.ownerUserId, input.runId),
     );
     acquired = true;
-    const initialCreatedFrom = initialDateToInstant(
-      window.initialCreatedFrom,
-      input.timezone,
-    );
     const accounts: NormalizedBankAccount[] = [];
     const accountIds = new Set<string>();
     let accountPage = 1;
@@ -180,7 +128,7 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
             page: transactionPage,
             updatedFrom: window.updatedFrom,
             updatedTo: window.updatedTo,
-            initialCreatedFrom,
+            initialCreatedFrom: window.initialCreatedFromInstant,
             timezone: input.timezone,
           }),
         );

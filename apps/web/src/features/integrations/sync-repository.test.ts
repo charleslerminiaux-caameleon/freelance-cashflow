@@ -20,6 +20,7 @@ describe("createBankingSyncStore", () => {
         integration_id: "33333333-3333-4333-8333-333333333333",
         run_id: runId,
         initial_created_from: "2026-03-10",
+        initial_created_from_instant: "2026-03-09T23:00:00+00:00",
         updated_from: "2026-09-01T10:00:00+00:00",
         updated_to: "2026-09-10T10:00:00+00:00",
       },
@@ -29,6 +30,7 @@ describe("createBankingSyncStore", () => {
     await expect(createBankingSyncStore(client).acquire(ownerUserId, runId)).resolves.toEqual({
       integrationId: "33333333-3333-4333-8333-333333333333",
       initialCreatedFrom: "2026-03-10",
+      initialCreatedFromInstant: "2026-03-09T23:00:00.000Z",
       updatedFrom: "2026-09-01T10:00:00.000Z",
       updatedTo: "2026-09-10T10:00:00.000Z",
     });
@@ -184,6 +186,24 @@ describe("createBankingSyncStore", () => {
 
     expect(error).toEqual(new SyncStoreError("DATABASE_ERROR", transient));
     expect((error as Error).message).not.toContain("fictitious-private-canary");
+  });
+
+  it("classifies the resolved Supabase status-zero transport shape as transient", async () => {
+    const canary = "fictitious-private-canary";
+    const { client } = clientWithRpc({
+      data: null,
+      error: { code: "", message: canary, details: canary, hint: "" },
+      count: null,
+      status: 0,
+      statusText: canary,
+    });
+
+    const error = await createBankingSyncStore(client)
+      .publish(ownerUserId, runId)
+      .catch((caught: unknown) => caught);
+
+    expect(error).toEqual(new SyncStoreError("DATABASE_ERROR", true));
+    expect(JSON.stringify(error)).not.toContain(canary);
   });
 
   it("treats a thrown transport failure as transient without retaining its cause", async () => {

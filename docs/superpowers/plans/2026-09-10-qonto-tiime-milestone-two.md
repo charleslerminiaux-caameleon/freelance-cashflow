@@ -109,7 +109,7 @@ expect(await provider.listAccounts(1)).toMatchObject({ nextPage: 2 });
 
 ```text
 acquire_banking_sync(p_owner_user_id uuid, p_run_id uuid)
-  -> jsonb {integration_id, run_id, initial_created_from, updated_from, updated_to}
+  -> jsonb {integration_id, run_id, initial_created_from, initial_created_from_instant, updated_from, updated_to}
 renew_banking_sync(p_owner_user_id uuid, p_run_id uuid) -> void
 stage_banking_page(p_owner_user_id uuid, p_run_id uuid, p_kind text,
                   p_account_external_id text, p_page integer,
@@ -160,7 +160,8 @@ export type SyncResult = { success: true; created: number; updated: number }
   | { success: false; code: IntegrationErrorCode };
 export interface BankingSyncStore {
   acquire(ownerUserId: string, runId: string): Promise<{
-    integrationId: string; initialCreatedFrom: string; updatedFrom: string; updatedTo: string;
+    integrationId: string; initialCreatedFrom: string; initialCreatedFromInstant: string;
+    updatedFrom: string; updatedTo: string;
   }>;
   renew(ownerUserId: string, runId: string): Promise<void>;
   stageAccounts(ownerUserId: string, runId: string, page: number, nextPage: number|null, items: NormalizedBankAccount[]): Promise<void>;
@@ -184,7 +185,7 @@ expect(store.visibleAccounts).toEqual(previousAccounts);
 expect(store.publishedThrough).toBe(previousBound);
 ```
 
-- [ ] **Step 2: Implement orchestration.** Generate run ID at server composition (`crypto.randomUUID`). Acquire before calling Qonto, renew before each request; process sequential pages; stage before advancing local page number; reject non-progressing page metadata and repeated account IDs across pages; 120-second overall sync budget and 10,000-page hard cap return PROVIDER_UNAVAILABLE/INVALID_RESPONSE respectively, preserving visible data. Pass persisted initial history filter on every transaction run so updated old in-scope objects are re-read. Catch cleanup errors without replacing primary error. Never convert an acknowledged publish success into failure due to logging. Reconcile an ambiguous publication result via idempotent publish retry only for classified transient DB failures, otherwise preserve run for next inspection (do not mark a committed run failed).
+- [ ] **Step 2: Implement orchestration.** Generate run ID at server composition (`crypto.randomUUID`). Acquire before calling Qonto, renew before each request; process sequential pages; stage before advancing local page number; reject non-progressing page metadata and repeated account IDs across pages; 120-second overall sync budget and 10,000-page hard cap return PROVIDER_UNAVAILABLE/INVALID_RESPONSE respectively, preserving visible data. Pass the persisted initial history instant returned by PostgreSQL on every transaction run so updated old in-scope objects are re-read; PostgreSQL is the authority for resolving owner-timezone midnight gaps and overlaps. Catch cleanup errors without replacing primary error. Never convert an acknowledged publish success into failure due to logging. Reconcile an ambiguous publication result via idempotent publish retry only for classified transient DB failures, otherwise preserve run for next inspection (do not mark a committed run failed).
 
 - [ ] **Step 3: RED logger and config tests.** Logger rejects arbitrary event names/fields; strip injected headers, messages, amounts, IBAN, label and raw errors. Validate values as well as field names: UUID identifiers, finite nonnegative durations/counters, enum codes. Config absent/incomplete => unconfigured, doesn't break manual app. Whitespace/control-character credentials invalid; never stringify credentials in failure.
 

@@ -24,6 +24,7 @@ export interface BankingSyncStore {
   ): Promise<{
     integrationId: string;
     initialCreatedFrom: string;
+    initialCreatedFromInstant: string;
     updatedFrom: string;
     updatedTo: string;
   }>;
