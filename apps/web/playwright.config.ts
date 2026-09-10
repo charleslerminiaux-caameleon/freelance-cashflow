@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = 3_100;
-const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${port}`;
+const port = 3_200;
+const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -25,9 +25,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `corepack pnpm dev --hostname 127.0.0.1 --port ${port}`,
+    command: "node e2e/start-server.cjs",
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

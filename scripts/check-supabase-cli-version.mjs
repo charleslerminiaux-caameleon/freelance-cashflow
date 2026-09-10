@@ -32,6 +32,12 @@ for (const file of localCommandFiles) {
   }
 }
 
+const harness = await readFile("scripts/run-isolated-tests.mjs", "utf8");
+const harnessInvocations = [...harness.matchAll(/["']dlx["'],\s*["']supabase(?:@([^"']+))?["']/gu)];
+if (harnessInvocations.length === 0 || harnessInvocations.some(match => match[1] !== expectedVersion)) {
+  failures.push(`scripts/run-isolated-tests.mjs: Supabase CLI doit utiliser @${expectedVersion}`);
+}
+
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 let workflowDocument;
 

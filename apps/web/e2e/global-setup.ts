@@ -5,9 +5,9 @@ import { z } from "zod";
 const ownerEmail = "owner@example.test";
 const environmentSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().refine((value) => {
-    const hostname = new URL(value).hostname;
-    return hostname === "127.0.0.1" || hostname === "localhost";
+    return value === "http://127.0.0.1:56321";
   }, "Les tests E2E refusent toute instance Supabase non locale."),
+  E2E_STACK_PROJECT: z.literal("jalon-2-qonto-tests"),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 });
 

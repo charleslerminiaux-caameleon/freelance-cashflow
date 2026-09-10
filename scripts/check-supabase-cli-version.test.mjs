@@ -24,6 +24,7 @@ const exactInlineSetupStep = `
 
 async function runContract({
   readmeCommand = exactLocalCommand,
+  harnessVersion = "2.116.0",
   workflow = `jobs:
   database:
     steps:${exactSetupStep}
@@ -33,6 +34,7 @@ async function runContract({
   const fixtureRoot = await mkdtemp(join(tmpdir(), "freelance-cashflow-cli-pin-"));
   const fixtureFiles = new Map([
     ["README.md", readmeCommand],
+    ["scripts/run-isolated-tests.mjs", `const args = ["pnpm", "dlx", "supabase@${harnessVersion}"];`],
     ["docs/INSTALLATION.md", exactLocalCommand],
     ["docs/SECURITY_LOCAL.md", exactLocalCommand],
     ["apps/web/e2e/run-local.sh", exactLocalCommand],
@@ -193,4 +195,10 @@ test("accepts quoted setup values with YAML comments", async () => {
   });
 
   assert.equal(result.status, 0, result.stderr);
+});
+
+test("rejects a different CLI version in the executable isolated harness", async () => {
+  const result = await runContract({ harnessVersion: "2.117.0" });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /run-isolated-tests/u);
 });

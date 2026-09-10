@@ -12,7 +12,7 @@ Le Jalon 1 couvre le parcours manuel complet :
 
 Il comprend aussi l’import de factures CSV, les charges récurrentes et ponctuelles, les réserves, les horizons 30/90/180 jours et les scénarios certain/engagé/probable. Toutes les données affichées par le dashboard proviennent de PostgreSQL et du moteur de prévision déterministe.
 
-La connexion Qonto n’est pas encore incluse : elle constitue le Jalon 2 et restera strictement en lecture seule. La saisie manuelle et l’import CSV continueront à fonctionner sans fournisseur externe.
+La connexion Qonto en lecture seule, sa synchronisation atomique et ses vues bancaires sont implémentées et testées avec HTTP fictif et PostgreSQL réel. La validation du compte réel reste à effectuer. Tiime dispose de contrats internes et d’un écran de préparation ; son connecteur attend l’accès API officiel. Le Jalon 2 complet reste donc en attente des validations réelles. Voir [Qonto](docs/QONTO.md) et [Tiime](docs/TIIME.md). Les parcours manuels/CSV restent disponibles.
 
 ## Architecture
 
@@ -20,7 +20,7 @@ Le repository est un monorepo pnpm :
 
 - `apps/web` : application Next.js, authentification, écrans métier et dashboard ;
 - `packages/domain` : règles financières et moteur de prévision sans dépendance à Next.js ou Supabase ;
-- `packages/integrations` : normalisation des imports CSV et futurs connecteurs ;
+- `packages/integrations` : normalisation CSV, adaptateur Qonto serveur et contrats Tiime ;
 - `packages/shared` : montants en centimes, dates locales et primitives partagées ;
 - `supabase` : migrations PostgreSQL, RLS, fonctions métier, seed et tests pgTAP.
 
@@ -53,11 +53,11 @@ corepack pnpm lint
 corepack pnpm typecheck
 corepack pnpm test:run
 corepack pnpm build
-corepack pnpm dlx supabase@2.116.0 test db
-corepack pnpm e2e
+corepack pnpm test:isolated
+corepack pnpm test:client-boundary
 ```
 
-Le test E2E crée un compte fictif local, exécute le parcours complet dans Chromium et le supprime en fin d’exécution. Il refuse une URL Supabase non locale.
+Les tests isolés dérivent une stack jetable `jalon-2-qonto-tests` (ports 563xx) et lancent Chromium sur 3200. Ils refusent toute autre stack, gardent les identifiants en mémoire et remplacent les variables Qonto par des canaris fictifs sous interception HTTP. Les parcours manuel et Qonto créent chacun leur propriétaire fictif puis le suppriment. Voir les sous-commandes dans [QONTO.md](docs/QONTO.md).
 
 ## Statut open source
 

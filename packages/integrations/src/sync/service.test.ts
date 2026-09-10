@@ -355,17 +355,20 @@ describe("synchronizeBanking", () => {
     const bankingProvider = provider({
       accounts: { 1: { items: [], nextPage: null } },
     });
-    const ticks = [0, 0, 120_001];
-    const { result, store } = synchronize(
-      bankingProvider,
-      new FakeStore(),
-      () => ticks.shift() ?? 120_001,
-    );
+    let time = 0;
+    const request = bankingProvider.listAccounts.bind(bankingProvider);
+    bankingProvider.listAccounts = async (page) => {
+      const result = await request(page);
+      time = 120_001;
+      return result;
+    };
+    const { result, store } = synchronize(bankingProvider, new FakeStore(), () => time);
 
     await expect(result).resolves.toEqual({
       success: false,
       code: "PROVIDER_UNAVAILABLE",
     });
+    expect(bankingProvider.accountRequests).toEqual([1]);
     expect(store.calls).not.toContain("stage-accounts-1");
     expect(store.calls).not.toContain("publish");
   });

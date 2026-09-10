@@ -45,30 +45,7 @@ jobs:
       - name: Run unit tests
         run: pnpm test:run
       - name: Build
-        run: pnpm build
-
-  database:
-    name: Supabase migrations and pgTAP
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.116.0
-      - name: Start dedicated Supabase stack
-        run: supabase start
-      - name: Rebuild database from migrations
-        run: supabase db reset --local
-      - name: Run pgTAP tests
-        run: supabase test db
-      - name: Stop dedicated Supabase stack
-        if: always()
-        run: supabase stop --no-backup
+        run: pnpm test:client-boundary
 
   secrets:
     name: Secret scan
@@ -88,10 +65,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  e2e:
-    name: Chromium manual cashflow journey
+  acceptance:
+    name: Isolated PostgreSQL, Qonto HTTP and both Chromium journeys
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -112,21 +89,10 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
-      - name: Start dedicated Supabase stack
-        run: supabase start
-      - name: Rebuild database from migrations
-        run: supabase db reset --local
       - name: Install Chromium
         run: pnpm --filter @fc/web exec playwright install --with-deps chromium
-      - name: Run complete manual journey
-        shell: bash
-        run: |
-          set +x
-          eval "$(supabase status --output env)"
-          export NEXT_PUBLIC_SUPABASE_URL="${API_URL}"
-          export NEXT_PUBLIC_SUPABASE_ANON_KEY="${ANON_KEY}"
-          export SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY}"
-          pnpm --filter @fc/web e2e
-      - name: Stop dedicated Supabase stack
+      - name: Run dedicated database and simulated-provider acceptance
+        run: pnpm test:isolated
+      - name: Stop only the dedicated disposable test stack
         if: always()
-        run: supabase stop --no-backup
+        run: node scripts/run-isolated-tests.mjs stop

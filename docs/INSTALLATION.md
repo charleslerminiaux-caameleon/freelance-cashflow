@@ -1,6 +1,6 @@
 # Installation locale
 
-Ce guide démarre une installation de développement reproductible du Jalon 1. Il ne configure ni Qonto ni un déploiement cloud.
+Ce guide démarre une installation de développement reproductible du parcours manuel. Il ne configure ni Qonto ni un déploiement cloud.
 
 ## Prérequis
 
@@ -76,11 +76,10 @@ corepack pnpm test:run
 corepack pnpm build
 ```
 
-Les migrations et contraintes PostgreSQL :
+Les migrations, contraintes PostgreSQL, concurrence et scénarios Qonto sur la stack jetable dédiée :
 
 ```bash
-corepack pnpm dlx supabase@2.116.0 db reset --local
-corepack pnpm dlx supabase@2.116.0 test db
+corepack pnpm test:isolated
 ```
 
 Le parcours complet Chromium :
@@ -90,7 +89,7 @@ corepack pnpm --filter @fc/web exec playwright install chromium
 corepack pnpm e2e
 ```
 
-Le lanceur E2E récupère les clés de la stack locale en mémoire si elles ne sont pas déjà présentes dans le processus. Le mot de passe aléatoire du compte de test n’est écrit dans aucun fichier.
+Le lanceur E2E récupère toujours les clés de la stack dédiée en mémoire et remplace les valeurs héritées. Le mot de passe aléatoire du compte de test n’est écrit dans aucun fichier.
 
 ## 6. Arrêter l’environnement
 
@@ -107,3 +106,9 @@ corepack pnpm dlx supabase@2.116.0 stop --no-backup
 ```
 
 Cette dernière commande est destructive pour la stack du repository courant. Vérifiez toujours le `project_id` avant de l’utiliser.
+
+## Acceptation isolée et fournisseurs
+
+Pour les tests, utilisez `corepack pnpm test:isolated` : ce harness dérive une configuration jetable dans `.isolated-tests/`, sans toucher la configuration source ni copier `.env.local`. Il utilise le projet `jalon-2-qonto-tests`, API 56321, PostgreSQL 56322 et le serveur web 3200, sans réutiliser un serveur existant. `corepack pnpm test:client-boundary` construit avec de faux canaris et inspecte les fichiers clients. Docker doit être démarré et Chromium installé.
+
+Pour Qonto réel, utilisez une autre installation avec son propre project_id et ses ports, puis renseignez vous-même son fichier ignoré `apps/web/.env.local` : [procédure Qonto](QONTO.md). Ne lancez jamais les tests contre cette installation. La préparation Tiime et la demande d’accès sont détaillées dans [TIIME.md](TIIME.md). Aucun accès fournisseur réel n’est requis pour les tests.
