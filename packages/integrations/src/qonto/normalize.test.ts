@@ -39,6 +39,12 @@ describe("normalizeAccount", () => {
     ).toMatchObject({ status: "closed", ibanMasked: null, availableBalanceCents: null });
   });
 
+  it("rejects an IBAN too short to redact", () => {
+    expect(() => normalizeAccount({ ...fakeAccount, iban: "FR761234" })).toThrowError(
+      IntegrationError,
+    );
+  });
+
   it.each([
     ["unsafe current balance", { balance_cents: Number.MAX_SAFE_INTEGER + 1 }],
     ["fractional authorized balance", { authorized_balance_cents: 12.5 }],

@@ -169,6 +169,21 @@ describe("createQontoProvider HTTP contract", () => {
     ["current page mismatch", 1, metadata(2, 3)],
     ["repeated next page", 1, metadata(1, 1)],
     ["backward next page", 2, metadata(2, 1)],
+    [
+      "forward next-page jump",
+      1,
+      { ...metadata(1, 2), next_page: 3, total_pages: 3 },
+    ],
+    [
+      "premature terminal page",
+      1,
+      { ...metadata(1, null), next_page: null, total_pages: 2, total_count: 101 },
+    ],
+    [
+      "current page beyond total pages",
+      3,
+      { ...metadata(3, null), total_pages: 2 },
+    ],
   ])("rejects invalid %s metadata", async (_case, requestedPage, meta) => {
     const transport = sequenceFetch([
       jsonResponse({ transactions: [fakeTransaction], meta }),
@@ -181,6 +196,27 @@ describe("createQontoProvider HTTP contract", () => {
     } catch (error) {
       expectIntegrationCode(error, "PROVIDER_INVALID_RESPONSE");
     }
+  });
+
+  it("rejects zero-page metadata when the result is not empty", async () => {
+    const transport = sequenceFetch([
+      jsonResponse({
+        transactions: [fakeTransaction],
+        meta: {
+          current_page: 1,
+          next_page: null,
+          prev_page: null,
+          total_pages: 0,
+          total_count: 1,
+          per_page: 100,
+        },
+      }),
+    ]);
+    const provider = createQontoProvider({ ...credentials, fetch: transport.fetch });
+
+    await expect(provider.listTransactions(transactionWindow())).rejects.toMatchObject({
+      code: "PROVIDER_INVALID_RESPONSE",
+    });
   });
 
   it.each([

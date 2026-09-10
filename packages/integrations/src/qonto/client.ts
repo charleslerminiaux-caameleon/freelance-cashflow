@@ -144,15 +144,31 @@ function validateNextPage(
     current_page: number;
     next_page: number | null;
     total_pages: number;
+    total_count: number;
   },
   requestedPage: number,
+  itemCount: number,
 ): number | null {
   const nextPage = metadata.next_page;
-  if (
-    metadata.current_page !== requestedPage ||
-    (nextPage !== null &&
-      (nextPage <= requestedPage || nextPage > metadata.total_pages))
-  ) {
+  if (metadata.current_page !== requestedPage) {
+    throw invalidResponse();
+  }
+
+  if (metadata.total_pages === 0) {
+    if (
+      requestedPage !== 1 ||
+      nextPage !== null ||
+      metadata.total_count !== 0 ||
+      itemCount !== 0
+    ) {
+      throw invalidResponse();
+    }
+    return null;
+  }
+
+  const expectedNextPage =
+    requestedPage < metadata.total_pages ? requestedPage + 1 : null;
+  if (requestedPage > metadata.total_pages || nextPage !== expectedNextPage) {
     throw invalidResponse();
   }
   return nextPage;
@@ -226,7 +242,11 @@ export function createQontoProvider(options: CreateQontoProviderOptions): Bankin
       const parsed = qontoAccountsEnvelopeSchema.safeParse(await get(url));
       if (!parsed.success) throw invalidResponse();
       const nextPage = parsed.data.meta
-        ? validateNextPage(parsed.data.meta, requestedPage)
+        ? validateNextPage(
+            parsed.data.meta,
+            requestedPage,
+            parsed.data.bank_accounts.length,
+          )
         : parsed.data.bank_accounts.length === PAGE_SIZE
           ? requestedPage + 1
           : null;
@@ -262,7 +282,11 @@ export function createQontoProvider(options: CreateQontoProviderOptions): Bankin
             parsedWindow.timezone,
           ),
         ),
-        nextPage: validateNextPage(parsed.data.meta, parsedWindow.page),
+        nextPage: validateNextPage(
+          parsed.data.meta,
+          parsedWindow.page,
+          parsed.data.transactions.length,
+        ),
       };
     },
   };

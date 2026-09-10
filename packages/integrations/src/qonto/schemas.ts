@@ -10,7 +10,12 @@ export const qontoAccountSchema = z.object({
   id: identifierSchema,
   name: textSchema,
   status: z.enum(["active", "closed"]),
-  iban: z.string().trim().min(8).max(64).nullable().optional(),
+  iban: z
+    .string()
+    .trim()
+    .regex(/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/u)
+    .nullable()
+    .optional(),
   currency: currencySchema,
   balance_cents: safeCentsSchema,
   authorized_balance_cents: safeCentsSchema.nullable().optional(),
