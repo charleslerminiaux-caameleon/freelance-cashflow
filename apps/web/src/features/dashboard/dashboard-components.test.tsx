@@ -170,6 +170,25 @@ describe("dashboard detail panels", () => {
     );
   });
 
+  it("renders invoiceable schedule dates in French short format", () => {
+    render(
+      <ActionList
+        overdueInvoices={[]}
+        itemsToInvoice={[{
+          id: "schedule-1",
+          engagementId: "engagement-1",
+          label: "Acompte",
+          engagementReference: "CMD-001",
+          customerName: "Studio Vermeil",
+          plannedInvoiceDate: localDate("2026-09-15"),
+          amountCents: moneyCents(300_000),
+        }]}
+      />,
+    );
+
+    expect(screen.getByText("CMD-001 · prévu le 15/09")).toBeInTheDocument();
+  });
+
   it("shows upcoming inflows and outflows in separate named regions", () => {
     render(
       <UpcomingLists
@@ -200,5 +219,17 @@ describe("dashboard detail panels", () => {
         "/cashflow?horizon=90&scenario=probable&filters=1&expenses=1&weightedOpportunities=1",
       );
     }
+  });
+
+  it("renders upcoming cashflow dates in French short format", () => {
+    render(
+      <UpcomingLists
+        inflows={[event("invoice-1", "inflow", 600_000)]}
+        outflows={[]}
+        state={{ horizonDays: 90, scenario: "certain", inclusions }}
+      />,
+    );
+
+    expect(screen.getByText("20/09 · certain")).toBeInTheDocument();
   });
 });

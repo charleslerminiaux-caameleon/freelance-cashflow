@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMoney, moneyCents } from "@fc/shared";
+import { formatMoney, formatShortLocalDate, moneyCents, type LocalDate } from "@fc/shared";
 import {
   Area,
   CartesianGrid,
@@ -40,13 +40,17 @@ export function CashflowChart({
         <ResponsiveContainer width="100%" height={340}>
           <ComposedChart data={chart.points} margin={{ top: 18, right: 12, bottom: 4, left: 6 }}>
             <CartesianGrid stroke="#e3ebe8" vertical={false} />
-            <XAxis dataKey="date" minTickGap={36} tickFormatter={(value: string) => value.slice(5)} />
+            <XAxis
+              dataKey="date"
+              minTickGap={36}
+              tickFormatter={(value: string) => formatShortLocalDate(value as LocalDate)}
+            />
             <YAxis
               width={68}
               tickFormatter={(value: number) => `${Math.round(value / 100_000)} k€`}
             />
             <Tooltip
-              labelFormatter={(value) => `Date : ${String(value)}`}
+              labelFormatter={(value) => `Date : ${formatShortLocalDate(value as LocalDate)}`}
               formatter={(value, name) => [
                 formatMoney(moneyCents(Number(value))),
                 String(name),

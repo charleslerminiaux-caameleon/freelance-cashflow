@@ -139,6 +139,14 @@ describe("buildDashboardViewModel", () => {
     expect(model.chart.points).toHaveLength(91);
   });
 
+  it("formats the chart risk date for the dashboard summary", () => {
+    const model = buildDashboardViewModel(sourceData(), referenceOptions);
+
+    expect(model.chart.summary).toBe(
+      "Le scénario certain passe sous le seuil de sécurité le 13/11.",
+    );
+  });
+
   it("builds distinct certain, committed, and weighted probable chart series", () => {
     const model = buildDashboardViewModel(sourceData(), referenceOptions);
     const october20 = model.chart.points.find(({ date }) => date === "2026-10-20");
