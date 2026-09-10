@@ -30,6 +30,21 @@ const inclusions: DashboardInclusions = {
   weightedOpportunities: false,
 };
 
+const scenarioHelp = [
+  {
+    label: "Facturé",
+    description: "Factures émises restant à encaisser; les sorties certaines continuent d’être prises en compte dans la trésorerie.",
+  },
+  {
+    label: "Commandes signées",
+    description: "Facturé plus les facturations planifiées des commandes signées; les opportunités sont exclues.",
+  },
+  {
+    label: "Pipeline pondéré",
+    description: "Commandes signées plus les opportunités ouvertes pondérées par leur probabilité (exemple : 10 000 € à 60 % compte pour 6 000 €).",
+  },
+] as const;
+
 function event(
   id: string,
   direction: "inflow" | "outflow",
@@ -121,7 +136,48 @@ describe("dashboard controls", () => {
     expect(screen.queryByRole("button", { name: "Mettre à jour" })).not.toBeInTheDocument();
   });
 
-  it("submits the GET form when a scenario or inclusion changes", () => {
+  it("shows each scenario help while its choice is hovered", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    for (const { description } of scenarioHelp) {
+      const tooltip = screen.getByText(description);
+
+      expect(tooltip).toHaveProperty("hidden", true);
+      fireEvent.mouseEnter(tooltip.parentElement!);
+      expect(tooltip).toHaveProperty("hidden", false);
+      fireEvent.mouseLeave(tooltip.parentElement!);
+      expect(tooltip).toHaveProperty("hidden", true);
+    }
+  });
+
+  it("shows each scenario help while its choice has keyboard focus", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    for (const { label, description } of scenarioHelp) {
+      const radio = screen.getByRole("radio", { name: label });
+      const tooltip = screen.getByText(description);
+
+      expect(tooltip).toHaveProperty("hidden", true);
+      fireEvent.focus(radio);
+      expect(tooltip).toHaveProperty("hidden", false);
+      fireEvent.blur(radio);
+      expect(tooltip).toHaveProperty("hidden", true);
+    }
+  });
+
+  it("submits each scenario's stable GET value automatically", () => {
     render(
       <ScenarioControls
         horizonDays={90}
@@ -131,16 +187,17 @@ describe("dashboard controls", () => {
     );
 
     const form = screen.getByRole("radio", { name: "Facturé" }).closest("form")!;
-    const submitted = vi.fn();
+    const submittedScenarios: string[] = [];
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      submitted();
+      submittedScenarios.push(String(new FormData(form).get("scenario")));
     });
 
     fireEvent.click(screen.getByRole("radio", { name: "Commandes signées" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Charges" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Pipeline pondéré" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Facturé" }));
 
-    expect(submitted).toHaveBeenCalledTimes(2);
+    expect(submittedScenarios).toEqual(["committed", "probable", "certain"]);
     expect(new FormData(form).get("horizon")).toBe("90");
     expect(new FormData(form).get("filters")).toBe("1");
   });

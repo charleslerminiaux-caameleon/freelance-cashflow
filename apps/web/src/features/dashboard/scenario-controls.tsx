@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { scenarioCopy } from "./scenario-copy";
 import type { DashboardViewModel } from "./view-model";
 
@@ -8,6 +10,9 @@ export function ScenarioControls({
   scenario,
   inclusions,
 }: Pick<DashboardViewModel, "horizonDays" | "scenario" | "inclusions">) {
+  const [hoveredScenario, setHoveredScenario] = useState<string | null>(null);
+  const [focusedScenario, setFocusedScenario] = useState<string | null>(null);
+
   return (
     <form
       className="scenario-controls"
@@ -20,7 +25,14 @@ export function ScenarioControls({
       <fieldset className="scenario-choices">
         <legend>Scénario</legend>
         {Object.entries(scenarioCopy).map(([value, copy]) => (
-          <span className="scenario-choice" key={value}>
+          <span
+            className="scenario-choice"
+            key={value}
+            onBlur={() => setFocusedScenario(null)}
+            onFocus={() => setFocusedScenario(value)}
+            onMouseEnter={() => setHoveredScenario(value)}
+            onMouseLeave={() => setHoveredScenario(null)}
+          >
             <label>
               <input
                 aria-describedby={`scenario-${value}-description`}
@@ -31,7 +43,12 @@ export function ScenarioControls({
               />
               <span>{copy.label}</span>
             </label>
-            <span className="scenario-tooltip" id={`scenario-${value}-description`} role="tooltip">
+            <span
+              className="scenario-tooltip"
+              hidden={hoveredScenario !== value && focusedScenario !== value}
+              id={`scenario-${value}-description`}
+              role="tooltip"
+            >
               {copy.description}
             </span>
           </span>
