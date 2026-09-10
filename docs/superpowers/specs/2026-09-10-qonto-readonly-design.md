@@ -1,26 +1,28 @@
-# Freelance Forecast — Jalon 2 : Qonto en lecture seule
+# Freelance Forecast — Jalon 2 : Qonto et Tiime en lecture seule
 
-Date : 10 septembre 2026. Conception validée en conversation ; document soumis à relecture avant plan détaillé.
+Date : 10 septembre 2026. Conception Qonto validée en conversation ; extension Tiime demandée par le propriétaire. L'accès API Tiime sera demandé par le propriétaire et n'est pas encore obtenu. Document soumis à relecture avant plan détaillé.
 
 Références : cahier des charges v0.2 lu dans le checkout utilisateur ; `2026-09-05-freelance-cashflow-mvp-design.md` ; plan `2026-09-05-manual-cashflow-vertical.md`. Base : `origin/main`, commit `69d3302`, fusion de la PR #2.
 
 ## 1. Objectif et périmètre
 
-Importer comptes, soldes et transactions Qonto depuis le serveur, à la demande du propriétaire. Publier uniquement des données normalisées et cohérentes ; conserver intégralement la dernière version visible si une synchronisation échoue. Les saisies manuelles et imports CSV restent opérationnels sans Qonto.
+Importer comptes, soldes et transactions Qonto depuis le serveur, à la demande du propriétaire. Ajouter Tiime comme source de clients, factures, échéances et informations de règlement effectivement accessibles via son API officielle. Publier uniquement des données normalisées et cohérentes ; conserver intégralement la dernière version visible si une synchronisation échoue. Les saisies manuelles et imports CSV restent opérationnels sans connecteur.
 
-Le jalon livre le connecteur, les migrations/RLS, la synchronisation manuelle, les vues bancaires, l'actualisation du dashboard, les tests automatisés et une procédure distincte de validation réelle. Les tests ne demandent aucune clé Qonto réelle.
+Le jalon livre les connecteurs Qonto et Tiime, les migrations/RLS, les synchronisations manuelles, les vues bancaires et de facturation, l'actualisation du dashboard, les tests automatisés et des procédures distinctes de validation réelle. Les tests ne demandent aucune clé fournisseur réelle. Qonto et la préparation Tiime peuvent avancer immédiatement ; le transport Tiime et sa validation dépendent de l'accès et de la documentation officielle. Une livraison Qonto seule reste une livraison partielle du jalon 2 élargi.
 
-Sont exclus : rapprochement automatique facture/transaction, initiation de paiement, OAuth, webhooks, autres fournisseurs, worker planifié, Scaleway et déploiement cloud. Le paiement manuel existant reste le mécanisme de constat des paiements des factures. Une transaction importée ne marque donc pas automatiquement une facture payée.
+Sont exclus : rapprochement automatique facture/transaction bancaire, initiation de paiement, OAuth Qonto, webhooks, fournisseurs autres que Qonto et Tiime, worker planifié, Scaleway et déploiement cloud. L'authentification Tiime sera définie à partir de sa documentation officielle ; aucun mécanisme n'est présumé. Le paiement manuel reste utilisable. Une transaction Qonto importée ne marque pas automatiquement une facture payée ; un règlement explicitement fourni par Tiime constitue une information de facturation distincte à normaliser sans double comptage.
 
 ## 2. Architecture et responsabilités
 
-- `packages/integrations` : contrats bancaires normalisés, adaptateur Qonto, schémas Zod, transport HTTP borné, erreurs fournisseur. L'entrée serveur du connecteur est distincte de l'entrée CSV existante.
+- `packages/integrations` : contrats bancaires et de facturation normalisés, adaptateurs Qonto et Tiime séparés, schémas Zod, transport HTTP borné, erreurs fournisseur. Les entrées serveur sont distinctes de l'entrée CSV existante. Les schémas de réponse et le transport Tiime ne sont écrits qu'après lecture de son contrat officiel.
 - Service de synchronisation serveur indépendant de Next.js : séquence comptes/transactions, orchestration des pages, points de reprise et politique de retry. Ses dépendances de transport, persistance, horloge et attente sont injectables pour les tests. Il sera réutilisable par le futur worker.
 - Couche de persistance Supabase : fonctions atomiques de verrouillage, préparation des pages et publication. Elle ne connaît pas les payloads Qonto.
 - `apps/web` : lecture de configuration serveur, contrôle `requireOwner`, déclenchement manuel, état de l'intégration, vues des données publiées et invalidation des vues.
-- `packages/domain` conserve son indépendance de Qonto, React, Next.js et Supabase. Les projections utilisent un solde initial normalisé.
+- `packages/domain` conserve son indépendance de Qonto, Tiime, React, Next.js et Supabase. Les projections utilisent un solde initial normalisé et les soldes restant à encaisser des factures.
 
 Ne pas créer de serveur permanent ou de file de messages au jalon 2. Une synchronisation manuelle est attendue explicitement par la requête serveur ; pas de tâche détachée dont la survie dépendrait du processus web.
+
+Les publications et verrous sont indépendants par intégration. Une indisponibilité Tiime ne bloque pas une publication Qonto et inversement. Le dashboard peut donc afficher deux dates de fraîcheur distinctes ; aucune transaction distribuée entre les fournisseurs n'est promise.
 
 ## 3. Configuration et confidentialité
 
@@ -96,7 +98,7 @@ Après publication, invalider Intégrations, Trésorerie, Dashboard et l'indicat
 
 Sans données bancaires publiées utilisables, conserver le solde manuel. Après une panne Qonto, conserver la dernière publication bancaire avec indication de fraîcheur, sans retomber silencieusement sur le solde manuel. Le solde bancaire autorisé est affiché comme tel ; il ne remplace pas la notion de trésorerie estimée après réserves existante.
 
-Les transactions déjà incluses dans le solde bancaire ne sont pas rejouées dans le prévisionnel. Les factures restent soumises au mécanisme de paiement manuel existant. Afficher cette limite dans la documentation pour éviter de promettre un rapprochement bancaire absent.
+Les transactions déjà incluses dans le solde bancaire ne sont pas rejouées dans le prévisionnel. Les factures manuelles restent soumises au mécanisme de paiement manuel existant ; les factures Tiime suivent les informations de règlement explicites du fournisseur et les règles de conflit de la section 12. Afficher cette limite dans la documentation pour éviter de promettre un rapprochement bancaire absent.
 
 ## 9. Tests et critères d'acceptation
 
@@ -124,3 +126,49 @@ La procédure réelle vérifie présence de configuration, lecture des comptes e
 - [Clé API](https://docs.qonto.com/get-started/business-api/authentication/api-key)
 - [Liste paginée des comptes](https://docs.qonto.com/api-reference/business-api/accounts-organizations/business-accounts/list)
 - [Transactions, statuts, filtres et pagination](https://docs.qonto.com/api-reference/business-api/transactions-statements/transactions/list-transactions)
+- [Tiime : accès API sur demande pour les éditeurs de logiciels](https://support.tiime.fr/fr/articles/26240-proposez-vous-une-api)
+- [Tiime : export des factures, devis et clients](https://support.tiime.fr/fr/articles/26190-comment-exporter-mes-factures-devis-et-clients)
+
+## 12. Tiime : facturation en lecture seule
+
+### 12.1 Découpage du jalon 2
+
+Le jalon comprend deux lots fonctionnels : 2A, connexion bancaire Qonto ; 2B, facturation Tiime. Le propriétaire utilise actuellement seulement l'application Tiime et fera lui-même la demande d'accès API. Aucun message de demande n'est envoyé en son nom.
+
+Le plan détaillé Qonto reste exécutable indépendamment. Le lot Tiime comporte une préparation réalisable maintenant, puis un plan de connecteur rédigé après réception de la documentation. Cette séparation évite d'inventer des endpoints, scopes, credentials, formats de réponses ou capacités de paiement. Tiime reste dans le jalon 2, même si l'attente d'accès retarde sa clôture.
+
+### 12.2 Préparation réalisable sans accès API
+
+- Présenter Tiime dans Intégrations avec l'état exact « Accès API à obtenir », une explication et l'accès au parcours CSV existant. Aucun bouton de synchronisation actif et aucun faux statut de connexion.
+- Définir les contrats métier de facturation indépendants du fournisseur, en réutilisant les invariants du jalon 1 : client, identifiant externe stable, numéro de facture, dates, montants HT/TVA/TTC, devise, statut et règlement connu ou inconnu.
+- Prévoir l'identité fournisseur dans `integrations`, `sync_runs` et `provider_object_mappings`, sans créer de faux run ni simuler une connexion en production.
+- Documenter les informations à demander à Tiime : éligibilité d'une installation open source self-hosted, authentification officielle, permissions de lecture, documentation des ressources clients/factures/règlements, pagination, mises à jour, limites de débit, environnement de test et conditions de production.
+- Conserver le format CSV déjà supporté. Tiime documente un export, mais pas son schéma dans l'article consulté : ne pas promettre une compatibilité directe ni écrire un parseur natif sans format documenté ou exemple entièrement anonymisé. Une conversion explicite vers le CSV existant reste possible.
+
+Ces livrables constituent une préparation Tiime et ne doivent jamais être présentés comme un connecteur Tiime fonctionnel.
+
+### 12.3 Connecteur après obtention de la documentation
+
+Vérifier d'abord les capacités effectivement disponibles et formaliser le contrat d'authentification, les schémas de réponse, l'historique accessible et les règles de reprise dans une spécification complémentaire. Toute incompatibilité matérielle avec le périmètre demandé est présentée au propriétaire avant implémentation. Ne pas inventer de variables Tiime dans `.env.example` avant cette vérification.
+
+La cible est une synchronisation manuelle de clients, factures, échéances et informations de règlement exposées par Tiime. Les données suivent les garanties Qonto : validation Zod aux frontières, centimes entiers, ownership/RLS, idempotence, verrou par intégration, préparation invisible et publication atomique, conservation après échec, retries bornés pour les erreurs temporaires, six codes d'erreur stables et journalisation par liste blanche.
+
+Toutes les lectures sont côté serveur. Aucune création, modification, émission, annulation ou suppression de facture chez Tiime. Aucun accès par API privée déduite de l'application web, scraping ou réutilisation de cookies de session. Les secrets restent hors de Git, du navigateur, des logs, des fixtures et des comptes rendus. Si Tiime exige OAuth avec persistance de tokens, le stockage chiffré et le cycle de renouvellement font l'objet de la conception complémentaire avant toute implémentation.
+
+### 12.4 Factures existantes et autorité des règlements
+
+Une facture Tiime est identifiée par propriétaire, fournisseur et identifiant externe. Une facture déjà importée en CSV ou saisie manuellement ne doit pas être dupliquée lors de l'activation du connecteur. Un numéro identique déclenche une comparaison des attributs disponibles (client, devise, montants et dates), jamais une association au seul nom du client.
+
+Une correspondance certaine permet de lier l'identifiant Tiime à la facture existante en conservant son identifiant interne et ses relations métier. Une collision ambiguë ou contradictoire bloque la publication Tiime avec un message stable de conflit à résoudre, sans écraser l'existant. Aucun rapprochement bancaire automatique n'est ajouté.
+
+Ne jamais additionner un total payé fourni par Tiime et des paiements manuels qui peuvent représenter les mêmes règlements. Pour une facture déjà dotée de paiements manuels, un conflit d'autorité doit être résolu explicitement avant sa prise en charge Tiime. Une donnée de règlement absente signifie « inconnue », jamais « impayée ». Les modalités précises de reprise des paiements dépendent des identifiants et totaux officiellement disponibles et seront spécifiées avant le transport Tiime.
+
+Les factures normalisées alimentent la vue Facturation, les encaissements attendus, les retards et le prévisionnel selon leur reste à payer. Les champs locaux tels que le lien à une commande et les ajustements de date attendue ne sont pas écrasés implicitement par une nouvelle synchronisation.
+
+### 12.5 Validation et clôture
+
+Après accès à la documentation, les tests Tiime utilisent des fixtures fictives conformes au contrat officiel : pagination, rejeu, mise à jour de facture, paiement partiel si exposé, annulation si exposée, donnée absente, conflit CSV/manuel, erreur de connexion, limites de débit, panne de persistance et absence de double comptage au dashboard.
+
+La procédure réelle Tiime est distincte de Qonto et des tests automatisés. Lorsque les credentials deviennent nécessaires, s'arrêter pour indiquer au propriétaire les noms et l'emplacement local précis à renseigner, sans demander les valeurs dans le chat. La vérification réelle n'enregistre ni réponses brutes ni données financières dans les rapports.
+
+Le jalon 2 élargi est terminé seulement lorsque Qonto et Tiime ont chacun leur connecteur conforme au contrat officiel, leurs tests, leur documentation et leur validation réelle. Si l'accès Tiime est encore en attente, rapporter séparément l'état du lot Qonto et la dépendance externe du lot Tiime ; ne pas déplacer silencieusement Tiime au jalon 3 ni déclarer le jalon 2 achevé.
