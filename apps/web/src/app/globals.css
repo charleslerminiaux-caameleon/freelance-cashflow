@@ -1404,7 +1404,6 @@ details.panel[open] > summary {
   left: 0;
   line-height: 1.4;
   padding: 0.6rem 0.7rem;
-  pointer-events: none;
   position: absolute;
   top: calc(100% + 0.45rem);
   width: min(18rem, 75vw);

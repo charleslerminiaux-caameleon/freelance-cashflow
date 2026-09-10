@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { localDate, moneyCents } from "@fc/shared";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
@@ -156,6 +156,30 @@ describe("dashboard controls", () => {
     }
   });
 
+  it("keeps each scenario help open while the pointer enters its text", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    for (const { label, description } of scenarioHelp) {
+      const radio = screen.getByRole("radio", { name: label });
+      const tooltip = screen.getByText(description);
+      const choice = tooltip.parentElement!;
+
+      fireEvent.mouseEnter(radio.closest("label")!);
+      fireEvent.mouseLeave(radio.closest("label")!, { relatedTarget: tooltip });
+      fireEvent.mouseEnter(tooltip, { relatedTarget: radio });
+
+      expect(tooltip).toBeVisible();
+      fireEvent.mouseLeave(choice);
+      expect(tooltip).not.toBeVisible();
+    }
+  });
+
   it("shows each scenario help while its choice has keyboard focus", () => {
     render(
       <ScenarioControls
@@ -174,6 +198,31 @@ describe("dashboard controls", () => {
       expect(tooltip).toBeVisible();
       fireEvent.blur(radio);
       expect(tooltip).not.toBeVisible();
+    }
+  });
+
+  it("closes focused scenario help with Escape and reopens it after refocus", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    for (const { label, description } of scenarioHelp) {
+      const radio = screen.getByRole("radio", { name: label });
+      const tooltip = screen.getByText(description);
+
+      act(() => radio.focus());
+      expect(tooltip).toBeVisible();
+      fireEvent.keyDown(radio, { key: "Escape" });
+      expect(tooltip).not.toBeVisible();
+      expect(radio).toHaveFocus();
+      act(() => radio.blur());
+      act(() => radio.focus());
+      expect(tooltip).toBeVisible();
+      act(() => radio.blur());
     }
   });
 
@@ -201,6 +250,35 @@ describe("dashboard controls", () => {
     expect(new FormData(form).get("horizon")).toBe("90");
     expect(new FormData(form).get("filters")).toBe("1");
   });
+
+  it("submits unchecked and restored inclusions in the GET payload", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    const form = screen.getByRole("radio", { name: "Facturé" }).closest("form")!;
+    const payloads: FormData[] = [];
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      payloads.push(new FormData(form));
+    });
+
+    const invoices = screen.getByRole("checkbox", { name: "Factures émises" });
+    fireEvent.click(invoices);
+    fireEvent.click(invoices);
+
+    expect(payloads[0]?.get("invoices")).toBeNull();
+    expect(payloads[1]?.get("invoices")).toBe("1");
+    for (const payload of payloads) {
+      expect(payload.get("scenario")).toBe("certain");
+      expect(payload.get("horizon")).toBe("90");
+      expect(payload.get("filters")).toBe("1");
+    }
+  });
 });
 
 describe("dashboard detail panels", () => {
@@ -216,6 +294,7 @@ describe("dashboard detail panels", () => {
     render(
       <CashflowChart
         currency="EUR"
+        horizonDays={90}
         scenario="certain"
         chart={{
           points: [{
@@ -225,15 +304,15 @@ describe("dashboard detail panels", () => {
             probableBalanceCents: moneyCents(4_238_000),
             safetyThresholdCents: moneyCents(2_000_000),
           }],
-          riskDate: null,
-          summary: "Le scénario certain reste au-dessus du seuil sur 90 jours.",
+          riskDate: localDate("2026-11-13"),
+          summary: "Une copie de résumé obsolète ne doit pas être affichée.",
         }}
       />,
     );
 
     const chart = screen.getByRole("img", { name: "Projection de trésorerie" });
     expect(chart).toHaveAccessibleDescription(
-      "Facturé · reste au-dessus du seuil sur 90 jours.",
+      "Facturé · passe sous le seuil de sécurité le 13/11.",
     );
     expect(chart.querySelector(".recharts-responsive-container")).toHaveStyle({
       minWidth: "0",
@@ -244,6 +323,31 @@ describe("dashboard detail panels", () => {
     expect(within(legend).getByText("Commandes signées")).toBeInTheDocument();
     expect(within(legend).getByText("Pipeline pondéré")).toBeInTheDocument();
     expect(screen.getByText("Seuil de sécurité")).toBeInTheDocument();
+  });
+
+  it("builds the safe chart summary from the structured horizon", () => {
+    render(
+      <CashflowChart
+        currency="EUR"
+        horizonDays={180}
+        scenario="probable"
+        chart={{
+          points: [{
+            date: localDate("2026-09-05"),
+            certainBalanceCents: moneyCents(4_238_000),
+            committedBalanceCents: moneyCents(4_238_000),
+            probableBalanceCents: moneyCents(4_238_000),
+            safetyThresholdCents: moneyCents(2_000_000),
+          }],
+          riskDate: null,
+          summary: "Une copie de résumé obsolète ne doit pas être affichée.",
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Projection de trésorerie" })).toHaveAccessibleDescription(
+      "Pipeline pondéré · reste au-dessus du seuil sur 180 jours.",
+    );
   });
 
   it("links overdue invoices and invoiceable schedules to their work screens", () => {

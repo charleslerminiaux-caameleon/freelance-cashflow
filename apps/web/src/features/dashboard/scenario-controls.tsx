@@ -12,6 +12,7 @@ export function ScenarioControls({
 }: Pick<DashboardViewModel, "horizonDays" | "scenario" | "inclusions">) {
   const [hoveredScenario, setHoveredScenario] = useState<string | null>(null);
   const [focusedScenario, setFocusedScenario] = useState<string | null>(null);
+  const [dismissedScenario, setDismissedScenario] = useState<string | null>(null);
 
   return (
     <form
@@ -29,8 +30,17 @@ export function ScenarioControls({
             className="scenario-choice"
             key={value}
             onBlur={() => setFocusedScenario(null)}
-            onFocus={() => setFocusedScenario(value)}
-            onMouseEnter={() => setHoveredScenario(value)}
+            onFocus={() => {
+              setFocusedScenario(value);
+              setDismissedScenario(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setDismissedScenario(value);
+            }}
+            onMouseEnter={() => {
+              setHoveredScenario(value);
+              setDismissedScenario(null);
+            }}
             onMouseLeave={() => setHoveredScenario(null)}
           >
             <label>
@@ -45,7 +55,10 @@ export function ScenarioControls({
             </label>
             <span
               className="scenario-tooltip"
-              hidden={hoveredScenario !== value && focusedScenario !== value}
+              hidden={
+                dismissedScenario === value
+                || (hoveredScenario !== value && focusedScenario !== value)
+              }
               id={`scenario-${value}-description`}
               role="tooltip"
             >

@@ -26,10 +26,13 @@ export function formatCashflowChartTooltipLabel(value: LocalDate): string {
 export function CashflowChart({
   chart,
   currency,
+  horizonDays,
   scenario,
-}: Pick<DashboardViewModel, "chart" | "currency" | "scenario">) {
+}: Pick<DashboardViewModel, "chart" | "currency" | "horizonDays" | "scenario">) {
   const selectedScenario = scenarioCopy[scenario];
-  const scenarioSummary = chart.summary.replace(`Le scénario ${scenario} `, "");
+  const scenarioSummary = chart.riskDate === null
+    ? `reste au-dessus du seuil sur ${horizonDays} jours.`
+    : `passe sous le seuil de sécurité le ${formatShortLocalDate(chart.riskDate)}.`;
 
   return (
     <section className="dashboard-panel cashflow-chart-panel" aria-labelledby="cashflow-chart-title">
