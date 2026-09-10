@@ -38,7 +38,9 @@ create temp table old_state as select (select id from public.bank_accounts) acco
 select is((select count(*) from public.provider_object_mappings),2::bigint,'publication creates mappings');
 select is((select count(*) from public.bank_account_staging)+(select count(*) from public.bank_transaction_staging)+(select count(*) from public.banking_sync_pages),0::bigint,'success clears all staging');
 select is(public.publish_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001'),'{"created":2,"updated":0}'::jsonb,'success replay returns persisted counts');
-select public.acquire_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002');
+create temp table incremental_acquisition as select public.acquire_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002') result;
+select is((select result->>'initial_created_from' from incremental_acquisition),(select initial_created_from::text from public.integrations),'incremental JSON retains original history bound');
+select is((select initial_created_from from public.sync_runs where id='30000000-0000-4000-8000-000000000002'),(select initial_created_from from public.integrations),'incremental run retains original history bound');
 select is((select updated_from from public.sync_runs where id='30000000-0000-4000-8000-000000000002'),(select watermark - interval '5 minutes' from old_state),'incremental overlap exactly five minutes');
 select is(public.publish_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001'),'{"created":2,"updated":0}'::jsonb,'old successful replay safe with new holder');
 select is((select lease_run_id from public.integrations),'30000000-0000-4000-8000-000000000002'::uuid,'old replay preserves newer lease');
@@ -52,7 +54,23 @@ select is((select count(*) from public.provider_object_mappings),2::bigint,'fail
 select public.fail_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','PROVIDER_INVALID_RESPONSE',true);
 select is((select last_connection_succeeded from public.integrations),true,'connection success survives sync failure');
 select is((select count(*) from public.bank_account_staging),0::bigint,'failure clears own staging');
+create temp table failed_snapshot as select
+  (select to_jsonb(i) from public.integrations i) integration_row,
+  (select to_jsonb(r) from public.sync_runs r where id='30000000-0000-4000-8000-000000000002') run_row;
+select lives_ok($$ select public.fail_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','PROVIDER_INVALID_RESPONSE',true) $$,'failed closure replay succeeds without active lease');
+select is((select to_jsonb(i) from public.integrations i),(select integration_row from failed_snapshot),'failed closure replay preserves integration outcome');
+select is((select to_jsonb(r) from public.sync_runs r where id='30000000-0000-4000-8000-000000000002'),(select run_row from failed_snapshot),'failed closure replay preserves exact run outcome');
+select throws_ok($$ select public.fail_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000002','PROVIDER_INVALID_RESPONSE',true) $$,'42501','DATABASE_ERROR','failed closure replay still requires singleton owner');
+
 select public.acquire_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000003');
+create temp table newer_lease_snapshot as select to_jsonb(i) integration_row from public.integrations i;
+select lives_ok($$ select public.fail_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','PROVIDER_INVALID_RESPONSE',true) $$,'failed closure replay succeeds with newer lease');
+select lives_ok($$ select public.fail_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','PROVIDER_UNAVAILABLE',false) $$,'terminal failure replay never rewrites recorded outcome');
+select is((select to_jsonb(i) from public.integrations i),(select integration_row from newer_lease_snapshot),'failure replay preserves exact newer lease and metadata');
+select is((select to_jsonb(r) from public.sync_runs r where id='30000000-0000-4000-8000-000000000002'),(select run_row from failed_snapshot),'failure replay after takeover preserves original run outcome');
+select throws_ok($$ select public.fail_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000001','DATABASE_ERROR',false) $$,'P0001','SYNC_LOCKED','successful publication cannot be reclosed as failure');
+select is((select to_jsonb(i) from public.integrations i),(select integration_row from newer_lease_snapshot),'incompatible failure outcome cannot affect newer lease');
+
 select public.stage_banking_page('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000003','accounts',null,1,null,pg_temp.account('a',200));
 select public.stage_banking_page('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000003','transactions','a',1,null,pg_temp.tx('t','EUR','completed'));
 select is(public.publish_banking_sync('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000003'),'{"created":0,"updated":2}'::jsonb,'idempotent updates counted');
@@ -87,7 +105,8 @@ insert into public.app_settings(owner_user_id) values ('10000000-0000-4000-8000-
 select public.acquire_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000007');
 -- Simulate an initial import begun on an earlier calendar day, still unpublished.
 update public.integrations set initial_created_from='2026-01-01',lease_expires_at=clock_timestamp()-interval '1 second';
-select public.acquire_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000008');
+create temp table retry_acquisition as select public.acquire_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000008') result;
+select is((select result->>'initial_created_from' from retry_acquisition),'2026-01-01','retry JSON retains original history bound');
 select is((select initial_created_from from public.sync_runs where id='30000000-0000-4000-8000-000000000008'),'2026-01-01'::date,'retry preserves original history date');
 select is((select updated_from from public.sync_runs where id='30000000-0000-4000-8000-000000000008'),'2025-12-31T23:00:00Z'::timestamptz,'retry initial window uses owner timezone');
 select throws_ok($$select public.fail_banking_sync('10000000-0000-4000-8000-000000000002','30000000-0000-4000-8000-000000000008','unsafe diagnostic',true)$$,'P0001','DATABASE_ERROR','only stable error codes may persist');

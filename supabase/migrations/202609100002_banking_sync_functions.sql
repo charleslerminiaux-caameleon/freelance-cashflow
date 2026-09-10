@@ -49,10 +49,10 @@ begin
   v_initial := coalesce(v.initial_created_from,((v_now at time zone v_timezone)::date - interval '6 months')::date);
   v_from := coalesce(v.last_published_updated_to - interval '5 minutes', v_initial::timestamp at time zone v_timezone);
   insert into public.sync_runs(id,owner_user_id,integration_id,initial_created_from,updated_from,updated_to)
-    values(p_run_id,p_owner_user_id,v.id,case when v.last_published_updated_to is null then v_initial end,v_from,v_now);
+    values(p_run_id,p_owner_user_id,v.id,v_initial,v_from,v_now);
   update public.integrations set lease_run_id=p_run_id,lease_expires_at=v_now+interval '60 seconds',
     initial_created_from=v_initial,status='syncing',last_error_code=null where id=v.id;
-  return jsonb_build_object('integration_id',v.id,'run_id',p_run_id,'initial_created_from',case when v.last_published_updated_to is null then v_initial end,'updated_from',v_from,'updated_to',v_now);
+  return jsonb_build_object('integration_id',v.id,'run_id',p_run_id,'initial_created_from',v_initial,'updated_from',v_from,'updated_to',v_now);
 exception when sqlstate '42501' or raise_exception then raise;
   when others then raise exception using errcode='P0001',message='DATABASE_ERROR';
 end;
@@ -210,6 +210,12 @@ create or replace function public.fail_banking_sync(p_owner_user_id uuid, p_run_
 language plpgsql security definer set search_path = '' as $$
 declare v public.integrations;
 begin
+  perform public.banking_require_owner(p_owner_user_id);
+  -- A lost failure response may be retried even after a newer run acquired the lease.
+  -- Lock before reading the outcome; terminal replay is a no-op preserving its first result.
+  select * into v from public.integrations where owner_user_id=p_owner_user_id and provider='qonto' for update;
+  if exists (select 1 from public.sync_runs where owner_user_id=p_owner_user_id
+    and integration_id=v.id and id=p_run_id and status='failed') then return; end if;
   v := public.banking_locked_integration(p_owner_user_id,p_run_id);
   if p_error_code is null or p_error_code not in ('PROVIDER_AUTH_EXPIRED','PROVIDER_RATE_LIMIT','PROVIDER_UNAVAILABLE','PROVIDER_INVALID_RESPONSE','SYNC_LOCKED','DATABASE_ERROR') or p_connection_succeeded is null then raise exception 'DATABASE_ERROR'; end if;
   update public.sync_runs set status='failed',finished_at=clock_timestamp(),error_code=p_error_code where id=p_run_id;
