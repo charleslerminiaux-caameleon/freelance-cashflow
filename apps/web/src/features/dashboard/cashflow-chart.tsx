@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import type { DashboardViewModel } from "./view-model";
+import { scenarioCopy } from "./scenario-copy";
 
 export function formatCashflowChartTick(value: LocalDate): string {
   return formatShortLocalDate(value);
@@ -25,19 +26,25 @@ export function formatCashflowChartTooltipLabel(value: LocalDate): string {
 export function CashflowChart({
   chart,
   currency,
-}: Pick<DashboardViewModel, "chart" | "currency">) {
+  scenario,
+}: Pick<DashboardViewModel, "chart" | "currency" | "scenario">) {
+  const selectedScenario = scenarioCopy[scenario];
+  const scenarioSummary = chart.summary.replace(`Le scénario ${scenario} `, "");
+
   return (
     <section className="dashboard-panel cashflow-chart-panel" aria-labelledby="cashflow-chart-title">
       <header className="chart-heading">
         <h2 id="cashflow-chart-title">Solde projeté</h2>
         <ul className="chart-legend" aria-label="Légende du graphique">
-          <li><span className="legend-line legend-certain" />Certain</li>
-          <li><span className="legend-line legend-committed" />Engagé</li>
-          <li><span className="legend-swatch" />Probable pondéré</li>
+          <li><span className="legend-line legend-certain" />{scenarioCopy.certain.label}</li>
+          <li><span className="legend-line legend-committed" />{scenarioCopy.committed.label}</li>
+          <li><span className="legend-swatch" />{scenarioCopy.probable.label}</li>
           <li><span className="legend-line legend-threshold" />Seuil de sécurité</li>
         </ul>
       </header>
-      <p id="cashflow-chart-summary" className="sr-only">{chart.summary}</p>
+      <p id="cashflow-chart-summary" className="sr-only">
+        {selectedScenario.label} · {scenarioSummary}
+      </p>
       <div
         className="cashflow-chart"
         role="img"
@@ -67,7 +74,7 @@ export function CashflowChart({
             <Area
               type="monotone"
               dataKey="probableBalanceCents"
-              name="Probable pondéré"
+              name={scenarioCopy.probable.label}
               fill="#dbe9d1"
               fillOpacity={0.72}
               stroke="#78a964"
@@ -76,7 +83,7 @@ export function CashflowChart({
             <Line
               type="monotone"
               dataKey="committedBalanceCents"
-              name="Engagé"
+              name={scenarioCopy.committed.label}
               stroke="#70a08f"
               strokeDasharray="7 4"
               dot={false}
@@ -84,7 +91,7 @@ export function CashflowChart({
             <Line
               type="monotone"
               dataKey="certainBalanceCents"
-              name="Certain"
+              name={scenarioCopy.certain.label}
               stroke="#0e6259"
               strokeWidth={3}
               dot={false}
@@ -101,7 +108,7 @@ export function CashflowChart({
         </ResponsiveContainer>
       </div>
       <p className={chart.riskDate === null ? "chart-risk-safe" : "chart-risk-alert"}>
-        {chart.summary}
+        <strong>{selectedScenario.label}</strong> · {scenarioSummary}
       </p>
     </section>
   );

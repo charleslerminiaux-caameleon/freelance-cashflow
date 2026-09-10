@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { localDate, moneyCents } from "@fc/shared";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
@@ -73,6 +73,7 @@ describe("dashboard controls", () => {
       element?.tagName === "STRONG" && element.textContent === "42 380,00 €",
     )).toBeInTheDocument();
     expect(within(strip).getByText("69 jours")).toBeInTheDocument();
+    expect(within(strip).getByText("Facturé")).toBeInTheDocument();
   });
 
   it("keeps scenario and inclusions in linkable horizon URLs", () => {
@@ -92,7 +93,7 @@ describe("dashboard controls", () => {
     expect(screen.getByRole("link", { name: "90 j" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("submits an explicit filter marker so unchecked sources remain excluded", () => {
+  it("offers named scenarios with accessible explanations", () => {
     render(
       <ScenarioControls
         horizonDays={90}
@@ -104,7 +105,44 @@ describe("dashboard controls", () => {
     expect(document.querySelector('input[name="filters"]')).toHaveValue("1");
     expect(screen.getByRole("checkbox", { name: "Factures émises" })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Commandes signées" })).not.toBeChecked();
-    expect(screen.getByLabelText("Scénario")).toHaveValue("certain");
+    expect(screen.getByRole("radio", { name: "Facturé" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Facturé" }).closest("form")).toHaveFormValues({
+      scenario: "certain",
+    });
+    expect(screen.getByRole("radio", { name: "Facturé" })).toHaveAccessibleDescription(
+      "Factures émises restant à encaisser; les sorties certaines continuent d’être prises en compte dans la trésorerie.",
+    );
+    expect(screen.getByRole("radio", { name: "Commandes signées" })).toHaveAccessibleDescription(
+      "Facturé plus les facturations planifiées des commandes signées; les opportunités sont exclues.",
+    );
+    expect(screen.getByRole("radio", { name: "Pipeline pondéré" })).toHaveAccessibleDescription(
+      "Commandes signées plus les opportunités ouvertes pondérées par leur probabilité (exemple : 10 000 € à 60 % compte pour 6 000 €).",
+    );
+    expect(screen.queryByRole("button", { name: "Mettre à jour" })).not.toBeInTheDocument();
+  });
+
+  it("submits the GET form when a scenario or inclusion changes", () => {
+    render(
+      <ScenarioControls
+        horizonDays={90}
+        scenario="certain"
+        inclusions={inclusions}
+      />,
+    );
+
+    const form = screen.getByRole("radio", { name: "Facturé" }).closest("form")!;
+    const submitted = vi.fn();
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitted();
+    });
+
+    fireEvent.click(screen.getByRole("radio", { name: "Commandes signées" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Charges" }));
+
+    expect(submitted).toHaveBeenCalledTimes(2);
+    expect(new FormData(form).get("horizon")).toBe("90");
+    expect(new FormData(form).get("filters")).toBe("1");
   });
 });
 
@@ -121,6 +159,7 @@ describe("dashboard detail panels", () => {
     render(
       <CashflowChart
         currency="EUR"
+        scenario="certain"
         chart={{
           points: [{
             date: localDate("2026-09-05"),
@@ -137,15 +176,16 @@ describe("dashboard detail panels", () => {
 
     const chart = screen.getByRole("img", { name: "Projection de trésorerie" });
     expect(chart).toHaveAccessibleDescription(
-      "Le scénario certain reste au-dessus du seuil sur 90 jours.",
+      "Facturé · reste au-dessus du seuil sur 90 jours.",
     );
     expect(chart.querySelector(".recharts-responsive-container")).toHaveStyle({
       minWidth: "0",
       width: "100%",
     });
-    expect(screen.getByText("Certain")).toBeInTheDocument();
-    expect(screen.getByText("Engagé")).toBeInTheDocument();
-    expect(screen.getByText("Probable pondéré")).toBeInTheDocument();
+    const legend = screen.getByRole("list", { name: "Légende du graphique" });
+    expect(within(legend).getByText("Facturé")).toBeInTheDocument();
+    expect(within(legend).getByText("Commandes signées")).toBeInTheDocument();
+    expect(within(legend).getByText("Pipeline pondéré")).toBeInTheDocument();
     expect(screen.getByText("Seuil de sécurité")).toBeInTheDocument();
   });
 

@@ -1313,34 +1313,22 @@ details.panel[open] > summary {
 }
 
 .scenario-controls {
-  align-items: end;
+  align-items: start;
+  background: var(--fc-surface);
+  border: 1px solid var(--fc-border);
+  border-radius: 1rem;
   display: grid;
-  gap: 0.9rem;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  grid-template-columns: minmax(18rem, auto) minmax(0, 1fr);
+  padding: 1rem 1.15rem;
 }
 
-.scenario-field {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.scenario-field label,
 .scenario-controls legend {
   color: var(--fc-muted);
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-.scenario-field select {
-  background: var(--fc-surface);
-  border: 1px solid var(--fc-border);
-  border-radius: 0.55rem;
-  color: var(--fc-ink);
-  font: inherit;
-  min-height: 2.7rem;
-  padding: 0.55rem 0.7rem;
 }
 
 .scenario-controls fieldset {
@@ -1356,7 +1344,37 @@ details.panel[open] > summary {
   margin-bottom: 0.4rem;
 }
 
-.scenario-controls fieldset label {
+.scenario-controls .scenario-choices {
+  gap: 0.45rem;
+}
+
+.scenario-choice {
+  background: #edf6f3;
+  border: 1px solid var(--fc-border);
+  border-radius: 0.55rem;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  position: relative;
+}
+
+.scenario-choice > label {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 0.45rem;
+  min-height: 2.7rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.scenario-choice:has(input:checked) {
+  background: var(--fc-petrol);
+  border-color: var(--fc-petrol);
+  color: white;
+}
+
+.scenario-controls fieldset:not(.scenario-choices) label {
   align-items: center;
   background: var(--fc-surface);
   border: 1px solid var(--fc-border);
@@ -1370,22 +1388,38 @@ details.panel[open] > summary {
   padding: 0.55rem 0.7rem;
 }
 
+.scenario-choice input[type="radio"],
 .scenario-controls input[type="checkbox"] {
   accent-color: var(--fc-petrol);
   height: 1rem;
   width: 1rem;
 }
 
-.scenario-controls button {
-  background: var(--fc-petrol);
-  border: 0;
+.scenario-tooltip {
+  background: var(--fc-ink);
   border-radius: 0.55rem;
   color: white;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-  min-height: 2.7rem;
-  padding: 0.6rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  left: 0;
+  line-height: 1.4;
+  opacity: 0;
+  padding: 0.6rem 0.7rem;
+  pointer-events: none;
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  transform: translateY(-0.2rem);
+  transition: opacity 120ms ease, transform 120ms ease;
+  visibility: hidden;
+  width: min(18rem, 75vw);
+  z-index: 2;
+}
+
+.scenario-choice:hover .scenario-tooltip,
+.scenario-choice:focus-within .scenario-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
 }
 
 .dashboard-actions {
@@ -1608,9 +1642,6 @@ details.panel[open] > summary {
     grid-template-columns: 1fr;
   }
 
-  .scenario-controls button {
-    justify-self: start;
-  }
 }
 
 @media (max-width: 1100px) {

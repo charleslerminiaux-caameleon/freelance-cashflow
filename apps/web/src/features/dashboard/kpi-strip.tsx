@@ -1,12 +1,7 @@
 import { formatMoney, moneyCents } from "@fc/shared";
 
+import { scenarioCopy } from "./scenario-copy";
 import type { DashboardViewModel } from "./view-model";
-
-const scenarioLabels = {
-  certain: "scénario certain",
-  committed: "scénario engagé",
-  probable: "scénario probable pondéré",
-} as const;
 
 export function KpiStrip({
   kpis,
@@ -40,7 +35,7 @@ export function KpiStrip({
       <article className="dashboard-kpi">
         <span>Projeté 30 j</span>
         <strong>{formatMoney(kpis.projected30DaysCents)}</strong>
-        <small>{scenarioLabels[scenario]}</small>
+        <small>{scenarioCopy[scenario].label}</small>
       </article>
       <article className="dashboard-kpi dashboard-kpi-runway">
         <span>Runway</span>

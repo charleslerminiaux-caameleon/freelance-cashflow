@@ -77,7 +77,9 @@ it("renders the real-data dashboard hierarchy and linkable controls", async () =
   expect(screen.getByRole("heading", { name: "Bonjour" })).toBeInTheDocument();
   expect(screen.getByText("samedi 5 septembre 2026")).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Indicateurs de trésorerie" })).toBeInTheDocument();
-  expect(screen.getByRole("img", { name: "Projection de trésorerie" })).toBeInTheDocument();
+  const scenarioControls = screen.getByRole("radio", { name: "Facturé" }).closest("form")!;
+  const chart = screen.getByRole("img", { name: "Projection de trésorerie" });
+  expect(scenarioControls.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole("heading", { name: "À traiter" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "90 j" })).toHaveAttribute("aria-current", "page");
 });
