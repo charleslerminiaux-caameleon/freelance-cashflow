@@ -28,17 +28,25 @@ select is(
   ),
   jsonb_build_array(
     'app_settings',
+    'bank_account_staging',
+    'bank_accounts',
+    'bank_transaction_staging',
+    'bank_transactions',
+    'banking_sync_pages',
     'billing_schedule_items',
     'cashflow_categories',
     'customers',
     'engagements',
+    'integrations',
     'invoice_payments',
     'invoices',
     'opportunities',
     'planned_cashflows',
-    'recurring_cashflows'
+    'provider_object_mappings',
+    'recurring_cashflows',
+    'sync_runs'
   ),
-  'exactly the ten owner-scoped tables have RLS enabled'
+  'exactly the eighteen owner-scoped tables have RLS enabled'
 );
 
 select is(
@@ -55,14 +63,18 @@ select is(
           regexp_replace(qual, E'\\s+', ' ', 'g') = case
             when tablename = 'app_settings'
               then '(( SELECT auth.uid() AS uid) = owner_user_id)'
+            when policyname = 'owner_read'
+              then '((owner_user_id = ( SELECT auth.uid() AS uid)) AND (EXISTS ( SELECT 1 FROM app_settings WHERE (app_settings.owner_user_id = ( SELECT auth.uid() AS uid)))))'
             else '((( SELECT auth.uid() AS uid) = owner_user_id) AND (EXISTS ( SELECT 1 FROM app_settings WHERE (app_settings.owner_user_id = ( SELECT auth.uid() AS uid)))))'
           end
         )::text,
         (
-          regexp_replace(with_check, E'\\s+', ' ', 'g') = case
+          case when policyname = 'owner_read' then with_check is null
+          else regexp_replace(with_check, E'\\s+', ' ', 'g') = case
             when tablename = 'app_settings'
               then '(( SELECT auth.uid() AS uid) = owner_user_id)'
             else '((( SELECT auth.uid() AS uid) = owner_user_id) AND (EXISTS ( SELECT 1 FROM app_settings WHERE (app_settings.owner_user_id = ( SELECT auth.uid() AS uid)))))'
+          end
           end
         )::text
       )
@@ -73,15 +85,20 @@ select is(
   ),
   jsonb_build_array(
     'app_settings|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'bank_accounts|owner_read|PERMISSIVE|authenticated|SELECT|true|true',
+    'bank_transactions|owner_read|PERMISSIVE|authenticated|SELECT|true|true',
     'billing_schedule_items|owner_access|PERMISSIVE|authenticated|ALL|true|true',
     'cashflow_categories|owner_access|PERMISSIVE|authenticated|ALL|true|true',
     'customers|owner_access|PERMISSIVE|authenticated|ALL|true|true',
     'engagements|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'integrations|owner_read|PERMISSIVE|authenticated|SELECT|true|true',
     'invoice_payments|owner_access|PERMISSIVE|authenticated|ALL|true|true',
     'invoices|owner_access|PERMISSIVE|authenticated|ALL|true|true',
     'opportunities|owner_access|PERMISSIVE|authenticated|ALL|true|true',
     'planned_cashflows|owner_access|PERMISSIVE|authenticated|ALL|true|true',
-    'recurring_cashflows|owner_access|PERMISSIVE|authenticated|ALL|true|true'
+    'provider_object_mappings|owner_read|PERMISSIVE|authenticated|SELECT|true|true',
+    'recurring_cashflows|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'sync_runs|owner_read|PERMISSIVE|authenticated|SELECT|true|true'
   ),
   'every public policy exactly matches the owner-access contract'
 );
