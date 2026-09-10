@@ -3,7 +3,11 @@ import { localDate, moneyCents } from "@fc/shared";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { ActionList } from "./action-list";
-import { CashflowChart } from "./cashflow-chart";
+import {
+  CashflowChart,
+  formatCashflowChartTick,
+  formatCashflowChartTooltipLabel,
+} from "./cashflow-chart";
 import { HorizonSelector } from "./horizon-selector";
 import { KpiStrip } from "./kpi-strip";
 import { ScenarioControls } from "./scenario-controls";
@@ -105,6 +109,14 @@ describe("dashboard controls", () => {
 });
 
 describe("dashboard detail panels", () => {
+  it("formats cashflow chart ticks as French short dates", () => {
+    expect(formatCashflowChartTick(localDate("2026-12-31"))).toBe("31/12");
+  });
+
+  it("formats cashflow chart tooltip labels as French short dates", () => {
+    expect(formatCashflowChartTooltipLabel(localDate("2026-12-31"))).toBe("Date : 31/12");
+  });
+
   it("exposes a textual chart legend and accessible risk summary", () => {
     render(
       <CashflowChart

@@ -14,6 +14,14 @@ import {
 
 import type { DashboardViewModel } from "./view-model";
 
+export function formatCashflowChartTick(value: LocalDate): string {
+  return formatShortLocalDate(value);
+}
+
+export function formatCashflowChartTooltipLabel(value: LocalDate): string {
+  return `Date : ${formatShortLocalDate(value)}`;
+}
+
 export function CashflowChart({
   chart,
   currency,
@@ -43,14 +51,14 @@ export function CashflowChart({
             <XAxis
               dataKey="date"
               minTickGap={36}
-              tickFormatter={(value: string) => formatShortLocalDate(value as LocalDate)}
+              tickFormatter={(value: string) => formatCashflowChartTick(value as LocalDate)}
             />
             <YAxis
               width={68}
               tickFormatter={(value: number) => `${Math.round(value / 100_000)} k€`}
             />
             <Tooltip
-              labelFormatter={(value) => `Date : ${formatShortLocalDate(value as LocalDate)}`}
+              labelFormatter={(value) => formatCashflowChartTooltipLabel(value as LocalDate)}
               formatter={(value, name) => [
                 formatMoney(moneyCents(Number(value))),
                 String(name),

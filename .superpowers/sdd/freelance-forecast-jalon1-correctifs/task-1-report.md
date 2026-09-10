@@ -41,4 +41,22 @@
 
 ## Préoccupations
 
-Aucune. Les callbacks Recharts sont intégrés directement au composant ; les tests de composants existants ne matérialisent pas les graduations ni l’infobulle dans JSDOM, mais l’auto-review confirme qu’ils appellent le formateur partagé.
+Aucune. Les sorties des callbacks Recharts sont désormais protégées par des tests comportementaux ciblés.
+
+## Fix round 1
+
+### Changements et fichiers
+
+- Extraction de `formatCashflowChartTick` et `formatCashflowChartTooltipLabel` dans `apps/web/src/features/dashboard/cashflow-chart.tsx`, puis branchement des callbacks Recharts réels sur ces fonctions.
+- Ajout de deux tests comportementaux à `apps/web/src/features/dashboard/dashboard-components.test.tsx`, avec l’attente littérale `2026-12-31 → 31/12` pour les graduations et `Date : 31/12` pour l’infobulle.
+
+### Preuve RED/GREEN
+
+1. RED — `pnpm --filter @fc/web test:run -- src/features/dashboard/dashboard-components.test.tsx` : 2 échecs attendus, `formatCashflowChartTick is not a function` et `formatCashflowChartTooltipLabel is not a function`, avant l’extraction.
+2. GREEN — même commande : 47 fichiers / 194 tests réussis après l’extraction et le branchement des callbacks.
+
+### Vérifications
+
+- `pnpm --filter @fc/web test:run -- src/features/dashboard/dashboard-components.test.tsx` : réussi, 47 fichiers / 194 tests.
+- `pnpm --filter @fc/web typecheck` : réussi (`next typegen && tsc --noEmit`).
+- `git diff --check` : réussi.
