@@ -3,7 +3,7 @@ import { expect, it, vi } from "vitest";
 import { getQontoIntegration } from "./repository";
 const owner = "11111111-1111-4111-8111-111111111111";
 function client(data: unknown, error: unknown = null) {
- const query = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data, error }) };
+ const query = { abortSignal: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data, error }) };
  return { query, db: { from: vi.fn(() => query) } };
 }
 it("reads only public control fields with owner and provider predicates", async () => {

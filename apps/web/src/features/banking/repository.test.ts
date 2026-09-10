@@ -6,7 +6,7 @@ const owner = "11111111-1111-4111-8111-111111111111";
 const integration = "22222222-2222-4222-8222-222222222222";
 const account = { id: owner, name: "Compte exemple", iban_masked: "FR00•••••••••••1234", currency: "EUR", current_balance_cents: 0, available_balance_cents: null, status: "active", updated_at: "2026-09-10T10:00:00Z", is_current: true };
 function client(data: unknown, count = 0, error: unknown = null) {
- const query = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data, count, error }) };
+ const query = { abortSignal: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), range: vi.fn().mockResolvedValue({ data, count, error }) };
  return {query, db: {from: vi.fn(() => query)}};
 }
 it("reads allowlisted published accounts with owner/integration scope, keeping zero balances", async () => {
@@ -35,7 +35,7 @@ it("loads all account pages rather than silently truncating a balance", async ()
  expect(await listBankAccounts(db as unknown as SupabaseClient,owner,integration)).toHaveLength(1001); expect(query.range.mock.calls).toEqual([[0,999],[1000,1999]]);
 });
 it("retains published accounts after provider failure without consulting live config", async () => {
- const control = {select:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis(),maybeSingle:vi.fn().mockResolvedValue({data:{id:integration,status:"error",last_success_at:"2026-09-10T10:00:00Z",last_connection_succeeded:false,last_error_code:"PROVIDER_AUTH_EXPIRED"},error:null})};
+ const control = {abortSignal:vi.fn().mockReturnThis(),select:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis(),maybeSingle:vi.fn().mockResolvedValue({data:{id:integration,status:"error",last_success_at:"2026-09-10T10:00:00Z",last_connection_succeeded:false,last_error_code:"PROVIDER_AUTH_EXPIRED"},error:null})};
  const {query}=client([account]); const db={from:vi.fn((name:string)=>name==="integrations"?control:query)};
  expect((await getBankingSnapshot(db as unknown as SupabaseClient,owner)).accounts).toHaveLength(1); expect(db.from.mock.calls).toEqual([["integrations"],["bank_accounts"],["integrations"]]);
 });
@@ -56,7 +56,7 @@ function publicationClient({ changeAt, continuous = false, metadataOnly }: {
     }
   }
   const control = {
-    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(),
+    abortSignal: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn(async (): Promise<{ error: null; data: IntegrationState | null }> => ({ error: null, data: {
       id: integration, status: failed ? metadataOnly ?? "error" : "connected",
       last_success_at: marker(), last_connection_succeeded: metadataOnly === "error" ? !failed : true,
@@ -64,7 +64,7 @@ function publicationClient({ changeAt, continuous = false, metadataOnly }: {
     } })),
   };
   const accounts = {
-    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
+    abortSignal: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
     range: vi.fn(async (from: number) => {
       if (changeAt === "account" || (changeAt === "second-account-page" && from === 1000)) publish();
       return { error: null, data: Array.from({ length: changeAt === "second-account-page" && from === 0 ? 1000 : 1 }, () => ({
@@ -73,7 +73,7 @@ function publicationClient({ changeAt, continuous = false, metadataOnly }: {
     }),
   };
   const transactions = {
-    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
+    abortSignal: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
     range: vi.fn(async () => {
       if (changeAt === "history") publish();
       return { error: null, count: 1, data: [{ id: owner, bank_account_id: owner, currency: "EUR", amount_cents: generation * 10,

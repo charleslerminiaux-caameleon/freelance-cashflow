@@ -14,9 +14,12 @@ const integrationSchema = z.object({
 export async function getQontoIntegration(client: SupabaseClient, ownerUserId: string): Promise<IntegrationState | null> {
   try {
     z.string().uuid().parse(ownerUserId);
+    // Explicit signals opt out of Next render GET memoization. The repeated
+    // publication-marker reads must each observe the current database state.
     const { data, error } = await client.from("integrations")
       .select("id, status, last_connection_succeeded, last_success_at, last_error_code")
-      .eq("owner_user_id", ownerUserId).eq("provider", "qonto").maybeSingle();
+      .eq("owner_user_id", ownerUserId).eq("provider", "qonto")
+      .abortSignal(new AbortController().signal).maybeSingle();
     if (error) throw new Error("DATABASE_ERROR");
     return data === null ? null : integrationSchema.parse(data);
   } catch { throw new Error("DATABASE_ERROR"); }

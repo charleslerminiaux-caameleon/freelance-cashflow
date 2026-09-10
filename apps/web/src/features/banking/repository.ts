@@ -42,7 +42,8 @@ export async function listBankAccounts(client: SupabaseClient, ownerUserId: stri
     for (let from = 0; ; from += 1000) {
       const { data, error } = await client.from("bank_accounts").select(accountColumns)
         .eq("owner_user_id", ownerUserId).eq("integration_id", integrationId)
-        .order("id", { ascending: true }).range(from, from + 999);
+        .order("id", { ascending: true })
+        .abortSignal(new AbortController().signal).range(from, from + 999);
       if (error) throw new Error("DATABASE_ERROR");
       const page = z.array(accountSchema).parse(data); rows.push(...page);
       if (page.length < 1000) return rows;
@@ -68,6 +69,9 @@ export async function getBankingSnapshot(
     throw new Error("DATABASE_ERROR");
   }
 
+  // Control, account and history GETs carry explicit signals to bypass Next
+  // render memoization, including identical URLs on retries. These owner reads
+  // run after cookies(), without fetch cache configuration (Next auto no-cache).
   // Publication changes accounts, transactions and last_success_at atomically.
   // Read the marker around the whole assembled view, retaining its PostgreSQL
   // precision (Date conversion would truncate microseconds). Discard every row
@@ -99,7 +103,8 @@ export async function listBankTransactions(client: SupabaseClient, ownerUserId: 
     const from = (page - 1) * 50;
     const { data, error, count } = await client.from("bank_transactions")
       .select(transactionColumns, { count: "exact" }).eq("owner_user_id", ownerUserId).eq("integration_id", integrationId)
-      .order("transaction_date", { ascending: false }).order("id", { ascending: false }).range(from, from + 49);
+      .order("transaction_date", { ascending: false }).order("id", { ascending: false })
+      .abortSignal(new AbortController().signal).range(from, from + 49);
     if (error) throw new Error("DATABASE_ERROR");
     return { items: z.array(transactionSchema).parse(data), page, hasNext: z.number().int().nonnegative().parse(count) > from + 50 };
   } catch { throw new Error("DATABASE_ERROR"); }
