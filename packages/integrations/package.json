@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts"
   },
   "types": "./src/index.ts",
   "scripts": {
@@ -13,6 +14,7 @@
   },
   "dependencies": {
     "@fc/shared": "workspace:*",
+    "server-only": "0.0.1",
     "zod": "^4.1.5"
   },
   "devDependencies": {
