@@ -111,6 +111,28 @@ it("returns a safe actionable invoice-number conflict", async () => {
   });
 });
 
+it("names the linked billing step when it has already been invoiced", async () => {
+  createInvoice.mockRejectedValue(new RepositoryError("FC_SCHEDULE_ALREADY_INVOICED"));
+
+  const result = await createInvoiceAction(initialState, manualInvoiceFormData());
+
+  expect(result).toEqual({
+    message: "Cette étape de facturation a déjà été facturée.",
+    success: false,
+  });
+});
+
+it("names the selected billing step in a schedule mismatch", async () => {
+  createInvoice.mockRejectedValue(new RepositoryError("FC_SCHEDULE_INVOICE_MISMATCH"));
+
+  const result = await createInvoiceAction(initialState, manualInvoiceFormData());
+
+  expect(result).toEqual({
+    message: "Le client et les montants doivent correspondre à l’étape de facturation sélectionnée.",
+    success: false,
+  });
+});
+
 describe("importInvoiceCsvAction", () => {
   it("validates every CSV row before asking the repository to write", async () => {
     const result = await importInvoiceCsvAction(

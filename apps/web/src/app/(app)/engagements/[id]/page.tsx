@@ -74,12 +74,12 @@ export default async function EngagementDetailPage({
           <div className="section-heading">
             <div>
               <p className="eyebrow">Facturation</p>
-              <h2 id="schedule-title">Échéancier</h2>
+              <h2 id="schedule-title">Plan de facturation</h2>
             </div>
             <span>{schedule.length}</span>
           </div>
           {schedule.length === 0 ? (
-            <p className="muted-copy">Aucune échéance. Ajoutez un acompte, un jalon ou le solde.</p>
+            <p className="muted-copy">Aucune étape de facturation. Ajoutez un acompte, un jalon ou le solde.</p>
           ) : (
             <div className="schedule-list">
               {schedule.map((item) => (
@@ -103,8 +103,8 @@ export default async function EngagementDetailPage({
         </section>
 
         <section className="panel" aria-labelledby="new-schedule-title">
-          <p className="eyebrow">Nouveau jalon</p>
-          <h2 id="new-schedule-title">Ajouter une échéance</h2>
+          <p className="eyebrow">Nouvelle étape de facturation</p>
+          <h2 id="new-schedule-title">Ajouter une étape de facturation</h2>
           <BillingScheduleForm
             action={createBillingScheduleItemAction}
             engagementId={engagement.id}

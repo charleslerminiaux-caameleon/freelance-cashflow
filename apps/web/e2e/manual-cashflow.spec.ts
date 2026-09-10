@@ -75,12 +75,12 @@ async function addBillingSchedule(
   page: Page,
   values: { label: string; amountHt: string },
 ) {
-  const form = formContaining(page, "Ajouter l’échéance");
+  const form = formContaining(page, "Ajouter une étape de facturation");
   await form.getByLabel("Libellé").fill(values.label);
   await form.getByLabel("Date de facturation prévue").fill(isoDateFromToday(1));
   await form.getByLabel("Montant HT").fill(values.amountHt);
-  await form.getByRole("button", { name: "Ajouter l’échéance" }).click();
-  await expect(form.getByRole("status")).toHaveText("Échéance ajoutée.");
+  await form.getByRole("button", { name: "Ajouter une étape de facturation" }).click();
+  await expect(form.getByRole("status")).toHaveText("Étape de facturation ajoutée.");
   await page.reload();
   await expect(page.getByRole("article").filter({ hasText: values.label })).toBeVisible();
 }
@@ -92,7 +92,7 @@ async function createInvoice(
   await page.getByRole("link", { name: "Facturation" }).click();
   const form = formContaining(page, "Créer la facture");
   await form
-    .getByLabel("Échéance de commande (facultative)")
+    .getByLabel("Étape de facturation (facultative)")
     .selectOption({ label: "Mission conseil · Acompte · Atelier Bleu" });
   await form.getByLabel("Numéro de facture").fill(values.number);
   await form.getByLabel("Montant HT").fill(values.amountHt);

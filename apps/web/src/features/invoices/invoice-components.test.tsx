@@ -10,7 +10,7 @@ import { PaymentForm } from "./payment-form";
 const idleAction = async () => ({ message: null, success: false });
 const paymentIdempotencyKey = "55555555-5555-4555-8555-555555555555";
 
-it("collects a manual invoice and can link one billing schedule item", () => {
+it("collects a manual invoice and can link one billing step", () => {
   render(
     <InvoiceForm
       action={idleAction}
@@ -32,7 +32,7 @@ it("collects a manual invoice and can link one billing schedule item", () => {
     />,
   );
 
-  fireEvent.change(screen.getByLabelText("Échéance de commande (facultative)"), {
+  fireEvent.change(screen.getByLabelText("Étape de facturation (facultative)"), {
     target: { value: "schedule-1" },
   });
 
@@ -130,6 +130,12 @@ it("rotates the payment idempotency key after a confirmed payment", async () => 
 });
 
 describe("InvoiceGroups", () => {
+  it("calls an unbilled schedule item a billing step", () => {
+    render(<InvoiceGroups invoices={[]} scheduleItems={[]} today={localDate("2026-09-20")} />);
+
+    expect(within(screen.getByRole("region", { name: "À facturer" })).getByText("Aucune étape de facturation à facturer.")).toBeInTheDocument();
+  });
+
   it("groups schedules and persisted invoices into the five billing stages", () => {
     render(
       <InvoiceGroups

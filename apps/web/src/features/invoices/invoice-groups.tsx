@@ -91,7 +91,7 @@ export function InvoiceGroups({
           <span>{scheduleItems.length}</span>
         </div>
         {scheduleItems.length === 0 ? (
-          <EmptyGroup>Aucune échéance de commande à facturer.</EmptyGroup>
+          <EmptyGroup>Aucune étape de facturation à facturer.</EmptyGroup>
         ) : (
           <div className="invoice-group-list">
             {scheduleItems.map((schedule) => (
