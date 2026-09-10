@@ -1403,23 +1403,12 @@ details.panel[open] > summary {
   font-weight: 400;
   left: 0;
   line-height: 1.4;
-  opacity: 0;
   padding: 0.6rem 0.7rem;
   pointer-events: none;
   position: absolute;
   top: calc(100% + 0.45rem);
-  transform: translateY(-0.2rem);
-  transition: opacity 120ms ease, transform 120ms ease;
-  visibility: hidden;
   width: min(18rem, 75vw);
   z-index: 2;
-}
-
-.scenario-choice:hover .scenario-tooltip,
-.scenario-choice:focus-within .scenario-tooltip {
-  opacity: 1;
-  transform: translateY(0);
-  visibility: visible;
 }
 
 .dashboard-actions {

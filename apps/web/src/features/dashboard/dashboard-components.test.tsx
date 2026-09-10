@@ -148,11 +148,11 @@ describe("dashboard controls", () => {
     for (const { description } of scenarioHelp) {
       const tooltip = screen.getByText(description);
 
-      expect(tooltip).toHaveProperty("hidden", true);
+      expect(tooltip).not.toBeVisible();
       fireEvent.mouseEnter(tooltip.parentElement!);
-      expect(tooltip).toHaveProperty("hidden", false);
+      expect(tooltip).toBeVisible();
       fireEvent.mouseLeave(tooltip.parentElement!);
-      expect(tooltip).toHaveProperty("hidden", true);
+      expect(tooltip).not.toBeVisible();
     }
   });
 
@@ -169,11 +169,11 @@ describe("dashboard controls", () => {
       const radio = screen.getByRole("radio", { name: label });
       const tooltip = screen.getByText(description);
 
-      expect(tooltip).toHaveProperty("hidden", true);
+      expect(tooltip).not.toBeVisible();
       fireEvent.focus(radio);
-      expect(tooltip).toHaveProperty("hidden", false);
+      expect(tooltip).toBeVisible();
       fireEvent.blur(radio);
-      expect(tooltip).toHaveProperty("hidden", true);
+      expect(tooltip).not.toBeVisible();
     }
   });
 
