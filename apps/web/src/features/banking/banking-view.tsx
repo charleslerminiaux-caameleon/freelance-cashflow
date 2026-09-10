@@ -36,7 +36,7 @@ export function BankingView({ banking, history, currency, searchParameters = {} 
         {(!account.is_current || account.status === "closed") && <p>Compte exclu du solde d’ouverture</p>}
       </article>)}
     </div>}
-    <h3>Historique bancaire</h3><p>La projection part des soldes de comptes publiés. Cet historique n’est pas ajouté aux événements prévisionnels. Ils ne sont pas ajoutés aux événements prévisionnels.</p>
+    <h3>Historique bancaire</h3><p>La projection part des soldes de comptes publiés. Cet historique n’est pas ajouté aux événements prévisionnels.</p>
     <div className="treasury-table-wrap"><table className="treasury-table" aria-label="Historique bancaire">
       <thead><tr><th scope="col">Date</th><th scope="col">Compte</th><th scope="col">Libellé</th><th scope="col">Statut</th><th scope="col">Montant</th></tr></thead>
       <tbody>{history.items.length === 0 ? <tr><td colSpan={5}>Aucune transaction sur cette page.</td></tr> : history.items.map(transaction => <tr key={transaction.id}>

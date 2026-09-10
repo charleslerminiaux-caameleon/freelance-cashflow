@@ -221,6 +221,7 @@ describe("createQontoProvider HTTP contract", () => {
 
   it.each([
     ["malformed JSON", new Response("{private malformed", { status: 200 })],
+    ["truncated UTF-8", new Response(new Uint8Array([0xe2, 0x82]))],
     ["missing transaction metadata", jsonResponse({ transactions: [fakeTransaction] })],
     [
       "schema failure",
@@ -425,5 +426,189 @@ describe("createQontoProvider retry policy", () => {
 
     await result;
     expect(fetch).toHaveBeenCalledTimes(3);
+  });
+});
+
+function openResponse(
+  init?: ResponseInit,
+  chunk?: Uint8Array,
+  onCancel: () => void | Promise<void> = () => undefined,
+) {
+  let cancellations = 0;
+  const response = new Response(new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (chunk) controller.enqueue(chunk);
+    },
+    cancel() {
+      cancellations += 1;
+      return onCancel();
+    },
+  }), init);
+  return { response, cancellations: () => cancellations };
+}
+
+function interruptedResponse() {
+  let pulls = 0;
+  return new Response(new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (pulls++ === 0) controller.enqueue(new TextEncoder().encode('{"bank_accounts":'));
+      else controller.error(new TypeError("private connection reset"));
+    },
+  }));
+}
+
+describe("createQontoProvider response stream lifecycle", () => {
+  it("retries a stream interruption after headers and recovers", async () => {
+    const transport = sequenceFetch([
+      interruptedResponse(), jsonResponse({ bank_accounts: [] }),
+    ]);
+    const waits: number[] = [];
+    const provider = createQontoProvider({
+      ...credentials, fetch: transport.fetch,
+      sleep: async (milliseconds) => {
+        expect(transport.requests[0]?.init?.signal?.aborted).toBe(true);
+        waits.push(milliseconds);
+      },
+    });
+    await expect(provider.listAccounts(1)).resolves.toEqual({ items: [], nextPage: null });
+    expect(transport.requests).toHaveLength(2);
+    expect(waits).toEqual([500]);
+  });
+
+  it("exhausts interrupted streams with only the stable unavailable error", async () => {
+    const transport = sequenceFetch(Array.from({ length: 3 }, interruptedResponse));
+    const waits: number[] = [];
+    const provider = createQontoProvider({
+      ...credentials, fetch: transport.fetch,
+      sleep: async (milliseconds) => { waits.push(milliseconds); },
+    });
+    const error = await provider.listAccounts(1).catch((error: unknown) => error);
+    expectIntegrationCode(error, "PROVIDER_UNAVAILABLE");
+    expect((error as Error).message).not.toContain("private");
+    expect((error as Error).cause).toBeUndefined();
+    expect(transport.requests).toHaveLength(3);
+    expect(waits).toEqual([500, 1_000]);
+    expect(transport.requests.every(({ init }) => init?.signal?.aborted)).toBe(true);
+  });
+
+  it.each([
+    [401, "PROVIDER_AUTH_EXPIRED", undefined, 1],
+    [403, "PROVIDER_AUTH_EXPIRED", undefined, 1],
+    [400, "PROVIDER_INVALID_RESPONSE", undefined, 1],
+    [429, "PROVIDER_RATE_LIMIT", "6", 1],
+    [429, "PROVIDER_RATE_LIMIT", undefined, 3],
+    [503, "PROVIDER_UNAVAILABLE", undefined, 3],
+  ] as const)("disposes open HTTP %i bodies before retry or return", async (status, code, retryAfter, attempts) => {
+    const streams = Array.from({ length: attempts }, () => openResponse({
+      status, headers: retryAfter ? { "retry-after": retryAfter } : undefined,
+    }));
+    const transport = sequenceFetch(streams.map(({ response }) => response));
+    const provider = createQontoProvider({
+      ...credentials, fetch: transport.fetch,
+      sleep: async () => {
+        const previous = transport.requests.length - 1;
+        expect(streams[previous]?.cancellations()).toBe(1);
+        expect(transport.requests[previous]?.init?.signal?.aborted).toBe(true);
+      },
+    });
+    await expect(provider.listAccounts(1)).rejects.toMatchObject({ code });
+    expect(transport.requests).toHaveLength(attempts);
+    expect(streams.map((stream) => stream.cancellations())).toEqual(Array(attempts).fill(1));
+    expect(transport.requests.every(({ init }) => init?.signal?.aborted)).toBe(true);
+  });
+
+  it.each(["declared size", "observed size", "malformed UTF-8"])(
+    "disposes an open %s failure without retrying", async (failure) => {
+      const stream = openResponse(
+        failure === "declared size" ? { headers: { "content-length": "5242881" } } : undefined,
+        failure === "observed size" ? new Uint8Array(5_242_881) : new Uint8Array([0xff]),
+      );
+      const transport = sequenceFetch([stream.response]);
+      const provider = createQontoProvider({ ...credentials, fetch: transport.fetch });
+      await expect(provider.listAccounts(1)).rejects.toMatchObject({ code: "PROVIDER_INVALID_RESPONSE" });
+      expect(transport.requests).toHaveLength(1);
+      expect(stream.cancellations()).toBe(1);
+      expect(transport.requests[0]?.init?.signal?.aborted).toBe(true);
+    },
+  );
+
+  it.each([
+    [401, "throw", "PROVIDER_AUTH_EXPIRED"],
+    [401, "reject", "PROVIDER_AUTH_EXPIRED"],
+    [401, "never resolve", "PROVIDER_AUTH_EXPIRED"],
+    [200, "throw", "PROVIDER_INVALID_RESPONSE"],
+    [200, "reject", "PROVIDER_INVALID_RESPONSE"],
+    [200, "never resolve", "PROVIDER_INVALID_RESPONSE"],
+  ] as const)(
+    "preserves HTTP %i primary result when cancellation can %s", async (status, behavior, code) => {
+      vi.useFakeTimers();
+      const stream = openResponse({ status }, new Uint8Array([0xff]), () => {
+        if (behavior === "throw") throw new Error("private cleanup failure");
+        if (behavior === "reject") return Promise.reject(new Error("private cleanup failure"));
+        return new Promise<void>(() => undefined);
+      });
+      const transport = sequenceFetch([stream.response]);
+      const provider = createQontoProvider({ ...credentials, fetch: transport.fetch });
+      let settled = false;
+      const result = provider.listAccounts(1).catch((error: unknown) => { settled = true; return error; });
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+      expectIntegrationCode(await result, code);
+      expect(stream.cancellations()).toBe(1);
+      expect(transport.requests).toHaveLength(1);
+      expect(transport.requests[0]?.init?.signal?.aborted).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it.each(["resolve", "never resolve"])("cancels stalled successful bodies on timeout when cancellation can %s", async (behavior) => {
+    vi.useFakeTimers();
+    const streams = Array.from({ length: 3 }, () => openResponse(undefined, undefined, () =>
+      behavior === "resolve" ? undefined : new Promise<void>(() => undefined),
+    ));
+    const transport = sequenceFetch(streams.map(({ response }) => response));
+    const provider = createQontoProvider({
+      ...credentials, fetch: transport.fetch,
+      sleep: async () => {
+        const previous = transport.requests.length - 1;
+        expect(streams[previous]?.cancellations()).toBe(1);
+        expect(transport.requests[previous]?.init?.signal?.aborted).toBe(true);
+      },
+    });
+    const result = provider.listAccounts(1).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expectIntegrationCode(await result, "PROVIDER_UNAVAILABLE");
+    expect(transport.requests).toHaveLength(3);
+    expect(streams.map((stream) => stream.cancellations())).toEqual([1, 1, 1]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("disposes a response arriving after its request deadline", async () => {
+    vi.useFakeTimers();
+    const late = openResponse({ status: 503 });
+    let resolveFirst!: (response: Response) => void;
+    let firstSignal: AbortSignal | null | undefined;
+    let requests = 0;
+    const provider = createQontoProvider({
+      ...credentials,
+      fetch: async (_input, init) => {
+        requests += 1;
+        if (requests === 1) {
+          firstSignal = init?.signal;
+          return new Promise<Response>((resolve) => { resolveFirst = resolve; });
+        }
+        return jsonResponse({ bank_accounts: [] });
+      },
+      sleep: async () => undefined,
+    });
+    const result = provider.listAccounts(1);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await expect(result).resolves.toEqual({ items: [], nextPage: null });
+    resolveFirst(late.response);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(firstSignal?.aborted).toBe(true);
+    expect(late.cancellations()).toBe(1);
+    expect(requests).toBe(2);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

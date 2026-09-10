@@ -62,7 +62,17 @@ async function defaultSleep(milliseconds: number): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function readJsonBounded(response: Response): Promise<unknown> {
+function cancelBody(body: ReadableStream<Uint8Array> | ReadableStreamDefaultReader<Uint8Array>): void {
+  // Abort owns the transport deadline. A broken cancellation must neither delay
+  // the next attempt nor replace its primary result with a cleanup failure.
+  try {
+    void body.cancel().catch(() => undefined);
+  } catch {
+    // Cancellation is best effort; the attempt also aborts its request signal.
+  }
+}
+
+async function readJsonBounded(response: Response, signal: AbortSignal): Promise<unknown> {
   const contentLength = response.headers.get("content-length");
   if (contentLength !== null) {
     const declaredBytes = Number(contentLength);
@@ -73,6 +83,8 @@ async function readJsonBounded(response: Response): Promise<unknown> {
 
   if (response.body === null) throw new InvalidPayloadError();
   const reader = response.body.getReader();
+  const cancelReader = () => cancelBody(reader);
+  signal.addEventListener("abort", cancelReader, { once: true });
   const decoder = new TextDecoder("utf-8", { fatal: true });
   let receivedBytes = 0;
   let text = "";
@@ -83,14 +95,21 @@ async function readJsonBounded(response: Response): Promise<unknown> {
       if (chunk.done) break;
       receivedBytes += chunk.value.byteLength;
       if (receivedBytes > MAX_BODY_BYTES) throw new InvalidPayloadError();
-      text += decoder.decode(chunk.value, { stream: true });
+      try {
+        text += decoder.decode(chunk.value, { stream: true });
+      } catch {
+        throw new InvalidPayloadError();
+      }
     }
-    text += decoder.decode();
-    return JSON.parse(text) as unknown;
-  } catch (error) {
-    if (error instanceof InvalidPayloadError) throw error;
-    throw new InvalidPayloadError();
+    try {
+      text += decoder.decode();
+      return JSON.parse(text) as unknown;
+    } catch {
+      throw new InvalidPayloadError();
+    }
   } finally {
+    signal.removeEventListener("abort", cancelReader);
+    cancelReader();
     reader.releaseLock();
   }
 }
@@ -101,6 +120,7 @@ async function fetchAttempt(
   authorization: string,
 ): Promise<{ response: Response; body?: unknown }> {
   const controller = new AbortController();
+  let response: Response | undefined;
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_resolve, reject) => {
     timeout = setTimeout(() => {
@@ -109,20 +129,27 @@ async function fetchAttempt(
     }, ATTEMPT_TIMEOUT_MS);
   });
   const request = (async () => {
-    const response = await fetchImplementation(url, {
+    response = await fetchImplementation(url, {
       method: "GET",
       headers: { Authorization: authorization },
       redirect: "error",
       cache: "no-store",
       signal: controller.signal,
     });
+    // An injected or slow transport may settle even after the deadline won.
+    if (controller.signal.aborted) {
+      if (response.body) cancelBody(response.body);
+      throw unavailable();
+    }
     if (!response.ok) return { response };
-    return { response, body: await readJsonBounded(response) };
+    return { response, body: await readJsonBounded(response, controller.signal) };
   })();
 
   try {
     return await Promise.race([request, deadline]);
   } finally {
+    controller.abort();
+    if (response?.body && !response.body.locked) cancelBody(response.body);
     if (timeout !== undefined) clearTimeout(timeout);
   }
 }
