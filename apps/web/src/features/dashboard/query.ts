@@ -331,6 +331,7 @@ export async function loadDashboardSourceData(
   range: DashboardQueryRange,
   adapter: DashboardRepositoryAdapter = repositories,
   knownSettings?: OwnerSettings,
+  knownBankingSnapshot?: BankingSnapshot,
 ): Promise<DashboardSourceData> {
   const parsedOwnerId = parseOwnerId(ownerUserId);
   const [settings, invoices, opportunities, billingScheduleItems, recurring, planned, banking] =
@@ -341,7 +342,7 @@ export async function loadDashboardSourceData(
       adapter.listRelevantBillingScheduleItems(client, parsedOwnerId, range),
       adapter.listRelevantRecurringCashflows(client, parsedOwnerId, range),
       adapter.listRelevantPlannedCashflows(client, parsedOwnerId, range),
-      adapter.getBankingSnapshot(client, parsedOwnerId),
+      knownBankingSnapshot ?? adapter.getBankingSnapshot(client, parsedOwnerId),
     ]);
 
   return {
@@ -435,6 +436,7 @@ export async function getDashboardViewModel(
   options: {
     searchParameters?: DashboardSearchParameters;
     today?: LocalDate;
+    bankingSnapshot?: BankingSnapshot;
   } = {},
 ): Promise<DashboardViewModel> {
   const parsedOwnerId = parseOwnerId(ownerUserId);
@@ -459,6 +461,7 @@ export async function getDashboardViewModel(
     range,
     repositories,
     settings,
+    options.bankingSnapshot,
   );
 
   return buildDashboardViewModel(data, dashboardOptions);

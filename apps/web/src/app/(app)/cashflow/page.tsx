@@ -1,7 +1,7 @@
 import { formatMoney } from "@fc/shared";
 
 import { BankingView } from "@/features/banking/banking-view";
-import { getBankingSnapshot, listBankTransactions, parseBankPage, type TransactionHistory } from "@/features/banking/repository";
+import { getBankingSnapshot, parseBankPage } from "@/features/banking/repository";
 import { createClient } from "@/lib/supabase/server";
 import { HorizonSelector } from "@/features/dashboard/horizon-selector";
 import {
@@ -33,14 +33,13 @@ export default async function CashflowPage({
 }) {
   const [{ userId }, parameters] = await Promise.all([requireOwner(), searchParams]);
   const client = await createClient();
-  const [model, banking] = await Promise.all([
-    getDashboardViewModel(userId, { searchParameters: parameters }),
-    getBankingSnapshot(client, userId),
-  ]);
-  const page = parseBankPage(parameters.bankPage);
-  const history: TransactionHistory = banking.integration?.last_success_at
-    ? await listBankTransactions(client, userId, banking.integration.id, page)
-    : { items: [], page: 1, hasNext: false };
+  const banking = await getBankingSnapshot(client, userId, {
+    historyPage: parseBankPage(parameters.bankPage),
+  });
+  const model = await getDashboardViewModel(userId, {
+    searchParameters: parameters,
+    bankingSnapshot: banking,
+  });
 
   return (
     <div className="commercial-page cashflow-page">
@@ -118,7 +117,7 @@ export default async function CashflowPage({
           </table>
         </div>
       </section>
-      <BankingView banking={banking} history={history} currency={model.currency} searchParameters={parameters} />
+      <BankingView banking={banking} history={banking.history} currency={model.currency} searchParameters={parameters} />
     </div>
   );
 }

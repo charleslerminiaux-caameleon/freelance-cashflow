@@ -50,10 +50,47 @@ export async function listBankAccounts(client: SupabaseClient, ownerUserId: stri
   } catch { throw new Error("DATABASE_ERROR"); }
 }
 
-export async function getBankingSnapshot(client: SupabaseClient, ownerUserId: string): Promise<BankingSnapshot> {
-  const integration = await getQontoIntegration(client, ownerUserId);
-  const accounts = integration?.last_success_at ? await listBankAccounts(client, ownerUserId, integration.id) : [];
-  return { integration, accounts };
+export function getBankingSnapshot(
+  client: SupabaseClient,
+  ownerUserId: string,
+): Promise<BankingSnapshot>;
+export function getBankingSnapshot(
+  client: SupabaseClient,
+  ownerUserId: string,
+  options: { historyPage: number },
+): Promise<BankingSnapshot & { history: TransactionHistory }>;
+export async function getBankingSnapshot(
+  client: SupabaseClient,
+  ownerUserId: string,
+  options?: { historyPage: number },
+): Promise<BankingSnapshot & { history?: TransactionHistory }> {
+  if (options && !pageSchema.safeParse(options.historyPage).success) {
+    throw new Error("DATABASE_ERROR");
+  }
+
+  // Publication changes accounts, transactions and last_success_at atomically.
+  // Read the marker around the whole assembled view, retaining its PostgreSQL
+  // precision (Date conversion would truncate microseconds). Discard every row
+  // from an overlapping publication and retry the entire read, at most 3 times.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const before = await getQontoIntegration(client, ownerUserId);
+    const accounts = before?.last_success_at
+      ? await listBankAccounts(client, ownerUserId, before.id)
+      : [];
+    const history = options
+      ? before?.last_success_at
+        ? await listBankTransactions(client, ownerUserId, before.id, options.historyPage)
+        : { items: [], page: 1, hasNext: false }
+      : undefined;
+    const after = await getQontoIntegration(client, ownerUserId);
+
+    if (before?.id === after?.id && before?.last_success_at === after?.last_success_at) {
+      // A connection failure or a new in-flight sync does not change published
+      // money. Show the latest control state without discarding that money.
+      return { integration: after, accounts, ...(history ? { history } : {}) };
+    }
+  }
+  throw new Error("DATABASE_ERROR");
 }
 
 export async function listBankTransactions(client: SupabaseClient, ownerUserId: string, integrationId: string, page = 1): Promise<TransactionHistory> {

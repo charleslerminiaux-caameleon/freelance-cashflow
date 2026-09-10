@@ -63,7 +63,7 @@ function model(): DashboardViewModel {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  createClient.mockResolvedValue({}); getBankingSnapshot.mockResolvedValue({integration:null,accounts:[]}); listBankTransactions.mockResolvedValue({items:[],page:2,hasNext:false});
+  createClient.mockResolvedValue({}); getBankingSnapshot.mockResolvedValue({integration:null,accounts:[],history:{items:[],page:1,hasNext:false}}); listBankTransactions.mockResolvedValue({items:[],page:2,hasNext:false});
   requireOwner.mockResolvedValue({ userId: "11111111-1111-4111-8111-111111111111" });
   getDashboardViewModel.mockResolvedValue(model());
 });
@@ -93,9 +93,14 @@ it("renders opening balance and explainable chronological forecast events", asyn
 
 it("shows retained Qonto source and separate paginated history", async () => {
  const data = model(); data.openingBalanceSource = "qonto"; data.lastBankSyncSucceeded = false; data.excludedBankCurrencies = ["USD"]; getDashboardViewModel.mockResolvedValue(data);
- getBankingSnapshot.mockResolvedValue({integration:{id:"bank",last_success_at:"2026-09-10T10:00:00Z",last_error_code:"DATABASE_ERROR"},accounts:[]});
+ const banking = {integration:{id:"bank",last_success_at:"2026-09-10T10:00:00Z",last_error_code:"DATABASE_ERROR"},accounts:[],history:{items:[],page:2,hasNext:false}};
+ getBankingSnapshot.mockResolvedValue(banking);
  const {default:Page} = await import("./page"); render(await Page({searchParams:Promise.resolve({bankPage:"2"})}));
  expect(screen.getByText(/Situation Qonto/)).toBeInTheDocument(); expect(screen.getByText(/Actualisation nécessaire/)).toBeInTheDocument(); expect(screen.getByRole("table",{name:"Historique bancaire"})).toBeInTheDocument(); expect(screen.getByRole("table",{name:"Événements de trésorerie"})).toBeInTheDocument();
- expect(listBankTransactions).toHaveBeenCalledWith({},"11111111-1111-4111-8111-111111111111","bank",2);
+ expect(getBankingSnapshot).toHaveBeenCalledTimes(1);
+ expect(getBankingSnapshot).toHaveBeenCalledWith({},"11111111-1111-4111-8111-111111111111",{historyPage:2});
+ expect(getDashboardViewModel).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111",{searchParameters:{bankPage:"2"},bankingSnapshot:banking});
+ expect(getDashboardViewModel.mock.calls[0]?.[1].bankingSnapshot).toBe(banking);
+ expect(listBankTransactions).not.toHaveBeenCalled();
 });
 it("does not read financial rows for nonowner", async () => { requireOwner.mockRejectedValue(new Error("redirect")); const {default:Page} = await import("./page"); await expect(Page({searchParams:Promise.resolve({})})).rejects.toThrow("redirect"); expect(createClient).not.toHaveBeenCalled(); expect(getBankingSnapshot).not.toHaveBeenCalled(); });

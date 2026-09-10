@@ -8,6 +8,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient }));
 
 import {
   businessDateForTimezone,
+  getDashboardViewModel,
   loadDashboardSourceData,
   readAllPages,
   type DashboardRepositoryAdapter,
@@ -218,4 +219,36 @@ it("loads published banking independently of provider configuration and never re
  const result = await loadDashboardSourceData({} as SupabaseClient, ownerUserId, expectedRange, adapter);
  expect(result.banking).toEqual(banking); expect(result.settings.manualCurrentBalanceCents).toBe(420000);
  expect(adapter.getBankingSnapshot).toHaveBeenCalledWith({},ownerUserId);
+});
+
+it("reuses a caller's validated banking snapshot without a second banking read", async () => {
+ const adapter = repositoryAdapter();
+ adapter.getBankingSnapshot = vi.fn().mockRejectedValue(new Error("unexpected second read"));
+ const banking = { integration: null, accounts: [] };
+ const result = await loadDashboardSourceData({} as SupabaseClient, ownerUserId, expectedRange, adapter, undefined, banking);
+ expect(result.banking).toBe(banking);
+ expect(adapter.getBankingSnapshot).not.toHaveBeenCalled();
+});
+
+it("builds the dashboard from the exact supplied snapshot without another publication read", async () => {
+  const settings = await repositoryAdapter().getOwnerSettings({} as SupabaseClient, ownerUserId);
+  const query = {
+    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), in: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(), gte: vi.fn().mockReturnThis(), lte: vi.fn().mockReturnThis(),
+    lt: vi.fn().mockReturnThis(), or: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: settings, error: null }),
+    range: vi.fn().mockResolvedValue({ data: [], error: null }),
+  };
+  const db = { from: vi.fn(() => query) };
+  createClient.mockResolvedValue(db);
+  const banking = {
+    integration: { id: ownerUserId, status: "connected" as const, last_success_at: "2026-09-10T10:00:00.000002Z", last_connection_succeeded: true, last_error_code: null },
+    accounts: [{ id: ownerUserId, name: "Compte exemple", iban_masked: null, currency: "EUR", current_balance_cents: 500000, available_balance_cents: null, status: "active" as const, is_current: true, updated_at: "2026-09-10T10:00:00Z" }],
+  };
+  const result = await getDashboardViewModel(ownerUserId, { today: expectedRange.startDate, bankingSnapshot: banking });
+  expect(result.openingBalanceCents).toBe(500000);
+  expect(result.openingBalanceAsOf).toBe(banking.integration.last_success_at);
+  expect(db.from.mock.calls.flat()).not.toContain("integrations");
+  expect(db.from.mock.calls.flat()).not.toContain("bank_accounts");
+  expect(db.from.mock.calls.flat()).not.toContain("bank_transactions");
 });

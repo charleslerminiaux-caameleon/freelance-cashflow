@@ -1,3 +1,4 @@
+import type { IntegrationState } from "@/features/integrations/status";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { expect, it, vi } from "vitest";
 import { listBankAccounts, listBankTransactions, parseBankPage, getBankingSnapshot } from "./repository";
@@ -36,5 +37,102 @@ it("loads all account pages rather than silently truncating a balance", async ()
 it("retains published accounts after provider failure without consulting live config", async () => {
  const control = {select:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis(),maybeSingle:vi.fn().mockResolvedValue({data:{id:integration,status:"error",last_success_at:"2026-09-10T10:00:00Z",last_connection_succeeded:false,last_error_code:"PROVIDER_AUTH_EXPIRED"},error:null})};
  const {query}=client([account]); const db={from:vi.fn((name:string)=>name==="integrations"?control:query)};
- expect((await getBankingSnapshot(db as unknown as SupabaseClient,owner)).accounts).toHaveLength(1); expect(db.from.mock.calls).toEqual([["integrations"],["bank_accounts"]]);
+ expect((await getBankingSnapshot(db as unknown as SupabaseClient,owner)).accounts).toHaveLength(1); expect(db.from.mock.calls).toEqual([["integrations"],["bank_accounts"],["integrations"]]);
+});
+
+function publicationClient({ changeAt, continuous = false, metadataOnly }: {
+  changeAt: "account" | "second-account-page" | "history";
+  continuous?: boolean;
+  metadataOnly?: "error" | "syncing";
+}) {
+  let generation = 1;
+  let changed = false;
+  let failed = false;
+  const marker = () => `2026-09-10T10:00:00.00000${generation}Z`;
+  function publish() {
+    if (continuous || !changed) {
+      changed = true;
+      if (metadataOnly) failed = true; else generation += 1;
+    }
+  }
+  const control = {
+    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn(async (): Promise<{ error: null; data: IntegrationState | null }> => ({ error: null, data: {
+      id: integration, status: failed ? metadataOnly ?? "error" : "connected",
+      last_success_at: marker(), last_connection_succeeded: metadataOnly === "error" ? !failed : true,
+      last_error_code: failed && metadataOnly === "error" ? "PROVIDER_UNAVAILABLE" : null,
+    } })),
+  };
+  const accounts = {
+    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
+    range: vi.fn(async (from: number) => {
+      if (changeAt === "account" || (changeAt === "second-account-page" && from === 1000)) publish();
+      return { error: null, data: Array.from({ length: changeAt === "second-account-page" && from === 0 ? 1000 : 1 }, () => ({
+        ...account, current_balance_cents: generation * 100,
+      })) };
+    }),
+  };
+  const transactions = {
+    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
+    range: vi.fn(async () => {
+      if (changeAt === "history") publish();
+      return { error: null, count: 1, data: [{ id: owner, bank_account_id: owner, currency: "EUR", amount_cents: generation * 10,
+        direction: "inflow", status: "completed", label: "Exemple", counterparty: null,
+        transaction_date: "2026-09-10", value_date: null, updated_at: "2026-09-10T10:00:00Z" }] };
+    }),
+  };
+  const db = { from: vi.fn((table: string) => table === "integrations" ? control : table === "bank_accounts" ? accounts : transactions) };
+  return { db: db as unknown as SupabaseClient, control, accounts, transactions };
+}
+
+it.each(["account", "second-account-page"] as const)("retries a publication during %s reads, retaining microsecond marker precision", async (changeAt) => {
+  const { db, control } = publicationClient({ changeAt });
+  const result = await getBankingSnapshot(db, owner);
+  expect(result.integration?.last_success_at).toBe("2026-09-10T10:00:00.000002Z");
+  expect(result.accounts.every(row => row.current_balance_cents === 200)).toBe(true);
+  expect(control.maybeSingle).toHaveBeenCalledTimes(4);
+});
+
+it("fails with a bounded stable error when publication continually changes", async () => {
+  const { db, control, accounts } = publicationClient({ changeAt: "account", continuous: true });
+  await expect(getBankingSnapshot(db, owner)).rejects.toThrow(/^DATABASE_ERROR$/);
+  expect(control.maybeSingle).toHaveBeenCalledTimes(6);
+  expect(accounts.range).toHaveBeenCalledTimes(3);
+});
+
+it("retries accounts and history together if publication occurs during the history read", async () => {
+  const { db, control, transactions } = publicationClient({ changeAt: "history" });
+  const result = await getBankingSnapshot(db, owner, { historyPage: 1 });
+  expect(result.accounts[0]?.current_balance_cents).toBe(200);
+  expect(result.history.items[0]?.amount_cents).toBe(20);
+  expect(result.integration?.last_success_at).toBe("2026-09-10T10:00:00.000002Z");
+  expect(control.maybeSingle).toHaveBeenCalledTimes(4);
+  expect(transactions.range).toHaveBeenCalledTimes(2);
+});
+
+it.each(["error", "syncing"] as const)("returns the latest %s metadata without retrying an unchanged publication", async (metadataOnly) => {
+  const { db, control, accounts } = publicationClient({ changeAt: "account", metadataOnly });
+  const result = await getBankingSnapshot(db, owner);
+  expect(result.integration?.last_success_at).toBe("2026-09-10T10:00:00.000001Z");
+  expect(result.integration?.status).toBe(metadataOnly);
+  expect(result.integration?.last_connection_succeeded).toBe(metadataOnly !== "error");
+  expect(result.accounts[0]?.current_balance_cents).toBe(100);
+  expect(control.maybeSingle).toHaveBeenCalledTimes(2);
+  expect(accounts.range).toHaveBeenCalledTimes(1);
+});
+
+it("does not return unpublished fallback when the first publication appears during the read", async () => {
+  const { db, control } = publicationClient({ changeAt: "history" });
+  control.maybeSingle.mockResolvedValueOnce({ error: null, data: null });
+  const result = await getBankingSnapshot(db, owner);
+  expect(result.accounts[0]?.current_balance_cents).toBe(100);
+  expect(result.integration?.last_success_at).toBe("2026-09-10T10:00:00.000001Z");
+  expect(control.maybeSingle).toHaveBeenCalledTimes(4);
+});
+
+it("bounds retries when history is continuously republished", async () => {
+  const { db, control, transactions } = publicationClient({ changeAt: "history", continuous: true });
+  await expect(getBankingSnapshot(db, owner, { historyPage: 1 })).rejects.toThrow(/^DATABASE_ERROR$/);
+  expect(control.maybeSingle).toHaveBeenCalledTimes(6);
+  expect(transactions.range).toHaveBeenCalledTimes(3);
 });
