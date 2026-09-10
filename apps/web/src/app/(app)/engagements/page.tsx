@@ -64,7 +64,7 @@ export default async function EngagementsPage() {
                   <dd>{engagement.payment_terms_days} jours</dd>
                 </div>
               </dl>
-              <span className="text-link">Voir la commande et son échéancier →</span>
+              <span className="text-link">Voir la commande et son plan de facturation →</span>
             </a>
           ))}
         </div>
