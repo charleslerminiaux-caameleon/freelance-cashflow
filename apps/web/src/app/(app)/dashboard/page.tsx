@@ -45,6 +45,10 @@ export default async function DashboardPage({
       </header>
 
       <KpiStrip
+        openingBalanceSource={model.openingBalanceSource}
+        openingBalanceAsOf={model.openingBalanceAsOf}
+        lastBankSyncSucceeded={model.lastBankSyncSucceeded}
+        excludedBankCurrencies={model.excludedBankCurrencies}
         kpis={model.kpis}
         horizonDays={model.horizonDays}
         scenario={model.scenario}

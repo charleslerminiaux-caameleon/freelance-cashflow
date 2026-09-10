@@ -358,3 +358,39 @@ describe("resolveDashboardOptions", () => {
     });
   });
 });
+
+const bankAccount = { id: "bank-a", name: "Compte exemple", iban_masked: null, currency: "EUR", current_balance_cents: 200000, available_balance_cents: 150000, status: "active" as const, is_current: true, updated_at: "2026-09-10T10:00:00Z" };
+function bankingData(): DashboardSourceData {
+ const data = sourceData(); data.settings.manualCurrentBalanceCents = moneyCents(100000);
+ data.banking = { integration: {id: "qonto", status: "connected", last_success_at: "2026-09-10T10:00:00Z", last_connection_succeeded: true, last_error_code: null}, accounts: [{...bankAccount}, { ...bankAccount, id: "bank-b", current_balance_cents: 300000 }] };
+ return data;
+}
+function bankModel(data: DashboardSourceData) { return buildDashboardViewModel(data, resolveDashboardOptions({}, {horizonDays:90,scenario:"certain"}, localDate("2026-09-05"))); }
+describe("published banking opening balance", () => {
+ it("uses EUR 200000 + 300000 instead of adding manual 100000 throughout forecasts and reserves", () => {
+  const data = bankingData(); const model = bankModel(data); const manual = bankModel({...data, banking: undefined});
+  expect(model.kpis.currentBalanceCents).toBe(500000); expect(model.openingBalanceSource).toBe("qonto"); expect(model.chart.points[0]?.certainBalanceCents).toBe(500000);
+  for (const [index, point] of model.chart.points.entries()) for (const key of ["certainBalanceCents", "committedBalanceCents", "probableBalanceCents"] as const) expect(point[key] - manual.chart.points[index]![key]).toBe(400000);
+  expect(model.kpis.availableBalanceCents - manual.kpis.availableBalanceCents).toBe(400000);
+  expect(model.treasuryEvents[0]!.runningBalanceCents - manual.treasuryEvents[0]!.runningBalanceCents).toBe(400000);
+ });
+ it("accepts zero and explicitly excludes foreign, closed and noncurrent accounts", () => {
+  const data = bankingData(); data.banking!.accounts = [{...bankAccount,current_balance_cents:0}, {...bankAccount,currency:"USD"}, {...bankAccount,status:"closed"}, {...bankAccount,is_current:false}];
+  const model = bankModel(data); expect(model.openingBalanceCents).toBe(0); expect(model.openingBalanceSource).toBe("qonto"); expect(model.excludedBankCurrencies).toEqual(["USD"]);
+ });
+ it("keeps published source/date after failure, independently of live config", () => {
+  const data = bankingData(); data.banking!.integration!.status = "error"; data.banking!.integration!.last_error_code = "PROVIDER_AUTH_EXPIRED";
+  const model = bankModel(data); expect(model.openingBalanceSource).toBe("qonto"); expect(model.openingBalanceAsOf).toBe("2026-09-10T10:00:00Z"); expect(model.lastBankSyncSucceeded).toBe(false);
+ });
+ it.each(["unpublished", "no-current-eur"])("falls back to manual only for %s", condition => {
+  const data = bankingData(); if (condition === "unpublished") data.banking!.integration!.last_success_at = null; else data.banking!.accounts = [{...bankAccount,currency:"USD"}];
+  const model = bankModel(data); expect(model.openingBalanceSource).toBe("manual"); expect(model.openingBalanceCents).toBe(100000);
+ });
+ it.each([undefined, null, Number.MAX_SAFE_INTEGER + 1])("never silently treats invalid bank balance as zero", balance => {
+  const data = bankingData(); Object.assign(data.banking!.accounts[0]!, {current_balance_cents:balance}); expect(() => bankModel(data)).toThrow();
+ });
+ it("rejects unsafe aggregate balances", () => { const data = bankingData(); data.banking!.accounts[0]!.current_balance_cents = Number.MAX_SAFE_INTEGER; expect(() => bankModel(data)).toThrow(); });
+ it("never turns completed or pending bank history into forecast events", () => {
+  const data = bankingData(); const before = bankModel(data); Object.assign(data.banking!, {transactions:[{status:"completed",amount_cents:200000},{status:"pending",amount_cents:100000}]}); expect(bankModel(data)).toEqual(before);
+ });
+});

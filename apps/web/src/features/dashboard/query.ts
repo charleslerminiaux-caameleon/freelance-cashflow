@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { localDate, moneyCents, type LocalDate } from "@fc/shared";
 import { z } from "zod";
 
+import { getBankingSnapshot, type BankingSnapshot } from "@/features/banking/repository";
 import { businessDateSchema } from "@/features/commercial-schema";
 import { repositoryError } from "@/features/repository-error";
 import {
@@ -108,6 +109,7 @@ export type DashboardQueryRange = {
 };
 
 export type DashboardRepositoryAdapter = {
+  getBankingSnapshot: (client: SupabaseClient, ownerUserId: string) => Promise<BankingSnapshot>;
   getOwnerSettings: (client: SupabaseClient, ownerUserId: string) => Promise<OwnerSettings>;
   listRelevantInvoices: (
     client: SupabaseClient,
@@ -306,6 +308,7 @@ async function listRelevantPlannedCashflows(
 }
 
 const repositories: DashboardRepositoryAdapter = {
+  getBankingSnapshot,
   getOwnerSettings,
   listRelevantInvoices,
   listRelevantOpportunities,
@@ -330,7 +333,7 @@ export async function loadDashboardSourceData(
   knownSettings?: OwnerSettings,
 ): Promise<DashboardSourceData> {
   const parsedOwnerId = parseOwnerId(ownerUserId);
-  const [settings, invoices, opportunities, billingScheduleItems, recurring, planned] =
+  const [settings, invoices, opportunities, billingScheduleItems, recurring, planned, banking] =
     await Promise.all([
       knownSettings ?? adapter.getOwnerSettings(client, parsedOwnerId),
       adapter.listRelevantInvoices(client, parsedOwnerId, range),
@@ -338,9 +341,11 @@ export async function loadDashboardSourceData(
       adapter.listRelevantBillingScheduleItems(client, parsedOwnerId, range),
       adapter.listRelevantRecurringCashflows(client, parsedOwnerId, range),
       adapter.listRelevantPlannedCashflows(client, parsedOwnerId, range),
+      adapter.getBankingSnapshot(client, parsedOwnerId),
     ]);
 
   return {
+    banking,
     settings: {
       currency: settings.currency,
       timezone: settings.timezone,

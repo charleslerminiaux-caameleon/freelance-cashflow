@@ -1,3 +1,4 @@
+import type { BankingSnapshot } from "@/features/banking/repository";
 import {
   buildCashflowEvents,
   calculateForecast,
@@ -53,6 +54,7 @@ export type DashboardOpportunitySource = OpportunityForecastSource & {
 };
 
 export type DashboardSourceData = {
+  banking?: BankingSnapshot;
   settings: {
     currency: string;
     timezone: string;
@@ -89,7 +91,10 @@ export type DashboardViewModel = {
   scenario: ForecastScenario;
   inclusions: DashboardInclusions;
   openingBalanceCents: MoneyCents;
-  openingBalanceAsOf: LocalDate;
+  openingBalanceAsOf: string;
+  openingBalanceSource: "manual" | "qonto";
+  excludedBankCurrencies: string[];
+  lastBankSyncSucceeded: boolean | null;
   safetyThresholdCents: MoneyCents;
   kpis: {
     currentBalanceCents: MoneyCents;
@@ -213,10 +218,55 @@ function compareMoneyDescending(left: MoneyCents, right: MoneyCents): number {
   return left > right ? -1 : 1;
 }
 
+export function selectOpeningBalance(data: Pick<DashboardSourceData, "settings" | "banking">): {
+  source: "manual" | "qonto";
+  balanceCents: MoneyCents;
+  asOf: string;
+  excludedCurrencies: string[];
+  lastSyncSucceeded: boolean | null;
+} {
+  const integration = data.banking?.integration;
+  const currentAccounts = (data.banking?.accounts ?? []).filter(
+    account => account.is_current && account.status === "active",
+  );
+  const excludedCurrencies = [...new Set(
+    currentAccounts
+      .filter(account => account.currency !== data.settings.currency)
+      .map(account => account.currency),
+  )].sort();
+  const accounts = currentAccounts.filter(account => account.currency === data.settings.currency);
+  const lastSyncSucceeded = integration?.last_success_at
+    ? integration.status === "connected"
+    : integration?.last_error_code ? false : null;
+
+  if (!integration?.last_success_at || accounts.length === 0) {
+    return {
+      source: "manual",
+      balanceCents: moneyCents(data.settings.manualCurrentBalanceCents),
+      asOf: data.settings.manualBalanceAsOf,
+      excludedCurrencies,
+      lastSyncSucceeded,
+    };
+  }
+
+  const total = accounts.reduce(
+    (sum, account) => sum + BigInt(moneyCents(account.current_balance_cents)),
+    0n,
+  );
+  return {
+    source: "qonto",
+    balanceCents: moneyCents(Number(total)),
+    asOf: integration.last_success_at,
+    excludedCurrencies,
+    lastSyncSucceeded,
+  };
+}
+
 export function buildDashboardViewModel(
   data: DashboardSourceData,
   options: DashboardOptions,
 ): DashboardViewModel {
+  const opening = selectOpeningBalance(data);
   const endDate = addDays(options.today, options.horizonDays);
   const thirtyDayEnd = addDays(options.today, 30);
   const snapshot: CashflowSnapshot = {
@@ -230,7 +280,7 @@ export function buildDashboardViewModel(
   const events = allEvents.filter((event) => includesEvent(event, options.inclusions));
   const forecasts = {
     certain: calculateForecast({
-      startBalanceCents: data.settings.manualCurrentBalanceCents,
+      startBalanceCents: opening.balanceCents,
       startDate: options.today,
       endDate,
       safetyThresholdCents: data.settings.safetyThresholdCents,
@@ -238,7 +288,7 @@ export function buildDashboardViewModel(
       events,
     }),
     committed: calculateForecast({
-      startBalanceCents: data.settings.manualCurrentBalanceCents,
+      startBalanceCents: opening.balanceCents,
       startDate: options.today,
       endDate,
       safetyThresholdCents: data.settings.safetyThresholdCents,
@@ -246,7 +296,7 @@ export function buildDashboardViewModel(
       events,
     }),
     probable: calculateForecast({
-      startBalanceCents: data.settings.manualCurrentBalanceCents,
+      startBalanceCents: opening.balanceCents,
       startDate: options.today,
       endDate,
       safetyThresholdCents: data.settings.safetyThresholdCents,
@@ -300,7 +350,7 @@ export function buildDashboardViewModel(
       || compareMoneyDescending(left.amountCents, right.amountCents),
     );
 
-  let runningBalance = data.settings.manualCurrentBalanceCents;
+  let runningBalance = opening.balanceCents;
   const treasuryEvents = events
     .filter((event) => includesScenario(event, options.scenario))
     .map((event) => {
@@ -320,12 +370,15 @@ export function buildDashboardViewModel(
     horizonDays: options.horizonDays,
     scenario: options.scenario,
     inclusions: options.inclusions,
-    openingBalanceCents: data.settings.manualCurrentBalanceCents,
-    openingBalanceAsOf: data.settings.manualBalanceAsOf,
+    openingBalanceCents: opening.balanceCents,
+    openingBalanceAsOf: opening.asOf,
+    openingBalanceSource: opening.source,
+    excludedBankCurrencies: opening.excludedCurrencies,
+    lastBankSyncSucceeded: opening.lastSyncSucceeded,
     safetyThresholdCents: data.settings.safetyThresholdCents,
     kpis: {
-      currentBalanceCents: data.settings.manualCurrentBalanceCents,
-      availableBalanceCents: moneyCents(data.settings.manualCurrentBalanceCents - reservedCents),
+      currentBalanceCents: opening.balanceCents,
+      availableBalanceCents: moneyCents(opening.balanceCents - reservedCents),
       inflows30DaysCents: moneyCents(
         thirtyDayPoints.reduce((total, point) => total + point.inflowsCents, 0),
       ),

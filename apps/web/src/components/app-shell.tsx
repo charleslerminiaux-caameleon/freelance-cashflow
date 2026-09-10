@@ -11,7 +11,7 @@ const navigation = [
   ["Paramètres", "/settings"],
 ] as const;
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, syncStatus = "Qonto : à configurer" }: { children: ReactNode; syncStatus?: string }) {
   return (
     <div className="app-shell">
       <header className="mobile-header">
@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <img src="/logo.jpeg" alt="" width="36" height="36" />
         </a>
         <span className="sync-status" aria-label="État de synchronisation">
-          Synchronisation à configurer
+          {syncStatus}
         </span>
       </header>
 
@@ -48,7 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </ul>
         </nav>
         <div className="sync-status" aria-label="État de synchronisation">
-          Synchronisation à configurer
+          {syncStatus}
         </div>
       </aside>
 

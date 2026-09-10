@@ -446,3 +446,8 @@ describe("dashboard detail panels", () => {
     expect(screen.getByText("20/09 · certain")).toBeInTheDocument();
   });
 });
+
+it("labels a Qonto opening balance and its stale publication without changing reserve semantics", () => {
+ render(<KpiStrip kpis={{currentBalanceCents:moneyCents(500000),availableBalanceCents:moneyCents(400000),inflows30DaysCents:moneyCents(0),outflows30DaysCents:moneyCents(0),projected30DaysCents:moneyCents(500000),runwayDays:null}} horizonDays={90} scenario="certain" openingBalanceSource="qonto" openingBalanceAsOf="2026-09-10T10:00:00Z" lastBankSyncSucceeded={false} excludedBankCurrencies={["USD"]} />);
+ expect(screen.getByText(/Solde Qonto/)).toBeInTheDocument(); expect(screen.getByText(/2026-09-10/)).toBeInTheDocument(); expect(screen.getByText(/actualisation nécessaire/i)).toBeInTheDocument(); expect(screen.getByText(/USD/)).toBeInTheDocument(); expect(screen.queryByText("solde manuel actuel")).not.toBeInTheDocument();
+});

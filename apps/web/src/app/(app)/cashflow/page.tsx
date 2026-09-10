@@ -1,5 +1,8 @@
 import { formatMoney } from "@fc/shared";
 
+import { BankingView } from "@/features/banking/banking-view";
+import { getBankingSnapshot, listBankTransactions, parseBankPage, type TransactionHistory } from "@/features/banking/repository";
+import { createClient } from "@/lib/supabase/server";
 import { HorizonSelector } from "@/features/dashboard/horizon-selector";
 import {
   getDashboardViewModel,
@@ -29,7 +32,15 @@ export default async function CashflowPage({
   searchParams: Promise<DashboardSearchParameters>;
 }) {
   const [{ userId }, parameters] = await Promise.all([requireOwner(), searchParams]);
-  const model = await getDashboardViewModel(userId, { searchParameters: parameters });
+  const client = await createClient();
+  const [model, banking] = await Promise.all([
+    getDashboardViewModel(userId, { searchParameters: parameters }),
+    getBankingSnapshot(client, userId),
+  ]);
+  const page = parseBankPage(parameters.bankPage);
+  const history: TransactionHistory = banking.integration?.last_success_at
+    ? await listBankTransactions(client, userId, banking.integration.id, page)
+    : { items: [], page: 1, hasNext: false };
 
   return (
     <div className="commercial-page cashflow-page">
@@ -53,8 +64,10 @@ export default async function CashflowPage({
           <strong>{formatMoney(model.openingBalanceCents)}</strong>
         </div>
         <p>
-          Situation manuelle au {model.openingBalanceAsOf} · seuil de sécurité {formatMoney(model.safetyThresholdCents)}
+          {model.openingBalanceSource === "qonto" ? "Situation Qonto" : "Situation manuelle"} au {model.openingBalanceAsOf} · seuil de sécurité {formatMoney(model.safetyThresholdCents)}
         </p>
+        {model.openingBalanceSource === "qonto" && model.lastBankSyncSucceeded === false && <p>Actualisation nécessaire · dernier solde publié conservé.</p>}
+        {model.excludedBankCurrencies.length > 0 && <p>Devises exclues : {model.excludedBankCurrencies.join(", ")}.</p>}
       </section>
 
       <section className="dashboard-panel treasury-panel" aria-labelledby="treasury-events-title">
@@ -105,6 +118,7 @@ export default async function CashflowPage({
           </table>
         </div>
       </section>
+      <BankingView banking={banking} history={history} currency={model.currency} searchParameters={parameters} />
     </div>
   );
 }

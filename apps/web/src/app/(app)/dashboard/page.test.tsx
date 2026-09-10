@@ -33,6 +33,7 @@ function model(): DashboardViewModel {
       signedOrders: false,
       weightedOpportunities: false,
     },
+    openingBalanceSource: "manual", excludedBankCurrencies: [], lastBankSyncSucceeded: null,
     openingBalanceCents: moneyCents(4_238_000),
     openingBalanceAsOf: localDate("2026-09-05"),
     safetyThresholdCents: moneyCents(2_000_000),

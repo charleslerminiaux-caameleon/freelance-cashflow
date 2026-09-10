@@ -7,7 +7,11 @@ export function KpiStrip({
   kpis,
   horizonDays,
   scenario,
-}: Pick<DashboardViewModel, "kpis" | "horizonDays" | "scenario">) {
+  openingBalanceSource = "manual",
+  openingBalanceAsOf,
+  lastBankSyncSucceeded,
+  excludedBankCurrencies = [],
+}: Pick<DashboardViewModel, "kpis" | "horizonDays" | "scenario"> & Partial<Pick<DashboardViewModel, "openingBalanceSource" | "openingBalanceAsOf" | "lastBankSyncSucceeded" | "excludedBankCurrencies">>) {
   const reservedCents = moneyCents(kpis.currentBalanceCents - kpis.availableBalanceCents);
 
   return (
@@ -15,7 +19,9 @@ export function KpiStrip({
       <article className="dashboard-kpi dashboard-kpi-balance">
         <span>Solde</span>
         <strong>{formatMoney(kpis.currentBalanceCents)}</strong>
-        <small>solde manuel actuel</small>
+        <small>{openingBalanceSource === "qonto" ? "Solde Qonto" : "Solde manuel"}{openingBalanceAsOf ? ` au ${openingBalanceAsOf}` : " actuel"}</small>
+        {openingBalanceSource === "qonto" && lastBankSyncSucceeded === false && <small>Actualisation nécessaire · données conservées</small>}
+        {excludedBankCurrencies.length > 0 && <small>Devises exclues : {excludedBankCurrencies.join(", ")}</small>}
       </article>
       <article className="dashboard-kpi dashboard-kpi-available">
         <span>Disponible</span>

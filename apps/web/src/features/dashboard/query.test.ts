@@ -52,6 +52,7 @@ describe("businessDateForTimezone", () => {
 
 function repositoryAdapter(): DashboardRepositoryAdapter {
   return {
+    getBankingSnapshot: async () => ({ integration: null, accounts: [] }),
     getOwnerSettings: async () => ({
       singleton_key: true,
       owner_user_id: ownerUserId,
@@ -208,4 +209,13 @@ describe("loadDashboardSourceData", () => {
       repositoryAdapter(),
     )).rejects.toThrow("Invalid owner identifier");
   });
+});
+
+it("loads published banking independently of provider configuration and never reads transaction history", async () => {
+ const adapter = repositoryAdapter();
+ const banking = {integration:{id:ownerUserId,status:"error" as const,last_success_at:"2026-09-10T10:00:00Z",last_connection_succeeded:false,last_error_code:"PROVIDER_AUTH_EXPIRED" as const},accounts:[]};
+ adapter.getBankingSnapshot = vi.fn().mockResolvedValue(banking);
+ const result = await loadDashboardSourceData({} as SupabaseClient, ownerUserId, expectedRange, adapter);
+ expect(result.banking).toEqual(banking); expect(result.settings.manualCurrentBalanceCents).toBe(420000);
+ expect(adapter.getBankingSnapshot).toHaveBeenCalledWith({},ownerUserId);
 });

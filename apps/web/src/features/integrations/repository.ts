@@ -1,0 +1,23 @@
+import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
+import type { IntegrationState } from "./status";
+
+const integrationSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["not_connected", "syncing", "connected", "error", "awaiting_api_access"]),
+  last_connection_succeeded: z.boolean().nullable(),
+  last_success_at: z.string().datetime({ offset: true }).nullable(),
+  last_error_code: z.enum(["PROVIDER_AUTH_EXPIRED", "PROVIDER_RATE_LIMIT", "PROVIDER_UNAVAILABLE", "PROVIDER_INVALID_RESPONSE", "SYNC_LOCKED", "DATABASE_ERROR"]).nullable(),
+});
+
+export async function getQontoIntegration(client: SupabaseClient, ownerUserId: string): Promise<IntegrationState | null> {
+  try {
+    z.string().uuid().parse(ownerUserId);
+    const { data, error } = await client.from("integrations")
+      .select("id, status, last_connection_succeeded, last_success_at, last_error_code")
+      .eq("owner_user_id", ownerUserId).eq("provider", "qonto").maybeSingle();
+    if (error) throw new Error("DATABASE_ERROR");
+    return data === null ? null : integrationSchema.parse(data);
+  } catch { throw new Error("DATABASE_ERROR"); }
+}

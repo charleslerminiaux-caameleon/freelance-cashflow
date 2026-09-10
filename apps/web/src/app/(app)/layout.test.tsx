@@ -1,0 +1,11 @@
+import {render, screen} from "@testing-library/react";
+import {beforeEach, expect, it, vi} from "vitest";
+const m=vi.hoisted(()=>({requireOwner:vi.fn(),createClient:vi.fn(),getQontoIntegration:vi.fn(),isQontoConfigured:vi.fn()}));
+vi.mock("@/lib/auth/require-owner",()=>({requireOwner:m.requireOwner}));
+vi.mock("@/lib/supabase/server",()=>({createClient:m.createClient}));
+vi.mock("@/features/integrations/repository",()=>({getQontoIntegration:m.getQontoIntegration}));
+vi.mock("@/features/integrations/qonto-config",()=>({isQontoConfigured:m.isQontoConfigured}));
+import Layout from "./layout";
+beforeEach(()=>{vi.clearAllMocks();m.requireOwner.mockResolvedValue({userId:"owner"});m.createClient.mockResolvedValue({});m.isQontoConfigured.mockReturnValue(true);m.getQontoIntegration.mockResolvedValue({status:"connected",last_success_at:"2026-09-10T10:00:00Z"});});
+it("loads owner integration state into both shell variants",async()=>{render(await Layout({children:"Contenu"}));expect(m.getQontoIntegration).toHaveBeenCalledWith({},"owner");expect(screen.getAllByText("Qonto : données synchronisées")).toHaveLength(2);});
+it("guards reads before shell loading",async()=>{m.requireOwner.mockRejectedValue(new Error("redirect"));await expect(Layout({children:null})).rejects.toThrow("redirect");expect(m.createClient).not.toHaveBeenCalled();});

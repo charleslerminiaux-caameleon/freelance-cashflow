@@ -1795,3 +1795,19 @@ details.panel[open] > summary {
     padding: 1rem;
   }
 }
+
+/* Banking and integration cards share the commercial dashboard surface. */
+.integration-grid, .bank-account-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.integration-card, .banking-panel { padding: 1.5rem; min-width: 0; }
+.integration-card { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+.integration-card p, .integration-card h2 { margin: 0; }
+.integration-card p, .bank-account p, .banking-panel td, .banking-panel th { overflow-wrap: anywhere; }
+.integration-card button:disabled { cursor: not-allowed; opacity: .55; }
+.integration-badge { border: 1px solid currentColor; border-radius: 2rem; padding: .3rem .8rem; font-size: .85rem; }
+.bank-account { border: 1px solid var(--fc-border); border-radius: .8rem; padding: 1rem; min-width: 0; }
+.bank-account h3 { margin-top: 0; }
+.bank-account dl { display: grid; gap: .3rem; }
+.bank-account dd { margin: 0 0 .7rem; font-weight: 600; }
+.bank-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; }
+.banking-panel th small { display: block; font-weight: normal; }
+@media (max-width: 760px) { .integration-grid, .bank-account-grid { grid-template-columns: 1fr; } .integration-card, .banking-panel { padding: 1rem; } }

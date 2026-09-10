@@ -39,3 +39,5 @@ it("renders the validated destinations in the compact mobile navigation", () => 
   );
   expect(within(mobileNavigation).getAllByRole("link")).toHaveLength(8);
 });
+
+it("shows the same live integration status on mobile and desktop", () => {render(<AppShell syncStatus="Qonto : données synchronisées">Contenu</AppShell>); expect(screen.getAllByLabelText("État de synchronisation")).toHaveLength(2); for (const status of screen.getAllByLabelText("État de synchronisation")) expect(status).toHaveTextContent("Qonto : données synchronisées");});

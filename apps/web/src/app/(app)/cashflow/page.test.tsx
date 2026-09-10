@@ -4,11 +4,14 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 import type { DashboardViewModel } from "@/features/dashboard/view-model";
 
-const { getDashboardViewModel, requireOwner } = vi.hoisted(() => ({
+const { getDashboardViewModel, requireOwner, createClient, getBankingSnapshot, listBankTransactions } = vi.hoisted(() => ({
+  createClient: vi.fn(), getBankingSnapshot: vi.fn(), listBankTransactions: vi.fn(),
   getDashboardViewModel: vi.fn(),
   requireOwner: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/server", () => ({ createClient }));
+vi.mock("@/features/banking/repository", async (original) => ({...await original<typeof import("@/features/banking/repository")>(), getBankingSnapshot, listBankTransactions}));
 vi.mock("@/features/dashboard/query", () => ({ getDashboardViewModel }));
 vi.mock("@/lib/auth/require-owner", () => ({ requireOwner }));
 
@@ -37,6 +40,7 @@ function model(): DashboardViewModel {
       signedOrders: true,
       weightedOpportunities: true,
     },
+    openingBalanceSource: "manual", excludedBankCurrencies: [], lastBankSyncSucceeded: null,
     openingBalanceCents: moneyCents(4_238_000),
     openingBalanceAsOf: localDate("2026-09-05"),
     safetyThresholdCents: moneyCents(2_000_000),
@@ -58,6 +62,8 @@ function model(): DashboardViewModel {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
+  createClient.mockResolvedValue({}); getBankingSnapshot.mockResolvedValue({integration:null,accounts:[]}); listBankTransactions.mockResolvedValue({items:[],page:2,hasNext:false});
   requireOwner.mockResolvedValue({ userId: "11111111-1111-4111-8111-111111111111" });
   getDashboardViewModel.mockResolvedValue(model());
 });
@@ -84,3 +90,12 @@ it("renders opening balance and explainable chronological forecast events", asyn
     element?.tagName === "STRONG" && element.textContent === "48 380,00 €",
   )).toBeInTheDocument();
 });
+
+it("shows retained Qonto source and separate paginated history", async () => {
+ const data = model(); data.openingBalanceSource = "qonto"; data.lastBankSyncSucceeded = false; data.excludedBankCurrencies = ["USD"]; getDashboardViewModel.mockResolvedValue(data);
+ getBankingSnapshot.mockResolvedValue({integration:{id:"bank",last_success_at:"2026-09-10T10:00:00Z",last_error_code:"DATABASE_ERROR"},accounts:[]});
+ const {default:Page} = await import("./page"); render(await Page({searchParams:Promise.resolve({bankPage:"2"})}));
+ expect(screen.getByText(/Situation Qonto/)).toBeInTheDocument(); expect(screen.getByText(/Actualisation nécessaire/)).toBeInTheDocument(); expect(screen.getByRole("table",{name:"Historique bancaire"})).toBeInTheDocument(); expect(screen.getByRole("table",{name:"Événements de trésorerie"})).toBeInTheDocument();
+ expect(listBankTransactions).toHaveBeenCalledWith({},"11111111-1111-4111-8111-111111111111","bank",2);
+});
+it("does not read financial rows for nonowner", async () => { requireOwner.mockRejectedValue(new Error("redirect")); const {default:Page} = await import("./page"); await expect(Page({searchParams:Promise.resolve({})})).rejects.toThrow("redirect"); expect(createClient).not.toHaveBeenCalled(); expect(getBankingSnapshot).not.toHaveBeenCalled(); });
