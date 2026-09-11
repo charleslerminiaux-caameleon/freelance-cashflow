@@ -7,6 +7,7 @@ import {
   SuggestionForm,
   SuggestionStateForm,
   type CategoryOption,
+  type DuplicateWarning,
   type ExistingExpenseOption,
   type SuggestionFormAction,
 } from "./suggestion-form";
@@ -21,12 +22,11 @@ export type SuggestionReview = {
   sourcePublication: string;
   currency: string;
   evidence: {
-    id: string;
     label: string;
     amountCents: number;
     transactionDate: string;
   }[];
-  possibleDuplicates: ExistingExpenseOption[];
+  possibleDuplicates: DuplicateWarning[];
 };
 
 export type SuggestionPanelProps = {
@@ -113,8 +113,10 @@ export function SuggestionPanel(props: SuggestionPanelProps) {
                   <p className="muted-copy">Aucun justificatif disponible.</p>
                 ) : (
                   <ul>
-                    {suggestion.evidence.map((evidence) => (
-                      <li key={evidence.id}>
+                    {suggestion.evidence.map((evidence, index) => (
+                      <li
+                        key={`${evidence.transactionDate}-${evidence.label}-${evidence.amountCents}-${index}`}
+                      >
                         {evidence.transactionDate} · {evidence.label} ·{" "}
                         {displayMoney(evidence.amountCents, suggestion.currency)}
                       </li>

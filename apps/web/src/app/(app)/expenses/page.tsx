@@ -80,8 +80,15 @@ function reviewSuggestion(suggestion: RecurringSuggestion): SuggestionReview {
     nextDate: suggestion.nextDate,
     sourcePublication: suggestion.sourcePublication,
     currency: suggestion.currency,
-    evidence: suggestion.evidence,
-    possibleDuplicates: suggestion.possibleDuplicates,
+    evidence: suggestion.evidence.map(({ label, amountCents, transactionDate }) => ({
+      label,
+      amountCents,
+      transactionDate,
+    })),
+    possibleDuplicates: suggestion.possibleDuplicates.map(({ label, amountCents }) => ({
+      label,
+      amountCents,
+    })),
   };
 }
 

@@ -11,6 +11,7 @@ export type SuggestionFormAction = (
 
 export type CategoryOption = { id: string; name: string };
 export type ExistingExpenseOption = { id: string; label: string; amountCents: number };
+export type DuplicateWarning = { label: string; amountCents: number };
 
 export type SuggestionFormValue = {
   id: string;
@@ -19,7 +20,7 @@ export type SuggestionFormValue = {
   dayOfMonth: number;
   nextDate: string;
   sourcePublication: string;
-  possibleDuplicates: ExistingExpenseOption[];
+  possibleDuplicates: DuplicateWarning[];
 };
 
 const initialState: SuggestionActionState = { success: false, message: null };
@@ -28,7 +29,7 @@ function centsToInput(value: number): string {
   return `${Math.trunc(value / 100)},${Math.abs(value % 100).toString().padStart(2, "0")}`;
 }
 
-function expenseOption(option: ExistingExpenseOption): string {
+function expenseOption(option: { label: string; amountCents: number }): string {
   return `${option.label} · ${centsToInput(option.amountCents)} €`;
 }
 
@@ -143,8 +144,10 @@ export function SuggestionForm({
           <div className="form-grid-wide" role="alert">
             <p>Une charge mensuelle similaire existe :</p>
             <ul>
-              {suggestion.possibleDuplicates.map((expense) => (
-                <li key={expense.id}>{expenseOption(expense)}</li>
+              {suggestion.possibleDuplicates.map((expense, index) => (
+                <li key={`${expense.label}-${expense.amountCents}-${index}`}>
+                  {expenseOption(expense)}
+                </li>
               ))}
             </ul>
             <label className="checkbox-field">
