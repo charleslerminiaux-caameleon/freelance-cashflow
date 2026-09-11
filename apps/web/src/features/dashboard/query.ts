@@ -5,6 +5,10 @@ import { localDate, moneyCents, type LocalDate } from "@fc/shared";
 import { z } from "zod";
 
 import { getBankingSnapshot, type BankingSnapshot } from "@/features/banking/repository";
+import { paidMonthsByExpense } from "@/features/recurring-detection/forecast";
+import { listConfirmedRecurringSuggestions } from "@/features/recurring-detection/repository";
+import { recurringHistoryWindow } from "@/features/recurring-detection/history-window";
+import type { RecurringSuggestion } from "@/features/recurring-detection/schema";
 import { businessDateSchema } from "@/features/commercial-schema";
 import { repositoryError } from "@/features/repository-error";
 import {
@@ -109,7 +113,8 @@ export type DashboardQueryRange = {
 };
 
 export type DashboardRepositoryAdapter = {
-  getBankingSnapshot: (client: SupabaseClient, ownerUserId: string) => Promise<BankingSnapshot>;
+  getBankingSnapshot: (client: SupabaseClient, ownerUserId: string, today: string) => Promise<BankingSnapshot>;
+  listConfirmedRecurringSuggestions?: (client: SupabaseClient, owner: string, integration: string) => Promise<RecurringSuggestion[]>;
   getOwnerSettings: (client: SupabaseClient, ownerUserId: string) => Promise<OwnerSettings>;
   listRelevantInvoices: (
     client: SupabaseClient,
@@ -308,7 +313,8 @@ async function listRelevantPlannedCashflows(
 }
 
 const repositories: DashboardRepositoryAdapter = {
-  getBankingSnapshot,
+  getBankingSnapshot: (client, owner, today) => getBankingSnapshot(client, owner, { fullHistory: recurringHistoryWindow(today) }),
+  listConfirmedRecurringSuggestions,
   getOwnerSettings,
   listRelevantInvoices,
   listRelevantOpportunities,
@@ -342,10 +348,17 @@ export async function loadDashboardSourceData(
       adapter.listRelevantBillingScheduleItems(client, parsedOwnerId, range),
       adapter.listRelevantRecurringCashflows(client, parsedOwnerId, range),
       adapter.listRelevantPlannedCashflows(client, parsedOwnerId, range),
-      knownBankingSnapshot ?? adapter.getBankingSnapshot(client, parsedOwnerId),
+      knownBankingSnapshot && (!knownBankingSnapshot.integration?.last_success_at || knownBankingSnapshot.fullTransactions)
+        ? knownBankingSnapshot : adapter.getBankingSnapshot(client, parsedOwnerId, range.startDate),
     ]);
 
+  const confirmed = banking.integration?.last_success_at && adapter.listConfirmedRecurringSuggestions
+    ? await adapter.listConfirmedRecurringSuggestions(client, parsedOwnerId, banking.integration.id) : [];
+  const includedAccounts = new Set(banking.accounts.filter(account => account.status === "active" && account.is_current && account.currency === settings.currency).map(account => account.id));
+  const paidMonthsByRecurringId = paidMonthsByExpense(confirmed, (banking.fullTransactions ?? []).filter(transaction => includedAccounts.has(transaction.bank_account_id)));
+
   return {
+    paidMonthsByRecurringId,
     banking,
     settings: {
       currency: settings.currency,

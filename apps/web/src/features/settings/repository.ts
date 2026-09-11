@@ -34,12 +34,14 @@ const settingsColumns = `
 export async function getOwnerSettings(
   client: SupabaseClient,
   ownerUserId: string,
+  signal = new AbortController().signal,
 ): Promise<OwnerSettings> {
   const { data, error } = await client
     .from("app_settings")
     .select(settingsColumns)
     .eq("owner_user_id", ownerUserId)
     .eq("singleton_key", true)
+    .abortSignal(signal)
     .single();
 
   if (error) throw repositoryError(error);

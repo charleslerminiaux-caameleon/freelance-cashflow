@@ -2,6 +2,9 @@ import { formatMoney } from "@fc/shared";
 
 import { BankingView } from "@/features/banking/banking-view";
 import { getBankingSnapshot, parseBankPage } from "@/features/banking/repository";
+import { getOwnerSettings } from "@/features/settings/repository";
+import { recurringHistoryWindow } from "@/features/recurring-detection/history-window";
+import { businessDateForTimezone } from "@/features/dashboard/query";
 import { createClient } from "@/lib/supabase/server";
 import { HorizonSelector } from "@/features/dashboard/horizon-selector";
 import {
@@ -33,11 +36,15 @@ export default async function CashflowPage({
 }) {
   const [{ userId }, parameters] = await Promise.all([requireOwner(), searchParams]);
   const client = await createClient();
+  const settings = await getOwnerSettings(client, userId);
+  const today = businessDateForTimezone(settings.timezone);
   const banking = await getBankingSnapshot(client, userId, {
     historyPage: parseBankPage(parameters.bankPage),
+    fullHistory: recurringHistoryWindow(today),
   });
   const model = await getDashboardViewModel(userId, {
     searchParameters: parameters,
+    today,
     bankingSnapshot: banking,
   });
 

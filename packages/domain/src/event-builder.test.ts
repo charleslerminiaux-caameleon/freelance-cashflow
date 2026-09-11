@@ -438,3 +438,13 @@ describe("buildCashflowEvents", () => {
     ).toThrow("Money must be safe integer cents");
   });
 });
+
+it("excludes paid months only for monthly linked expense origin, leaving manual and nonmonthly flows", () => {
+  const recurring = { id: "linked", direction: "outflow" as const, cashflowKind: "expense" as const, label: "Synthetic", amountCents: moneyCents(1000), frequency: "monthly" as const, dayOfMonth: 20, startDate: localDate("2026-09-20"), endDate: null, certainty: "certain" as const, probabilityBasisPoints: 10000, active: true };
+  const source = snapshot({ recurringCashflows: [recurring, { ...recurring, id: "manual" }, { ...recurring, id: "quarter", frequency: "quarterly" }], plannedCashflows: [{ id: "linked", direction: "outflow", cashflowKind: "expense", label: "One off", amountCents: moneyCents(500), plannedDate: localDate("2026-09-20"), certainty: "certain", probabilityBasisPoints: 10000, status: "planned" }] });
+  const events = buildCashflowEvents(source, range, { linked: ["2026-09"], quarter: ["2026-09"] });
+  expect(events.filter(e => e.sourceId === "linked" && e.sourceType === "recurring_cashflow").map(e => e.plannedDate)).toEqual(["2026-10-20", "2026-11-20", "2026-12-20"]);
+  expect(events.filter(e => e.sourceId === "manual")).toHaveLength(4);
+  expect(events.filter(e => e.sourceId === "quarter")).toHaveLength(2);
+  expect(events.filter(e => e.sourceType === "planned_cashflow")).toHaveLength(1);
+});

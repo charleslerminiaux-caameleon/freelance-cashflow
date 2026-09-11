@@ -66,3 +66,38 @@ it("observes publication changes and refetches account pages and history despite
   expect(requests.every(request => request.signal instanceof AbortSignal)).toBe(true);
   expect(networkTables).toHaveLength(10);
 });
+
+it("reads complete history beyond 1000 within the balance publication bracket", async () => {
+  let generation = 1; let flipped = false;
+  const offsets: number[] = [];
+  const client = createClient("https://example.invalid", "synthetic-key", { auth: { persistSession: false }, global: { fetch: async (input, init) => {
+    const url = new URL(String(input)); const table = url.pathname.split("/").at(-1);
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+    expect(url.searchParams.get("owner_user_id")).toBe(`eq.${owner}`);
+    let rows: unknown[];
+    if (table === "integrations") rows = [{ id: integrationId, status: "connected", last_success_at: `2026-09-10T10:00:00.00000${generation}Z`, last_connection_succeeded: true, last_error_code: null }];
+    else if (table === "bank_accounts") rows = [{ id: owner, name: "Synthetic", iban_masked: null, currency: "EUR", current_balance_cents: generation * 100, available_balance_cents: null, status: "active", is_current: true, updated_at: "2026-09-10T10:00:00Z" }];
+    else {
+      expect(url.searchParams.get("integration_id")).toBe(`eq.${integrationId}`);
+      expect(url.searchParams.get("transaction_date")).toBe("gte.2026-03-11");
+      const offset = Number(url.searchParams.get("offset")); offsets.push(offset);
+      rows = Array.from({ length: offset === 0 ? 1000 : 1 }, () => ({ id: owner, bank_account_id: owner, currency: "EUR", amount_cents: generation * 10, direction: "outflow", status: "completed", label: "Synthetic", counterparty: null, transaction_date: "2026-09-10", value_date: null, updated_at: "2026-09-10T10:00:00Z" }));
+      if (offset === 1000 && !flipped) { generation++; flipped = true; }
+    }
+    return new Response(JSON.stringify(rows), { headers: { "Content-Type": "application/json" } });
+  } } });
+  const snapshot = await getBankingSnapshot(client, owner, { fullHistory: { since: "2026-03-11", until: "2026-09-11" } });
+  expect(snapshot.fullTransactions).toHaveLength(1001);
+  expect(snapshot.fullTransactions?.every(row => row.amount_cents === 20)).toBe(true);
+  expect(snapshot.accounts[0]?.current_balance_cents).toBe(200);
+  expect(offsets).toEqual([0, 1000, 0, 1000]);
+});
+
+it("rejects a transaction page cap overflow rather than returning partial history", async () => {
+  const { listAllBankTransactions } = await import("./repository");
+  let requests = 0;
+  const rows = Array.from({ length: 1000 }, () => ({ id: owner, bank_account_id: owner, currency: "EUR", amount_cents: 1, direction: "outflow", status: "completed", label: "Synthetic", counterparty: null, transaction_date: "2026-09-10", value_date: null, updated_at: "2026-09-10T10:00:00Z" }));
+  const client = createClient("https://example.invalid", "synthetic-key", { auth: { persistSession: false }, global: { fetch: async () => { requests++; return new Response(JSON.stringify(rows), { headers: { "Content-Type": "application/json" } }); } } });
+  await expect(listAllBankTransactions(client, owner, integrationId, { since: "2026-03-11", until: "2026-09-11" }, new AbortController().signal)).rejects.toThrow(/^DATABASE_ERROR$/);
+  expect(requests).toBe(101);
+});

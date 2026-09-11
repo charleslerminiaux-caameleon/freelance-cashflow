@@ -11,7 +11,7 @@ const integrationSchema = z.object({
   last_error_code: z.enum(["PROVIDER_AUTH_EXPIRED", "PROVIDER_RATE_LIMIT", "PROVIDER_UNAVAILABLE", "PROVIDER_INVALID_RESPONSE", "SYNC_LOCKED", "DATABASE_ERROR"]).nullable(),
 });
 
-export async function getQontoIntegration(client: SupabaseClient, ownerUserId: string): Promise<IntegrationState | null> {
+export async function getQontoIntegration(client: SupabaseClient, ownerUserId: string, signal = new AbortController().signal): Promise<IntegrationState | null> {
   try {
     z.string().uuid().parse(ownerUserId);
     // Explicit signals opt out of Next render GET memoization. The repeated
@@ -19,7 +19,7 @@ export async function getQontoIntegration(client: SupabaseClient, ownerUserId: s
     const { data, error } = await client.from("integrations")
       .select("id, status, last_connection_succeeded, last_success_at, last_error_code")
       .eq("owner_user_id", ownerUserId).eq("provider", "qonto")
-      .abortSignal(new AbortController().signal).maybeSingle();
+      .abortSignal(signal).maybeSingle();
     if (error) throw new Error("DATABASE_ERROR");
     return data === null ? null : integrationSchema.parse(data);
   } catch { throw new Error("DATABASE_ERROR"); }

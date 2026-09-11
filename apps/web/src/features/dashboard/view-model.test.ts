@@ -394,3 +394,23 @@ describe("published banking opening balance", () => {
   const data = bankingData(); const before = bankModel(data); Object.assign(data.banking!, {transactions:[{status:"completed",amount_cents:200000},{status:"pending",amount_cents:100000}]}); expect(bankModel(data)).toEqual(before);
  });
 });
+
+it("carries paid months to forecasts without replaying bank history or losing a zero balance", () => {
+  const data = bankingData();
+  data.banking!.accounts = [{ ...bankAccount, current_balance_cents: 0 }];
+  data.invoices = []; data.billingScheduleItems = []; data.opportunities = []; data.plannedCashflows = [];
+  data.recurringCashflows = [{ id: "linked", direction: "outflow", cashflowKind: "expense", label: "Synthetic", amountCents: moneyCents(1000), frequency: "monthly", dayOfMonth: 20, startDate: localDate("2026-09-01"), endDate: null, active: true, certainty: "certain", probabilityBasisPoints: 10000 }];
+  data.paidMonthsByRecurringId = { linked: ["2026-09"] };
+  const model = bankModel(data);
+  expect(model.openingBalanceCents).toBe(0);
+  expect(model.treasuryEvents.map(event => event.plannedDate)).toEqual(["2026-10-20", "2026-11-20"]);
+  expect(model.treasuryEvents.at(-1)?.runningBalanceCents).toBe(-2000);
+});
+it("does not suppress manual-balance forecasts from a detached paid-month map", () => {
+  const data = sourceData();
+  data.recurringCashflows = [{ id: "linked", direction: "outflow", cashflowKind: "expense", label: "Synthetic", amountCents: moneyCents(1000), frequency: "monthly", dayOfMonth: 20, startDate: localDate("2026-09-01"), endDate: null, active: true, certainty: "certain", probabilityBasisPoints: 10000 }];
+  const id = "linked";
+  const withoutPayments = bankModel(data);
+  data.paidMonthsByRecurringId = { [id]: ["2026-09", "2026-10", "2026-11"] };
+  expect(bankModel(data).treasuryEvents).toEqual(withoutPayments.treasuryEvents);
+});

@@ -212,13 +212,13 @@ describe("loadDashboardSourceData", () => {
   });
 });
 
-it("loads published banking independently of provider configuration and never reads transaction history", async () => {
+it("loads published banking independently of provider configuration", async () => {
  const adapter = repositoryAdapter();
  const banking = {integration:{id:ownerUserId,status:"error" as const,last_success_at:"2026-09-10T10:00:00Z",last_connection_succeeded:false,last_error_code:"PROVIDER_AUTH_EXPIRED" as const},accounts:[]};
  adapter.getBankingSnapshot = vi.fn().mockResolvedValue(banking);
  const result = await loadDashboardSourceData({} as SupabaseClient, ownerUserId, expectedRange, adapter);
  expect(result.banking).toEqual(banking); expect(result.settings.manualCurrentBalanceCents).toBe(420000);
- expect(adapter.getBankingSnapshot).toHaveBeenCalledWith({},ownerUserId);
+ expect(adapter.getBankingSnapshot).toHaveBeenCalledWith({},ownerUserId, expectedRange.startDate);
 });
 
 it("reuses a caller's validated banking snapshot without a second banking read", async () => {
@@ -233,6 +233,7 @@ it("reuses a caller's validated banking snapshot without a second banking read",
 it("builds the dashboard from the exact supplied snapshot without another publication read", async () => {
   const settings = await repositoryAdapter().getOwnerSettings({} as SupabaseClient, ownerUserId);
   const query = {
+    abortSignal: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), in: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(), gte: vi.fn().mockReturnThis(), lte: vi.fn().mockReturnThis(),
     lt: vi.fn().mockReturnThis(), or: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
@@ -242,6 +243,7 @@ it("builds the dashboard from the exact supplied snapshot without another public
   const db = { from: vi.fn(() => query) };
   createClient.mockResolvedValue(db);
   const banking = {
+    fullTransactions: [],
     integration: { id: ownerUserId, status: "connected" as const, last_success_at: "2026-09-10T10:00:00.000002Z", last_connection_succeeded: true, last_error_code: null },
     accounts: [{ id: ownerUserId, name: "Compte exemple", iban_masked: null, currency: "EUR", current_balance_cents: 500000, available_balance_cents: null, status: "active" as const, is_current: true, updated_at: "2026-09-10T10:00:00Z" }],
   };
@@ -251,4 +253,15 @@ it("builds the dashboard from the exact supplied snapshot without another public
   expect(db.from.mock.calls.flat()).not.toContain("integrations");
   expect(db.from.mock.calls.flat()).not.toContain("bank_accounts");
   expect(db.from.mock.calls.flat()).not.toContain("bank_transactions");
+});
+
+it("derives paid months from the supplied full coherent history independently of analysis success", async () => {
+  const adapter = repositoryAdapter();
+  const recurringId = "77777777-7777-4777-8777-777777777777";
+  const bank = { integration: { id: ownerUserId, status: "error" as const, last_success_at: "2026-09-10T10:00:00Z", last_connection_succeeded: false, last_error_code: "DATABASE_ERROR" as const }, accounts: [{ id: ownerUserId, currency: "EUR", status: "active" as const, is_current: true, name: "Synthetic", iban_masked: null, current_balance_cents: 0, available_balance_cents: null, updated_at: "2026-09-10T10:00:00Z" }], fullTransactions: [{ id: ownerUserId, bank_account_id: ownerUserId, currency: "EUR", amount_cents: 1000, direction: "outflow" as const, status: "completed" as const, label: "Cloud", transaction_date: localDate("2026-09-02"), counterparty: null, value_date: null, updated_at: "2026-09-10T10:00:00Z" }] };
+  adapter.listConfirmedRecurringSuggestions = async () => [{ id: ownerUserId, state: "confirmed", eligible: false, label: "Cloud", amountCents: 1000, dayOfMonth: 5, nextDate: "2026-10-05", lastPaymentDate: "2026-09-05", sourcePublication: "2026-08-01T00:00:00Z", linkedExpenseId: recurringId, accountId: ownerUserId, currency: "EUR", normalizedLabel: "cloud", evidence: [], possibleDuplicates: [] }];
+  adapter.getBankingSnapshot = async () => { throw new Error("must reuse snapshot"); };
+  const result = await loadDashboardSourceData({} as SupabaseClient, ownerUserId, expectedRange, adapter, undefined, bank);
+  expect(result.banking).toBe(bank);
+  expect(result.paidMonthsByRecurringId).toEqual({ [recurringId]: ["2026-09"] });
 });

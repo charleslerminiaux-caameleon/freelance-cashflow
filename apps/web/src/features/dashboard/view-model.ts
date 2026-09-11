@@ -55,6 +55,7 @@ export type DashboardOpportunitySource = OpportunityForecastSource & {
 
 export type DashboardSourceData = {
   banking?: BankingSnapshot;
+  paidMonthsByRecurringId?: Readonly<Record<string, readonly string[]>>;
   settings: {
     currency: string;
     timezone: string;
@@ -276,7 +277,7 @@ export function buildDashboardViewModel(
     recurringCashflows: data.recurringCashflows,
     plannedCashflows: data.plannedCashflows,
   };
-  const allEvents = buildCashflowEvents(snapshot, { startDate: options.today, endDate });
+  const allEvents = buildCashflowEvents(snapshot, { startDate: options.today, endDate }, opening.source === "qonto" ? data.paidMonthsByRecurringId : undefined);
   const events = allEvents.filter((event) => includesEvent(event, options.inclusions));
   const forecasts = {
     certain: calculateForecast({

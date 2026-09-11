@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   loadQontoConfig: vi.fn(),
   logSyncEvent: vi.fn(),
   synchronizeBanking: vi.fn(),
+  analyzeRecurringForOwner: vi.fn(),
 }));
+
+vi.mock("@/features/recurring-detection/service", () => ({ analyzeRecurringForOwner: mocks.analyzeRecurringForOwner }));
 
 vi.mock("@fc/integrations/server", () => ({
   createQontoProvider: mocks.createQontoProvider,
@@ -95,4 +98,22 @@ describe("synchronizeQontoForOwner", () => {
       code: "DATABASE_ERROR",
     });
   });
+});
+
+it.each(["returned", "thrown"])("retains banking success when analysis failure is %s", async (kind) => {
+  mocks.loadQontoConfig.mockReturnValue({ login: "synthetic", secretKey: "synthetic" });
+  mocks.getOwnerSettings.mockResolvedValue({ timezone: "Europe/Paris" });
+  mocks.synchronizeBanking.mockResolvedValue({ success: true, created: 1, updated: 0 });
+  let analyzedOwner: string | undefined;
+  mocks.analyzeRecurringForOwner.mockImplementation(async (owner: string) => { analyzedOwner = owner; if (kind === "thrown") throw new Error("private"); return { success: false, code: "DATABASE_ERROR" }; });
+  expect(await synchronizeQontoForOwner(ownerUserId)).toEqual({ success: true, created: 1, updated: 0 });
+  expect(analyzedOwner).toBe(ownerUserId);
+});
+it("never launches analysis after failed banking publication", async () => {
+  mocks.loadQontoConfig.mockReturnValue({ login: "synthetic", secretKey: "synthetic" });
+  mocks.getOwnerSettings.mockResolvedValue({ timezone: "Europe/Paris" });
+  mocks.synchronizeBanking.mockResolvedValue({ success: false, code: "PROVIDER_UNAVAILABLE" });
+  let ran = false; mocks.analyzeRecurringForOwner.mockImplementation(async () => { ran = true; });
+  expect(await synchronizeQontoForOwner(ownerUserId)).toEqual({ success: false, code: "PROVIDER_UNAVAILABLE" });
+  expect(ran).toBe(false);
 });

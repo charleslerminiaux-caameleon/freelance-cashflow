@@ -125,6 +125,7 @@ function cashflowSourceEventId(
 export function buildCashflowEvents(
   snapshot: CashflowSnapshot,
   inputRange: CashflowEventRange,
+  paidMonthsByRecurringId: Readonly<Record<string, readonly string[]>> = {},
 ): CashflowEvent[] {
   const range = {
     startDate: localDate(inputRange.startDate),
@@ -234,6 +235,8 @@ export function buildCashflowEvents(
       endDate: expansionEnd,
     })) {
       if (!inRange(plannedDate, range)) continue;
+      if (recurring.frequency === "monthly" && recurring.direction === "outflow" && recurring.cashflowKind === "expense"
+        && paidMonthsByRecurringId[recurring.id]?.includes(plannedDate.slice(0, 7))) continue;
       const id = cashflowSourceEventId(
         "recurring_cashflow",
         sourceType,
