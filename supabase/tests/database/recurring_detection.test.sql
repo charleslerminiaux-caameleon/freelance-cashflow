@@ -105,6 +105,8 @@ create function pg_temp.confirm(p jsonb default pg_temp.command(), source timest
  select public.confirm_recurring_suggestion((select id from public.recurring_suggestions limit 1),source,p,existing,allow_duplicate) $$;
 select throws_ok($$select pg_temp.confirm(source=>'2026-09-11T10:00:00.123Z')$$,'P0001','DETECTION_STALE','truncated publication marker rejected');
 select throws_ok($$select pg_temp.confirm(jsonb_set(pg_temp.command(),'{start_date}',to_jsonb((clock_timestamp() at time zone 'Europe/Paris')::date)))$$,'P0001','DETECTION_INVALID','today is not future start');
+select throws_ok($$select pg_temp.confirm(null)$$,'P0001','DETECTION_INVALID','null confirmation command denied');
+select throws_ok($$select pg_temp.confirm(jsonb_set(pg_temp.command(),'{probability_basis_points}','"10000"'))$$,'P0001','DETECTION_INVALID','string command probability denied');
 select throws_ok($$select pg_temp.confirm(jsonb_set(pg_temp.command(),'{amount_cents}','9007199254740992'))$$,'P0001','DETECTION_INVALID','unsafe integer denied');
 select throws_ok($$select pg_temp.confirm(jsonb_set(pg_temp.command(),'{cashflow_kind}','"income"'))$$,'P0001','DETECTION_INVALID','expense kind mandatory');
 insert into public.cashflow_categories(id,owner_user_id,name,type) values ('70000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000002','Synthetic foreign category','outflow');
@@ -166,6 +168,51 @@ select throws_ok($$select public.fail_recurring_analysis('10000000-0000-4000-800
 select ok(not has_function_privilege('anon','public.confirm_recurring_suggestion(uuid,timestamptz,jsonb,uuid,boolean)','EXECUTE'),'anonymous cannot confirm');
 select ok(not has_function_privilege('authenticated','public.normalize_recurring_label(text)','EXECUTE'),'normalization helper restricted');
 select ok(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('acquire_recurring_analysis','publish_recurring_analysis','fail_recurring_analysis','confirm_recurring_suggestion','set_recurring_suggestion_state') and not ('search_path=""'=any(p.proconfig))),'RPCs pin empty search path');
+-- A normalized database failure must close only this lease and preserve all prior data.
+create temp table before_generic_failure as select
+ (select last_success_at from public.integrations where owner_user_id='10000000-0000-4000-8000-000000000001') bank_publication,
+ (select analyzed_publication from public.recurring_detection_runs) analyzed_publication,
+ (select last_success_at from public.recurring_detection_runs) analysis_success,
+ (select to_jsonb(s) from public.recurring_suggestions s) suggestion;
+select lives_ok($$select public.fail_recurring_analysis('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','DATABASE_ERROR')$$,'normalized database failure closes active analysis');
+select is((select last_error_code from public.recurring_detection_runs),'DATABASE_ERROR','generic failure is persisted as its allowlisted code');
+select ok((select lease_run_id is null and lease_expires_at is null from public.recurring_detection_runs),'generic failure releases lease');
+select is((select last_success_at from public.integrations where owner_user_id='10000000-0000-4000-8000-000000000001'),(select bank_publication from before_generic_failure),'generic failure preserves bank publication');
+select is((select analyzed_publication from public.recurring_detection_runs),(select analyzed_publication from before_generic_failure),'generic failure preserves analyzed publication');
+select is((select last_success_at from public.recurring_detection_runs),(select analysis_success from before_generic_failure),'generic failure preserves prior analysis success');
+select is((select to_jsonb(s) from public.recurring_suggestions s),(select suggestion from before_generic_failure),'generic failure preserves full prior suggestion decision');
+select throws_ok($$select public.fail_recurring_analysis('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','DETECTION_INVALID')$$,'P0001','DETECTION_LOCKED','generic failure replay remains fenced');
+select is((select last_error_code from public.recurring_detection_runs),'DATABASE_ERROR','failure replay cannot replace generic recorded error');
+-- Keep both new regressions observable during RED even if generic closure is missing.
+select public.fail_recurring_analysis('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000002','DETECTION_INVALID') where exists(select 1 from public.recurring_detection_runs where lease_run_id is not null);
+
+-- Each of 10001 synthetic series is independently valid: three real owned payments.
+-- This makes removing the upper limit a behavioral failure, not a duplicate-array test.
+create temp table batch_base as select pg_temp.candidate() candidate;
+create temp table batch_transactions as select n series, m month_offset, gen_random_uuid() id from generate_series(1,10001) n cross join generate_series(0,2) m;
+insert into public.bank_transactions(id,owner_user_id,integration_id,bank_account_id,external_id,currency,amount_cents,direction,status,label,transaction_date,updated_at)
+ select id,'10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','40000000-0000-4000-8000-000000000001',
+ 'batch-'||series||'-'||month_offset,'EUR',1000,'outflow','completed','synthetic batch '||series,
+ (date_trunc('month',clock_timestamp() at time zone 'Europe/Paris')-month_offset*interval '1 month')::date,now() from batch_transactions;
+create temp table batch_candidates as select series,
+ (select candidate from batch_base) || jsonb_build_object('label','synthetic batch '||series,'normalized_label','synthetic batch '||series,'transaction_ids',jsonb_agg(id order by month_offset)) candidate from batch_transactions group by series;
+create function pg_temp.publish_batch(p_count integer) returns void language sql as $$
+ select public.publish_recurring_analysis('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000099',
+ (select last_success_at from public.integrations where owner_user_id='10000000-0000-4000-8000-000000000001'),
+ (select jsonb_agg(candidate order by series) from batch_candidates where series<=p_count)) $$;
+select public.acquire_recurring_analysis('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000099');
+select lives_ok($$select pg_temp.publish_batch(1001)$$,'one atomic publication accepts more than 1000 valid candidates');
+select is((select count(*) from public.recurring_suggestions where state='pending' and eligible),1001::bigint,'every candidate in large accepted batch is present and eligible');
+select is((select count(*) from public.recurring_suggestion_evidence e join public.recurring_suggestions s on s.id=e.suggestion_id where s.state='pending'),3003::bigint,'large accepted batch retains all evidence references');
+select is((select count(*) from public.recurring_suggestions where state='confirmed'),1::bigint,'large publication preserves previous confirmed decision');
+select public.fail_recurring_analysis('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000099','DETECTION_INVALID') where exists(select 1 from public.recurring_detection_runs where lease_run_id is not null);
+select public.acquire_recurring_analysis('10000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000099');
+create temp table before_oversized_batch as select to_jsonb(r) run_state from public.recurring_detection_runs r;
+select throws_ok($$select pg_temp.publish_batch(10001)$$,'P0001','DETECTION_INVALID','more than 10000 otherwise valid candidates are rejected atomically');
+select is((select count(*) from public.recurring_suggestions where state='pending' and eligible),1001::bigint,'oversized rejection preserves all previous eligible suggestions');
+select is((select count(*) from public.recurring_suggestion_evidence e join public.recurring_suggestions s on s.id=e.suggestion_id where s.state='pending'),3003::bigint,'oversized rejection preserves previous evidence');
+select is((select to_jsonb(r) from public.recurring_detection_runs r),(select run_state from before_oversized_batch),'oversized rejection preserves lease and prior successful metadata');
+select is((select last_success_at from public.integrations where owner_user_id='10000000-0000-4000-8000-000000000001'),(select bank_publication from before_generic_failure),'batch outcomes preserve banking publication');
 select lives_ok($$delete from auth.users where id='10000000-0000-4000-8000-000000000001'$$,'owner deprovisioning cascades with linked expense and lease');
 select is((select count(*) from public.recurring_suggestions)+(select count(*) from public.recurring_detection_runs)+(select count(*) from public.recurring_suggestion_evidence),0::bigint,'deprovisioning clears detection state');
 select * from finish();

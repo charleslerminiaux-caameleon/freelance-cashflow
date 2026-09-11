@@ -9,7 +9,7 @@ create table public.recurring_detection_runs (
   analyzed_publication timestamptz check (isfinite(analyzed_publication)),
   last_attempt_at timestamptz,
   last_success_at timestamptz,
-  last_error_code text check (last_error_code in ('DETECTION_LOCKED','DETECTION_STALE','DETECTION_INVALID','DETECTION_DUPLICATE','DETECTION_NOT_FOUND','DETECTION_SOURCE_UNAVAILABLE')),
+  last_error_code text check (last_error_code in ('DETECTION_LOCKED','DETECTION_STALE','DETECTION_INVALID','DETECTION_DUPLICATE','DETECTION_NOT_FOUND','DETECTION_SOURCE_UNAVAILABLE','DATABASE_ERROR')),
   primary key (owner_user_id, integration_id),
   foreign key (owner_user_id,integration_id) references public.integrations(owner_user_id,id) on delete cascade,
   check ((lease_run_id is null) = (lease_expires_at is null))

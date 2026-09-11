@@ -93,7 +93,7 @@ begin
   i:=public.recurring_locked_integration(p_owner_user_id);
   perform public.recurring_require_lease(p_owner_user_id,i.id,p_run_id);
   if p_source_publication is distinct from i.last_success_at then raise exception 'DETECTION_STALE'; end if;
-  if jsonb_typeof(p_candidates) is distinct from 'array' or jsonb_array_length(p_candidates)>1000 then raise exception 'DETECTION_INVALID'; end if;
+  if jsonb_typeof(p_candidates) is distinct from 'array' or jsonb_array_length(p_candidates)>10000 then raise exception 'DETECTION_INVALID'; end if;
   select (clock_timestamp() at time zone s.timezone)::date,s.currency into strict today,v_currency from public.app_settings s where owner_user_id=p_owner_user_id;
   update public.recurring_suggestions set eligible=false where owner_user_id=p_owner_user_id and integration_id=i.id and state='pending';
   for c in select value from jsonb_array_elements(p_candidates) loop
@@ -143,7 +143,7 @@ declare i public.integrations;
 begin
   i:=public.recurring_locked_integration(p_owner_user_id);
   perform public.recurring_require_lease(p_owner_user_id,i.id,p_run_id);
-  if p_error_code is null or p_error_code not in ('DETECTION_LOCKED','DETECTION_STALE','DETECTION_INVALID','DETECTION_DUPLICATE','DETECTION_NOT_FOUND','DETECTION_SOURCE_UNAVAILABLE') then raise exception 'DETECTION_INVALID'; end if;
+  if p_error_code is null or p_error_code not in ('DETECTION_LOCKED','DETECTION_STALE','DETECTION_INVALID','DETECTION_DUPLICATE','DETECTION_NOT_FOUND','DETECTION_SOURCE_UNAVAILABLE','DATABASE_ERROR') then raise exception 'DETECTION_INVALID'; end if;
   update public.recurring_detection_runs set lease_run_id=null,lease_expires_at=null,last_error_code=p_error_code where owner_user_id=p_owner_user_id and integration_id=i.id;
 end;
 $$;
