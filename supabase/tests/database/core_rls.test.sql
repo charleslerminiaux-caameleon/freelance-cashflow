@@ -44,9 +44,12 @@ select is(
     'planned_cashflows',
     'provider_object_mappings',
     'recurring_cashflows',
+    'recurring_detection_runs',
+    'recurring_suggestion_evidence',
+    'recurring_suggestions',
     'sync_runs'
   ),
-  'exactly the eighteen owner-scoped tables have RLS enabled'
+  'exactly the twenty-one owner-scoped tables have RLS enabled'
 );
 
 select is(
@@ -98,6 +101,9 @@ select is(
     'planned_cashflows|owner_access|PERMISSIVE|authenticated|ALL|true|true',
     'provider_object_mappings|owner_read|PERMISSIVE|authenticated|SELECT|true|true',
     'recurring_cashflows|owner_access|PERMISSIVE|authenticated|ALL|true|true',
+    'recurring_detection_runs|owner_read|PERMISSIVE|authenticated|SELECT|true|true',
+    'recurring_suggestion_evidence|owner_read|PERMISSIVE|authenticated|SELECT|true|true',
+    'recurring_suggestions|owner_read|PERMISSIVE|authenticated|SELECT|true|true',
     'sync_runs|owner_read|PERMISSIVE|authenticated|SELECT|true|true'
   ),
   'every public policy exactly matches the owner-access contract'
