@@ -81,3 +81,37 @@ Exit status 0
 ## Concerns
 
 None.
+
+## Review fix round 1
+
+- Verified the important review finding: slicing the raw label before the expense form's trim semantics could emit only whitespace, and a UTF-16 slice could retain half of an astral character.
+- Added regressions proving leading whitespace is removed before length limiting and astral characters are never split at the 160 UTF-16-unit boundary.
+- Added the requested boundary coverage proving a payment exactly three calendar days from the fitted day is accepted and one exactly four days away is rejected.
+- Implemented trim-first label limiting by iterating complete Unicode code points and stopping before the next point would exceed 160 UTF-16 code units.
+
+Focused RED before the production fix:
+
+```text
+corepack pnpm --filter @fc/domain test:run src/recurring-detection.test.ts
+Test Files  1 failed (1)
+Tests  2 failed | 18 passed (20)
+Failures: trim-before-limit and astral-boundary label regressions
+```
+
+The calendar-day boundary test passed during RED, verifying the existing day comparison while closing the review coverage gap.
+
+Focused GREEN after the production fix:
+
+```text
+corepack pnpm --filter @fc/domain test:run src/recurring-detection.test.ts
+Test Files  1 passed (1)
+Tests  20 passed (20)
+```
+
+```text
+corepack pnpm --filter @fc/domain typecheck
+tsc --noEmit
+Exit status 0
+```
+
+Self-review confirmed the helper applies JavaScript `trim()` first, counts the downstream form's UTF-16 units through `String.length`, and appends only complete code points. No broader source or test files changed, and no full repository suite was run per the round-one instructions.

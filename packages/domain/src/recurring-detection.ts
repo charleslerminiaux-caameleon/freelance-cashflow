@@ -127,6 +127,17 @@ function isDayCoherent(
   });
 }
 
+function suggestedLabel(label: string): string {
+  let result = "";
+  for (const character of label.trim()) {
+    if (result.length + character.length > MAXIMUM_LABEL_LENGTH) {
+      break;
+    }
+    result += character;
+  }
+  return result;
+}
+
 function latestSingletonRun(
   transactions: DetectionTransaction[],
 ): DetectionTransaction[] {
@@ -277,7 +288,7 @@ export function detectMonthlyOutflows(
       accountId: latestPayment.accountId,
       currency: latestPayment.currency,
       normalizedLabel: normalizeRecurringLabel(latestPayment.label),
-      label: latestPayment.label.slice(0, MAXIMUM_LABEL_LENGTH),
+      label: suggestedLabel(latestPayment.label),
       amountCents,
       dayOfMonth,
       transactionIds: run.map(({ id }) => id),

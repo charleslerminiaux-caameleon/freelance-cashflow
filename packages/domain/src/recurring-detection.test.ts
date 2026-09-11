@@ -255,6 +255,24 @@ describe("detectMonthlyOutflows", () => {
     ).toEqual([]);
   });
 
+  it("accepts an exact three-day error and rejects an exact four-day error", () => {
+    expect(
+      detect([
+        transaction("jul", "2026-07-02"),
+        transaction("aug", "2026-08-05"),
+        transaction("sep", "2026-09-05"),
+      ]),
+    ).toMatchObject([{ dayOfMonth: 5 }]);
+
+    expect(
+      detect([
+        transaction("jul", "2026-07-01"),
+        transaction("aug", "2026-08-05"),
+        transaction("sep", "2026-09-05"),
+      ]),
+    ).toEqual([]);
+  });
+
   it("accepts the freshness boundary at seven days and rejects it one day later", () => {
     const series = ["2026-06-05", "2026-07-05", "2026-08-05"].map((date, index) =>
       transaction(`fresh-${index}`, date),
@@ -272,6 +290,29 @@ describe("detectMonthlyOutflows", () => {
     ]);
 
     expect(result[0]?.label).toBe(longLabel.slice(0, 160));
+  });
+
+  it("trims the latest payment label before applying the expense limit", () => {
+    const paddedLabel = `${" ".repeat(160)}Visible provider`;
+    const result = detect([
+      transaction("jul", "2026-07-05", { label: paddedLabel }),
+      transaction("aug", "2026-08-05", { label: paddedLabel }),
+      transaction("sep", "2026-09-05", { label: paddedLabel }),
+    ]);
+
+    expect(result[0]?.label).toBe("Visible provider");
+  });
+
+  it("does not split an astral character at the UTF-16 expense limit", () => {
+    const label = `${"x".repeat(159)}🦊 suffix`;
+    const result = detect([
+      transaction("jul", "2026-07-05", { label }),
+      transaction("aug", "2026-08-05", { label }),
+      transaction("sep", "2026-09-05", { label }),
+    ]);
+
+    expect(result[0]?.label).toBe("x".repeat(159));
+    expect(result[0]?.label.length).toBeLessThanOrEqual(160);
   });
 });
 
