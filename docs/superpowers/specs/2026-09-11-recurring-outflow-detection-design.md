@@ -1,7 +1,7 @@
 # Détection des sorties mensuelles depuis Qonto
 
 Date : 2026-09-11
-Statut : conception proposée, en attente de revue de la spécification par l’utilisateur.
+Statut : spécification validée par l’utilisateur le 2026-09-11.
 
 ## Objectif et décisions validées
 
