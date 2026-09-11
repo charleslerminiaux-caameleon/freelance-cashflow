@@ -23,3 +23,13 @@ it("prevents duplicate submits while pending", async () => {
 
 it("allows retry of persisted syncing state so an expired database lease can recover", () => {render(<IntegrationPanel configured integration={{...state,status:"syncing"}} action={vi.fn()} />); expect(screen.getByRole("button",{name:"Synchroniser Qonto"})).toBeEnabled();});
 it("distinguishes a failed last provider connection", () => {render(<IntegrationPanel configured integration={{...state,status:"error",last_connection_succeeded:false,last_error_code:"PROVIDER_UNAVAILABLE"}} action={vi.fn()} />); expect(screen.getByText("Dernière connexion échouée")).toBeInTheDocument();});
+
+it("shows bank success separately from a failed recurring analysis", async () => {
+ const action = vi.fn(async () => ({ success: true, message: "Synchronisation Qonto terminée.", analysisSuccess: false, analysisMessage: "Données Qonto actualisées, analyse des récurrences à relancer." }));
+ render(<IntegrationPanel configured integration={state} action={action} />);
+
+ fireEvent.click(screen.getByRole("button", { name: "Synchroniser Qonto" }));
+
+ expect(await screen.findByRole("status")).toHaveTextContent("Synchronisation Qonto terminée.");
+ expect(screen.getByRole("alert")).toHaveTextContent(/données Qonto actualisées.*analyse.*relancer/i);
+});

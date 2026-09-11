@@ -61,10 +61,13 @@ describe("synchronizeQontoForOwner", () => {
     mocks.getOwnerSettings.mockResolvedValue({ timezone: "Europe/Paris" });
     mocks.synchronizeBanking.mockResolvedValue({ success: true, created: 2, updated: 3 });
 
+    mocks.analyzeRecurringForOwner.mockResolvedValue({ success: true, count: 2 });
+
     await expect(synchronizeQontoForOwner(ownerUserId)).resolves.toEqual({
       success: true,
       created: 2,
       updated: 3,
+      analysisResult: { success: true, count: 2 },
     });
 
     expect(mocks.createQontoProvider).toHaveBeenCalledWith({
@@ -100,13 +103,18 @@ describe("synchronizeQontoForOwner", () => {
   });
 });
 
-it.each(["returned", "thrown"])("retains banking success when analysis failure is %s", async (kind) => {
+it.each(["returned", "thrown"])("retains banking success and reports when analysis failure is %s", async (kind) => {
   mocks.loadQontoConfig.mockReturnValue({ login: "synthetic", secretKey: "synthetic" });
   mocks.getOwnerSettings.mockResolvedValue({ timezone: "Europe/Paris" });
   mocks.synchronizeBanking.mockResolvedValue({ success: true, created: 1, updated: 0 });
   let analyzedOwner: string | undefined;
   mocks.analyzeRecurringForOwner.mockImplementation(async (owner: string) => { analyzedOwner = owner; if (kind === "thrown") throw new Error("private"); return { success: false, code: "DATABASE_ERROR" }; });
-  expect(await synchronizeQontoForOwner(ownerUserId)).toEqual({ success: true, created: 1, updated: 0 });
+  expect(await synchronizeQontoForOwner(ownerUserId)).toEqual({
+    success: true,
+    created: 1,
+    updated: 0,
+    analysisResult: { success: false, code: "DATABASE_ERROR" },
+  });
   expect(analyzedOwner).toBe(ownerUserId);
 });
 it("never launches analysis after failed banking publication", async () => {

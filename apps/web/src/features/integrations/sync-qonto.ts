@@ -10,13 +10,18 @@ import {
 import type { SyncResult } from "@fc/integrations/server";
 
 import { analyzeRecurringForOwner } from "@/features/recurring-detection/service";
+import type { AnalysisResult } from "@/features/recurring-detection/schema";
 import { getOwnerSettings } from "@/features/settings/repository";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import { loadQontoConfig } from "./qonto-config";
 import { createBankingSyncStore } from "./sync-repository";
 
-export async function synchronizeQontoForOwner(ownerUserId: string): Promise<SyncResult> {
+export type QontoSyncResult =
+  | Extract<SyncResult, { success: false }>
+  | (Extract<SyncResult, { success: true }> & { analysisResult: AnalysisResult });
+
+export async function synchronizeQontoForOwner(ownerUserId: string): Promise<QontoSyncResult> {
   const config = loadQontoConfig();
   if (config === null) return { success: false, code: "PROVIDER_AUTH_EXPIRED" };
 
@@ -32,8 +37,13 @@ export async function synchronizeQontoForOwner(ownerUserId: string): Promise<Syn
       log: logSyncEvent,
     });
     if (bankingResult.success) {
-      try { await analyzeRecurringForOwner(ownerUserId); }
-      catch { /* Analysis never rolls back or masks a banking success. */ }
+      let analysisResult: AnalysisResult;
+      try {
+        analysisResult = await analyzeRecurringForOwner(ownerUserId);
+      } catch {
+        analysisResult = { success: false, code: "DATABASE_ERROR" };
+      }
+      return { ...bankingResult, analysisResult };
     }
     return bankingResult;
   } catch {

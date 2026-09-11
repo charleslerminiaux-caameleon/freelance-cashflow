@@ -17,6 +17,21 @@ import {
 } from "@/features/expenses/expense-form";
 import { listExpenseWorkspace } from "@/features/expenses/repository";
 import { getOwnerBusinessDate } from "@/features/invoices/business-date";
+import {
+  analyzeRecurringAction,
+  confirmSuggestionAction,
+  dismissSuggestionAction,
+  reexamineSuggestionAction,
+} from "@/features/recurring-detection/actions";
+import { getRecurringSuggestionWorkspace } from "@/features/recurring-detection/repository";
+import {
+  SuggestionPanel,
+  type SuggestionReview,
+} from "@/features/recurring-detection/suggestion-panel";
+import type {
+  RecurringSuggestion,
+  RecurringSuggestionWorkspace,
+} from "@/features/recurring-detection/schema";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
 
@@ -55,18 +70,59 @@ function basisPointsToInput(value: number): string {
     : `${Math.trunc(value / 100)},${decimals.toString().padStart(2, "0")}`;
 }
 
+function reviewSuggestion(suggestion: RecurringSuggestion): SuggestionReview {
+  return {
+    id: suggestion.id,
+    eligible: suggestion.eligible,
+    label: suggestion.label,
+    amountCents: suggestion.amountCents,
+    dayOfMonth: suggestion.dayOfMonth,
+    nextDate: suggestion.nextDate,
+    sourcePublication: suggestion.sourcePublication,
+    currency: suggestion.currency,
+    evidence: suggestion.evidence,
+    possibleDuplicates: suggestion.possibleDuplicates,
+  };
+}
+
 export default async function ExpensesPage() {
   const { userId } = await requireOwner();
   const client = await createClient();
-  const [workspace, today] = await Promise.all([
+  const emptySuggestionWorkspace: RecurringSuggestionWorkspace = {
+    suggestions: [],
+    ignored: [],
+    linkedExpenseIds: [],
+    lastAnalyzedAt: null,
+    analysisError: null,
+  };
+  const suggestionPromise = getRecurringSuggestionWorkspace(client, userId).then(
+    (suggestionWorkspace) => ({ suggestionWorkspace, loadError: false }),
+    () => ({ suggestionWorkspace: emptySuggestionWorkspace, loadError: true }),
+  );
+  const [workspace, today, suggestionResult] = await Promise.all([
     listExpenseWorkspace(client, userId),
     getOwnerBusinessDate(client, userId),
+    suggestionPromise,
   ]);
+  const { suggestionWorkspace } = suggestionResult;
   const categoryOptions = workspace.categories.map(({ id, name }) => ({ id, name }));
   const categoryNames = new Map(
     workspace.categories.map((category) => [category.id, category.name]),
   );
   const totalExpenses = workspace.recurringExpenses.length + workspace.plannedExpenses.length;
+  const linkedExpenseIds = new Set(suggestionWorkspace.linkedExpenseIds);
+  const existingExpenses = workspace.recurringExpenses
+    .filter(
+      (expense) =>
+        expense.cashflow_kind === "expense" &&
+        expense.frequency === "monthly" &&
+        !linkedExpenseIds.has(expense.id),
+    )
+    .map((expense) => ({
+      id: expense.id,
+      label: expense.label,
+      amountCents: expense.amount_cents,
+    }));
 
   return (
     <div className="commercial-page expense-page">
@@ -91,6 +147,20 @@ export default async function ExpensesPage() {
           pas un calcul fiscal ou social officiel.
         </p>
       </aside>
+
+      <SuggestionPanel
+        suggestions={suggestionWorkspace.suggestions.map(reviewSuggestion)}
+        ignored={suggestionWorkspace.ignored.map(reviewSuggestion)}
+        categories={categoryOptions}
+        existingExpenses={existingExpenses}
+        lastAnalyzedAt={suggestionWorkspace.lastAnalyzedAt}
+        analysisFailed={suggestionWorkspace.analysisError !== null}
+        loadError={suggestionResult.loadError}
+        confirmAction={confirmSuggestionAction}
+        dismissAction={dismissSuggestionAction}
+        reexamineAction={reexamineSuggestionAction}
+        analyzeAction={analyzeRecurringAction}
+      />
 
       <div className="expense-entry-grid">
         <details className="panel" open={workspace.recurringExpenses.length === 0}>
@@ -143,6 +213,9 @@ export default async function ExpensesPage() {
                         <span className={`status-pill ${expense.active ? "status-active" : ""}`}>
                           {expense.active ? "Active" : "Inactive"}
                         </span>
+                        {linkedExpenseIds.has(expense.id) ? (
+                          <span className="status-pill">Détectée depuis Qonto</span>
+                        ) : null}
                         <h3>{expense.label}</h3>
                         <p>
                           {kindLabels[expense.cashflow_kind]} · {frequencyLabels[expense.frequency]}
@@ -182,6 +255,7 @@ export default async function ExpensesPage() {
                         <ExpenseForm
                           action={updateExpenseAction}
                           categories={categoryOptions}
+                          linkedFromQonto={linkedExpenseIds.has(expense.id)}
                           mode="recurring"
                           today={today}
                           value={{

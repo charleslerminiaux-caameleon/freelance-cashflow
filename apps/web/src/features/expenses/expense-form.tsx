@@ -46,8 +46,12 @@ type ExpenseFormProps = {
   categories: CategoryOption[];
   today: string;
 } & (
-  | { mode: "recurring"; value?: RecurringExpenseFormValue }
-  | { mode: "planned"; value?: PlannedExpenseFormValue }
+  | {
+      mode: "recurring";
+      value?: RecurringExpenseFormValue;
+      linkedFromQonto?: boolean;
+    }
+  | { mode: "planned"; value?: PlannedExpenseFormValue; linkedFromQonto?: never }
 );
 
 const initialState: ExpenseActionState = { message: null, success: false };
@@ -66,6 +70,9 @@ const certainties = [
 
 export function ExpenseForm(props: ExpenseFormProps) {
   const [state, submit, pending] = useActionState(props.action, initialState);
+  const [frequency, setFrequency] = useState(
+    props.mode === "recurring" ? (props.value?.frequency ?? "monthly") : "monthly",
+  );
   const fieldId = useId();
   const editing = props.value !== undefined;
 
@@ -154,7 +161,8 @@ export function ExpenseForm(props: ExpenseFormProps) {
               <select
                 id={`${fieldId}-frequency`}
                 name="frequency"
-                defaultValue={props.value?.frequency ?? "monthly"}
+                value={frequency}
+                onChange={(event) => setFrequency(event.target.value as typeof frequency)}
               >
                 <option value="monthly">Mensuelle</option>
                 <option value="quarterly">Trimestrielle</option>
@@ -222,6 +230,12 @@ export function ExpenseForm(props: ExpenseFormProps) {
           </>
         )}
       </div>
+      {props.mode === "recurring" && props.linkedFromQonto && frequency !== "monthly" ? (
+        <p role="alert">
+          L’exclusion des mois déjà payés s’applique uniquement aux charges mensuelles liées à
+          Qonto.
+        </p>
+      ) : null}
       {state.message ? <p role={state.success ? "status" : "alert"}>{state.message}</p> : null}
       <button type="submit" disabled={pending}>
         {editing

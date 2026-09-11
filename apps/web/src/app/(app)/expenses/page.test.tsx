@@ -1,10 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 
-const { createClient, getOwnerBusinessDate, listExpenseWorkspace, requireOwner } = vi.hoisted(
+const {
+  createClient,
+  getOwnerBusinessDate,
+  getRecurringSuggestionWorkspace,
+  listExpenseWorkspace,
+  requireOwner,
+} = vi.hoisted(
   () => ({
     createClient: vi.fn(),
     getOwnerBusinessDate: vi.fn(),
+    getRecurringSuggestionWorkspace: vi.fn(),
     listExpenseWorkspace: vi.fn(),
     requireOwner: vi.fn(),
   }),
@@ -12,6 +19,9 @@ const { createClient, getOwnerBusinessDate, listExpenseWorkspace, requireOwner }
 
 vi.mock("@/features/expenses/repository", () => ({ listExpenseWorkspace }));
 vi.mock("@/features/invoices/business-date", () => ({ getOwnerBusinessDate }));
+vi.mock("@/features/recurring-detection/repository", () => ({
+  getRecurringSuggestionWorkspace,
+}));
 vi.mock("@/lib/auth/require-owner", () => ({ requireOwner }));
 vi.mock("@/lib/supabase/server", () => ({ createClient }));
 
@@ -25,6 +35,13 @@ beforeEach(() => {
   requireOwner.mockResolvedValue({ userId: ownerUserId });
   createClient.mockResolvedValue({ kind: "SSR client" });
   getOwnerBusinessDate.mockResolvedValue("2026-09-07");
+  getRecurringSuggestionWorkspace.mockResolvedValue({
+    suggestions: [],
+    ignored: [],
+    linkedExpenseIds: ["33333333-3333-4333-8333-333333333333"],
+    lastAnalyzedAt: null,
+    analysisError: null,
+  });
   listExpenseWorkspace.mockResolvedValue({
     categories: [
       {
@@ -93,6 +110,7 @@ it("renders persisted recurring and planned outflows with owner-scoped CRUD cont
   expect(getOwnerBusinessDate).toHaveBeenCalledWith({ kind: "SSR client" }, ownerUserId);
   expect(screen.getByRole("heading", { level: 1, name: "Charges et réserves" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Hébergement" })).toBeInTheDocument();
+  expect(screen.getByText("Détectée depuis Qonto")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Réserve Urssaf" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Créer la sortie récurrente" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Créer la sortie ponctuelle" })).toBeInTheDocument();
@@ -115,4 +133,67 @@ it("shows an honest empty state instead of example financial records", async () 
 
   expect(screen.getByRole("heading", { name: "Aucune sortie configurée" })).toBeInTheDocument();
   expect(screen.getByText(/vos charges réelles apparaîtront ici/i)).toBeInTheDocument();
+});
+
+it("loads owner suggestions and keeps pending rows out of configured expense totals", async () => {
+  getRecurringSuggestionWorkspace.mockResolvedValue({
+    suggestions: [
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        state: "pending",
+        eligible: true,
+        label: "Cloud synthétique",
+        amountCents: 9_900,
+        dayOfMonth: 7,
+        nextDate: "2026-10-07",
+        lastPaymentDate: "2026-09-07",
+        sourcePublication: "2026-09-11T10:00:00Z",
+        linkedExpenseId: null,
+        accountId: "77777777-7777-4777-8777-777777777777",
+        currency: "EUR",
+        normalizedLabel: "cloud synthetique",
+        evidence: [
+          {
+            id: "88888888-8888-4888-8888-888888888888",
+            label: "Cloud synthétique juillet",
+            amountCents: 9_900,
+            transactionDate: "2026-07-07",
+          },
+        ],
+        possibleDuplicates: [],
+      },
+    ],
+    ignored: [],
+    linkedExpenseIds: [],
+    lastAnalyzedAt: "2026-09-11T10:00:00Z",
+    analysisError: null,
+  });
+
+  render(await ExpensesPage());
+
+  expect(getRecurringSuggestionWorkspace).toHaveBeenCalledWith(
+    { kind: "SSR client" },
+    ownerUserId,
+  );
+  expect(screen.getByRole("heading", { name: "Récurrences à confirmer" })).toBeInTheDocument();
+  expect(screen.getByText("Cloud synthétique")).toBeInTheDocument();
+  expect(
+    screen.getByLabelText("Charge mensuelle existante pour Cloud synthétique"),
+  ).toHaveTextContent("Hébergement");
+  expect(screen.getByText(/aucun effet sur la trésorerie avant confirmation/i)).toBeInTheDocument();
+  expect(screen.getByText("2 sorties")).toBeInTheDocument();
+  expect(document.body).not.toHaveTextContent("cloud synthetique");
+  expect(document.body).not.toHaveTextContent("77777777-7777-4777-8777-777777777777");
+});
+
+it("keeps the expense workspace available when suggestions cannot be loaded", async () => {
+  getRecurringSuggestionWorkspace.mockRejectedValue(new Error("private database detail"));
+
+  render(await ExpensesPage());
+
+  expect(screen.getByRole("heading", { name: "Hébergement" })).toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    /impossible de charger les suggestions.*réessayez/i,
+  );
+  expect(document.body).not.toHaveTextContent("private database detail");
 });

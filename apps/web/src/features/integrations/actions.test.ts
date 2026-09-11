@@ -6,7 +6,7 @@ vi.mock("./sync-qonto", () => ({ synchronizeQontoForOwner: mocks.synchronizeQont
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 import { syncQontoAction } from "./actions";
 const initial = { success: false, message: null };
-beforeEach(() => { vi.clearAllMocks(); mocks.requireOwner.mockResolvedValue({ userId: "owner-session" }); mocks.isQontoConfigured.mockReturnValue(true); mocks.synchronizeQontoForOwner.mockResolvedValue({ success: true, created: 2, updated: 1 }); });
+beforeEach(() => { vi.clearAllMocks(); mocks.requireOwner.mockResolvedValue({ userId: "owner-session" }); mocks.isQontoConfigured.mockReturnValue(true); mocks.synchronizeQontoForOwner.mockResolvedValue({ success: true, created: 2, updated: 1, analysisResult: { success: true, count: 2 } }); });
 it("rejects nonowner before any provider/config access", async () => {
  mocks.requireOwner.mockRejectedValue(new Error("redirect"));
  await expect(syncQontoAction(initial, new FormData())).rejects.toThrow("redirect");
@@ -25,3 +25,17 @@ it.each(["PROVIDER_AUTH_EXPIRED", "PROVIDER_RATE_LIMIT", "PROVIDER_UNAVAILABLE",
  const result = await syncQontoAction(initial, new FormData()); expect(result.success).toBe(false); expect(result.message).toBeTruthy(); expect(JSON.stringify(result)).not.toContain("secret-payload"); expect(mocks.revalidatePath).toHaveBeenCalledWith("/integrations");
 });
 it("contains unexpected exceptions", async () => { mocks.synchronizeQontoForOwner.mockRejectedValue(new Error("secret-payload")); expect(JSON.stringify(await syncQontoAction(initial, new FormData()))).not.toContain("secret-payload"); });
+
+it("keeps banking success and returns a separate actionable analysis failure", async () => {
+ mocks.synchronizeQontoForOwner.mockResolvedValue({ success: true, created: 2, updated: 1, analysisResult: { success: false, code: "DATABASE_ERROR" } });
+
+ const result = await syncQontoAction(initial, new FormData());
+
+ expect(result).toEqual({
+   success: true,
+   message: "Synchronisation Qonto terminée.",
+   analysisMessage: "Données Qonto actualisées, analyse des récurrences à relancer.",
+   analysisSuccess: false,
+ });
+ expect(mocks.revalidatePath).toHaveBeenCalledWith("/expenses");
+});

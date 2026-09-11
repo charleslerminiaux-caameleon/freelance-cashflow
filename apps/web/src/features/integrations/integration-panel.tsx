@@ -3,7 +3,12 @@
 import { useActionState } from "react";
 import { integrationMessages, type IntegrationState } from "./status";
 
-export type SyncActionState = { success: boolean; message: string | null };
+export type SyncActionState = {
+  success: boolean;
+  message: string | null;
+  analysisSuccess?: boolean;
+  analysisMessage?: string;
+};
 export function IntegrationPanel({ configured, integration, action }: {
   configured: boolean;
   integration: IntegrationState | null;
@@ -27,6 +32,9 @@ export function IntegrationPanel({ configured, integration, action }: {
         </button>
       </form>
       {state.message && <p role={state.success ? "status" : "alert"}>{state.message}</p>}
+      {state.analysisMessage ? (
+        <p role={state.analysisSuccess ? "status" : "alert"}>{state.analysisMessage}</p>
+      ) : null}
       <a href="/cashflow">Consulter les comptes et transactions</a>
     </section>
     <section className="dashboard-panel integration-card" aria-labelledby="tiime-title">

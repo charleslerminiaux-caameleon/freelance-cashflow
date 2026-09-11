@@ -20,7 +20,14 @@ export async function syncQontoAction(
   try {
     const result = await synchronizeQontoForOwner(userId);
     state = result.success
-      ? { success: true, message: "Synchronisation Qonto terminée." }
+      ? {
+          success: true,
+          message: "Synchronisation Qonto terminée.",
+          analysisSuccess: result.analysisResult.success,
+          analysisMessage: result.analysisResult.success
+            ? `Analyse des récurrences terminée : ${result.analysisResult.count} détectée${result.analysisResult.count === 1 ? "" : "s"}.`
+            : "Données Qonto actualisées, analyse des récurrences à relancer.",
+        }
       : { success: false, message: integrationMessages[result.code] };
   } catch {
     state = { success: false, message: integrationMessages.DATABASE_ERROR };
@@ -28,6 +35,7 @@ export async function syncQontoAction(
   revalidatePath("/integrations");
   revalidatePath("/cashflow");
   revalidatePath("/dashboard");
+  revalidatePath("/expenses");
   revalidatePath("/", "layout");
   return state;
 }

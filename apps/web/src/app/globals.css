@@ -880,6 +880,10 @@ details.panel[open] > summary {
   margin-bottom: 1.5rem;
 }
 
+.recurring-suggestion-panel {
+  margin-bottom: 1.5rem;
+}
+
 .expense-record-list {
   display: grid;
   gap: 1rem;

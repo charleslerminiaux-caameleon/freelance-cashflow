@@ -29,6 +29,38 @@ it("collects a categorized recurring remuneration without hidden tax calculation
   expect(screen.getByRole("button", { name: "Créer la sortie récurrente" })).toBeInTheDocument();
 });
 
+it("warns when a Qonto-linked expense is edited away from monthly", () => {
+  render(
+    <ExpenseForm
+      action={idleAction}
+      categories={categories}
+      mode="recurring"
+      today="2026-09-07"
+      linkedFromQonto
+      value={{
+        id: "11111111-1111-4111-8111-111111111111",
+        label: "Hébergement",
+        categoryId: "",
+        cashflowKind: "expense",
+        amount: "99,00",
+        frequency: "monthly",
+        dayOfMonth: 7,
+        startDate: "2026-09-07",
+        endDate: "",
+        certainty: "committed",
+        probabilityPercent: "100",
+        active: true,
+      }}
+    />,
+  );
+
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Fréquence"), { target: { value: "quarterly" } });
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    /exclusion des mois déjà payés.*mensuelles/i,
+  );
+});
+
 it("collects a one-off reserve", () => {
   render(
     <ExpenseForm action={idleAction} categories={categories} mode="planned" today="2026-09-07" />,
