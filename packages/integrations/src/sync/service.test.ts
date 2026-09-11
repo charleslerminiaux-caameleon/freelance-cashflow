@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
   BankingPage,
@@ -340,8 +340,11 @@ describe("synchronizeBanking", () => {
         2: { items: [], nextPage: null },
       },
     });
-    const ticks = [0, 0, 0, 0, 120_001];
-    const { result, store } = synchronize(bankingProvider, new FakeStore(), () => ticks.shift() ?? 120_001);
+    let time = 0;
+    const slowStore = new FakeStore();
+    const stage = slowStore.stageAccounts.bind(slowStore);
+    slowStore.stageAccounts = async (...args) => { await stage(...args); time = 120_001; };
+    const { result, store } = synchronize(bankingProvider, slowStore, () => time);
 
     await expect(result).resolves.toEqual({
       success: false,
@@ -524,4 +527,119 @@ describe("synchronizeBanking", () => {
       { code: "PROVIDER_UNAVAILABLE", connectionSucceeded: false },
     ]);
   });
+});
+
+
+afterEach(() => vi.useRealTimers());
+
+describe("overall cancellation", () => {
+  it.each(["acquire", "renew", "stageAccounts", "stageTransactions", "publish", "recovery", "fail"] as const)(
+    "settles a pending %s at 120 seconds and never continues after late settlement", async (phase) => {
+      vi.useFakeTimers();
+      const store = new FakeStore();
+      const bankingProvider = provider({
+        accounts: { 1: { items: [account("a")], nextPage: null } },
+        transactions: { a: { 1: { items: [], nextPage: null } } },
+      });
+      let release!: (value: never) => void;
+      const pending = new Promise<never>(resolve => { release = resolve; });
+      let signal: AbortSignal | undefined;
+      const stuck = (...args: unknown[]) => { signal = args.at(-1) as AbortSignal; return pending; };
+      if (phase === "recovery") {
+        store.publish = vi.fn().mockRejectedValueOnce(new SyncStoreError("DATABASE_ERROR", true)).mockImplementation(stuck);
+      } else {
+        store[phase] = vi.fn(stuck);
+      }
+      if (phase === "fail") bankingProvider.listAccounts = async () => { throw new IntegrationError("PROVIDER_AUTH_EXPIRED"); };
+      let settled: unknown;
+      const result = synchronize(bankingProvider, store).result.then(value => { settled = value; });
+      await vi.advanceTimersByTimeAsync(119_999);
+      expect(settled).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toEqual({ success: false, code: phase === "publish" || phase === "recovery" ? "DATABASE_ERROR" : phase === "fail" ? "PROVIDER_AUTH_EXPIRED" : "PROVIDER_UNAVAILABLE" });
+      expect(signal?.aborted).toBe(true);
+      const calls = [...store.calls];
+      const requests = [...bankingProvider.accountRequests];
+      release({ created: 7, updated: 8 } as never);
+      await vi.advanceTimersByTimeAsync(0);
+      await result;
+      expect(store.calls).toEqual(calls);
+      expect(bankingProvider.accountRequests).toEqual(requests);
+      expect(store.failCalls).toEqual([]);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it.each(["fetch", "retry"])("cancels near-deadline Qonto %s without a later request or publication", async (phase) => {
+    vi.useFakeTimers();
+    const store = new FakeStore();
+    const acquire = store.acquire.bind(store);
+    store.acquire = () => new Promise(resolve => setTimeout(() => { void acquire().then(resolve); }, 119_000));
+    const signals: AbortSignal[] = [];
+    const fetch = vi.fn((_url: unknown, init?: RequestInit) => {
+      signals.push(init!.signal!);
+      return phase === "fetch" ? new Promise<Response>(() => {}) : Promise.resolve(new Response(null, { status: 429, headers: { "retry-after": "5" } }));
+    });
+    const bankingProvider = createQontoProvider({ login: "synthetic", secretKey: "synthetic", fetch });
+    let settled: unknown;
+    void synchronize(bankingProvider, store).result.then(value => { settled = value; });
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(settled).toEqual({ success: false, code: "PROVIDER_UNAVAILABLE" });
+    expect(signals).toHaveLength(1);
+    expect(signals[0]!.aborted).toBe(true);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(store.calls).not.toContain("publish");
+    expect(store.stagedAccounts).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps an acknowledged receipt even if the injected clock crosses the budget during publication", async () => {
+    const store = new FakeStore();
+    let time = 0;
+    store.publish = async () => { time = 120_001; return { created: 7, updated: 8 }; };
+    expect(await synchronize(provider({ accounts: { 1: { items: [], nextPage: null } } }), store, () => time).result)
+      .toEqual({ success: true, created: 7, updated: 8 });
+    expect(store.failCalls).toEqual([]);
+  });
+});
+
+
+it("uses monotonic elapsed time when the wall clock jumps", async () => {
+  vi.useFakeTimers();
+  const store = new FakeStore();
+  store.acquire = () => new Promise(() => {});
+  let settled: unknown;
+  void synchronize(provider({ accounts: {} }), store).result.then(value => { settled = value; });
+  vi.setSystemTime(new Date("2040-01-01T00:00:00Z"));
+  await vi.advanceTimersByTimeAsync(119_999);
+  expect(settled).toBeUndefined();
+  await vi.advanceTimersByTimeAsync(1);
+  expect(settled).toEqual({ success: false, code: "PROVIDER_UNAVAILABLE" });
+});
+
+it("gives late failure cleanup only the remainder of the original budget", async () => {
+  vi.useFakeTimers();
+  const store = new FakeStore();
+  const bankingProvider = provider({ accounts: {} });
+  bankingProvider.listAccounts = () => new Promise((_resolve, reject) => {
+    setTimeout(() => reject(new IntegrationError("PROVIDER_AUTH_EXPIRED")), 119_000);
+  });
+  store.fail = () => new Promise(() => {});
+  let settled: unknown;
+  void synchronize(bankingProvider, store).result.then(value => { settled = value; });
+  await vi.advanceTimersByTimeAsync(119_999);
+  expect(settled).toBeUndefined();
+  await vi.advanceTimersByTimeAsync(1);
+  expect(settled).toEqual({ success: false, code: "PROVIDER_AUTH_EXPIRED" });
+});
+
+it("never starts recovery or failure closure after an uncertain publication crosses the deadline", async () => {
+  const store = new FakeStore();
+  let time = 0;
+  store.publish = vi.fn(async () => { time = 120_001; throw new SyncStoreError("DATABASE_ERROR", true); });
+  const result = await synchronize(provider({ accounts: { 1: { items: [], nextPage: null } } }), store, () => time).result;
+  expect(result).toEqual({ success: false, code: "DATABASE_ERROR" });
+  expect(store.publish).toHaveBeenCalledTimes(1);
+  expect(store.failCalls).toEqual([]);
 });

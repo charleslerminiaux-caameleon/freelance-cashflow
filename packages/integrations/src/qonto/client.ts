@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { BankingPage, BankingProvider, TransactionWindow } from "../banking";
+import { withCancellation } from "../cancellation";
 import { IntegrationError } from "../errors";
 import { normalizeAccount, normalizeTransaction } from "./normalize";
 import {
@@ -38,7 +39,7 @@ const windowSchema = z
   .refine((window) => Date.parse(window.updatedFrom) <= Date.parse(window.updatedTo));
 
 type Fetch = typeof globalThis.fetch;
-type Sleep = (milliseconds: number) => Promise<void>;
+type Sleep = (milliseconds: number, signal?: AbortSignal) => Promise<void>;
 
 export type CreateQontoProviderOptions = {
   login: string;
@@ -58,8 +59,13 @@ function unavailable(): IntegrationError {
   return new IntegrationError("PROVIDER_UNAVAILABLE");
 }
 
-async function defaultSleep(milliseconds: number): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+async function defaultSleep(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const wait = () => new Promise<void>(resolve => { timer = setTimeout(resolve, milliseconds); });
+  try {
+    if (signal) await withCancellation(wait, signal, unavailable);
+    else await wait();
+  } finally { if (timer !== undefined) clearTimeout(timer); }
 }
 
 function cancelBody(body: ReadableStream<Uint8Array> | ReadableStreamDefaultReader<Uint8Array>): void {
@@ -118,8 +124,12 @@ async function fetchAttempt(
   fetchImplementation: Fetch,
   url: URL,
   authorization: string,
+  signal?: AbortSignal,
 ): Promise<{ response: Response; body?: unknown }> {
+  if (signal?.aborted) throw unavailable();
   const controller = new AbortController();
+  const abortRequest = () => controller.abort();
+  signal?.addEventListener("abort", abortRequest, { once: true });
   let response: Response | undefined;
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<never>((_resolve, reject) => {
@@ -128,7 +138,7 @@ async function fetchAttempt(
       reject(unavailable());
     }, ATTEMPT_TIMEOUT_MS);
   });
-  const request = (async () => {
+  const request = async () => {
     response = await fetchImplementation(url, {
       method: "GET",
       headers: { Authorization: authorization },
@@ -143,11 +153,12 @@ async function fetchAttempt(
     }
     if (!response.ok) return { response };
     return { response, body: await readJsonBounded(response, controller.signal) };
-  })();
+  };
 
   try {
-    return await Promise.race([request, deadline]);
+    return await withCancellation(() => Promise.race([request(), deadline]), controller.signal, unavailable);
   } finally {
+    signal?.removeEventListener("abort", abortRequest);
     controller.abort();
     if (response?.body && !response.body.locked) cancelBody(response.body);
     if (timeout !== undefined) clearTimeout(timeout);
@@ -228,15 +239,22 @@ export function createQontoProvider(options: CreateQontoProviderOptions): Bankin
   const now = options.now ?? Date.now;
   const authorization = `${login.data}:${secretKey.data}`;
 
-  async function get(url: URL): Promise<unknown> {
+  async function retryWait(milliseconds: number, signal?: AbortSignal): Promise<void> {
+    if (signal) await withCancellation(() => sleep(milliseconds, signal), signal, unavailable);
+    else await sleep(milliseconds);
+  }
+
+  async function get(url: URL, signal?: AbortSignal): Promise<unknown> {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+      if (signal?.aborted) throw unavailable();
       let result: Awaited<ReturnType<typeof fetchAttempt>>;
       try {
-        result = await fetchAttempt(fetchImplementation, url, authorization);
+        result = await fetchAttempt(fetchImplementation, url, authorization, signal);
       } catch (error) {
+        if (signal?.aborted) throw unavailable();
         if (error instanceof InvalidPayloadError) throw invalidResponse();
         if (attempt === MAX_ATTEMPTS - 1) throw unavailable();
-        await sleep(500 * 2 ** attempt);
+        await retryWait(500 * 2 ** attempt, signal);
         continue;
       }
 
@@ -251,7 +269,7 @@ export function createQontoProvider(options: CreateQontoProviderOptions): Bankin
         if (retryAfter !== null && retryAfter > MAX_RETRY_AFTER_MS) {
           throw new IntegrationError(code);
         }
-        await sleep(retryAfter ?? 500 * 2 ** attempt);
+        await retryWait(retryAfter ?? 500 * 2 ** attempt, signal);
         continue;
       }
       if (!response.ok || result.body === undefined) throw invalidResponse();
@@ -261,12 +279,12 @@ export function createQontoProvider(options: CreateQontoProviderOptions): Bankin
   }
 
   return {
-    async listAccounts(page): Promise<BankingPage<ReturnType<typeof normalizeAccount>>> {
+    async listAccounts(page, signal): Promise<BankingPage<ReturnType<typeof normalizeAccount>>> {
       const requestedPage = parsePage(page);
       const url = new URL("/v2/bank_accounts", QONTO_ORIGIN);
       url.searchParams.set("page", String(requestedPage));
       url.searchParams.set("per_page", String(PAGE_SIZE));
-      const parsed = qontoAccountsEnvelopeSchema.safeParse(await get(url));
+      const parsed = qontoAccountsEnvelopeSchema.safeParse(await get(url, signal));
       if (!parsed.success) throw invalidResponse();
       const nextPage = parsed.data.meta
         ? validateNextPage(
@@ -285,6 +303,7 @@ export function createQontoProvider(options: CreateQontoProviderOptions): Bankin
 
     async listTransactions(
       window,
+      signal,
     ): Promise<BankingPage<ReturnType<typeof normalizeTransaction>>> {
       const parsedWindow = parseWindow(window);
       const url = new URL("/v2/transactions", QONTO_ORIGIN);
@@ -299,7 +318,7 @@ export function createQontoProvider(options: CreateQontoProviderOptions): Bankin
       }
       url.searchParams.set("sort_by", "updated_at:asc");
 
-      const parsed = qontoTransactionsEnvelopeSchema.safeParse(await get(url));
+      const parsed = qontoTransactionsEnvelopeSchema.safeParse(await get(url, signal));
       if (!parsed.success) throw invalidResponse();
       return {
         items: parsed.data.transactions.map((transaction) =>

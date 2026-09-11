@@ -21,6 +21,7 @@ export interface BankingSyncStore {
   acquire(
     ownerUserId: string,
     runId: string,
+    signal?: AbortSignal,
   ): Promise<{
     integrationId: string;
     initialCreatedFrom: string;
@@ -28,13 +29,14 @@ export interface BankingSyncStore {
     updatedFrom: string;
     updatedTo: string;
   }>;
-  renew(ownerUserId: string, runId: string): Promise<void>;
+  renew(ownerUserId: string, runId: string, signal?: AbortSignal): Promise<void>;
   stageAccounts(
     ownerUserId: string,
     runId: string,
     page: number,
     nextPage: number | null,
     items: NormalizedBankAccount[],
+    signal?: AbortSignal,
   ): Promise<void>;
   stageTransactions(
     ownerUserId: string,
@@ -43,13 +45,15 @@ export interface BankingSyncStore {
     page: number,
     nextPage: number | null,
     items: NormalizedBankTransaction[],
+    signal?: AbortSignal,
   ): Promise<void>;
-  publish(ownerUserId: string, runId: string): Promise<{ created: number; updated: number }>;
+  publish(ownerUserId: string, runId: string, signal?: AbortSignal): Promise<{ created: number; updated: number }>;
   fail(
     ownerUserId: string,
     runId: string,
     code: IntegrationErrorCode,
     connectionSucceeded: boolean,
+    signal?: AbortSignal,
   ): Promise<void>;
 }
 
@@ -59,6 +63,7 @@ export type SynchronizeBankingInput = {
   timezone: string;
   provider: BankingProvider;
   store: BankingSyncStore;
+  /** Monotonic elapsed-time clock; defaults to performance.now. */
   now?: () => number;
   log?: (event: SyncLogEvent) => void;
 };

@@ -38,8 +38,9 @@ export type TransactionWindow = {
 };
 
 export interface BankingProvider {
-  listAccounts(page: number): Promise<BankingPage<NormalizedBankAccount>>;
+  listAccounts(page: number, signal?: AbortSignal): Promise<BankingPage<NormalizedBankAccount>>;
   listTransactions(
     window: TransactionWindow,
+    signal?: AbortSignal,
   ): Promise<BankingPage<NormalizedBankTransaction>>;
 }

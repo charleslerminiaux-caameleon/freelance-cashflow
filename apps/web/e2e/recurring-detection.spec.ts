@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
+import { createRecurringCalendar } from './qonto-fixtures.mjs';
 
 test.use({ actionTimeout: 15000 });
 
@@ -54,6 +55,14 @@ test('owner reviews, confirms, edits, deletes, reexamines, associates and handle
   await page.getByLabel('Seuil de sécurité').fill('100,00');
   await page.getByRole('button', { name: 'Terminer la configuration' }).click();
   await expect(page).toHaveURL(/\/dashboard/);
+  // The preload shares this run anchor. Align SQL's owner business calendar
+  // before any recurring import or projection, keeping the live DB clock intact.
+  if (process.env.E2E_STACK_PROJECT !== 'jalon-2-qonto-tests' || process.env.NEXT_PUBLIC_SUPABASE_URL !== 'http://127.0.0.1:56321') throw new Error('Dedicated test database required');
+  const calendar = createRecurringCalendar(new Date(process.env.E2E_RECURRING_ANCHOR!));
+  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  const settings = await admin.from('app_settings').select('owner_user_id').single();
+  if (settings.error) throw new Error('Dedicated owner unavailable');
+  if ((await admin.from('app_settings').update({ timezone: calendar.timezone }).eq('owner_user_id', settings.data.owner_user_id)).error) throw new Error('Dedicated calendar unavailable');
   await sync(page);
   await page.goto('/expenses');
   const panel = page.getByRole('region', { name: 'Récurrences à confirmer', exact: true });
@@ -122,9 +131,6 @@ test('owner reviews, confirms, edits, deletes, reexamines, associates and handle
 
   // Hold the real dedicated database lease to exercise bank-success/analysis-failure UI.
   if (process.env.E2E_STACK_PROJECT !== 'jalon-2-qonto-tests' || process.env.NEXT_PUBLIC_SUPABASE_URL !== 'http://127.0.0.1:56321') throw new Error('Dedicated test database required');
-  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
-  const settings = await admin.from('app_settings').select('owner_user_id').single();
-  if (settings.error) throw new Error('Dedicated owner unavailable');
   const args = { p_owner_user_id: settings.data.owner_user_id, p_run_id: randomUUID() };
   if ((await admin.rpc('acquire_recurring_analysis', args)).error) throw new Error('Dedicated lease unavailable');
   let cleanupError: unknown;

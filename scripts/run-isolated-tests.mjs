@@ -48,7 +48,7 @@ export function parseStatus(status) {
 }
 export function testEnvironment(inherited = process.env) {
   const env = { ...inherited, QONTO_LOGIN: 'FAKE_QONTO_LOGIN_ACCEPTANCE_ONLY', QONTO_SECRET_KEY: 'FAKE_QONTO_SECRET_ACCEPTANCE_ONLY', NEXT_TELEMETRY_DISABLED: '1' };
-  for (const key of ['NODE_OPTIONS', 'FORCE_COLOR', 'NO_COLOR', 'E2E_BASE_URL', 'E2E_QONTO_SCENARIO']) delete env[key];
+  for (const key of ['NODE_OPTIONS', 'FORCE_COLOR', 'NO_COLOR', 'E2E_BASE_URL', 'E2E_QONTO_SCENARIO', 'E2E_RECURRING_ANCHOR']) delete env[key];
   return env;
 }
 // Child output is captured: neither status credentials nor arbitrary process errors are printed.
@@ -89,7 +89,7 @@ export async function main(mode = 'all') {
   if (mode === 'integration' || mode === 'all') run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'vitest', 'run', '--config', 'e2e/integration.config.ts'], { env, show: true });
   if (mode === 'e2e' || mode === 'all') {
     for (const file of browserSpecs) {
-      run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'playwright', 'test', file], { env: { ...env, E2E_QONTO_SCENARIO: file === 'recurring-detection.spec.ts' ? 'recurring' : '' }, show: true });
+      run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'playwright', 'test', file], { env: { ...env, E2E_QONTO_SCENARIO: file === 'recurring-detection.spec.ts' ? 'recurring' : '', E2E_RECURRING_ANCHOR: new Date().toISOString() }, show: true });
     }
   }
 }

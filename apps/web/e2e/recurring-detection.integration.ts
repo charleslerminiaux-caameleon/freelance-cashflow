@@ -8,7 +8,7 @@ import { synchronizeQontoForOwner } from '../src/features/integrations/sync-qont
 import { analyzeRecurring } from '../src/features/recurring-detection/service';
 import { createAnalysisStore, confirmSuggestion, getRecurringSuggestionWorkspace, setSuggestionState } from '../src/features/recurring-detection/repository';
 import { loadDashboardSourceData } from '../src/features/dashboard/query';
-import { fixtureResponse } from './qonto-fixtures.mjs';
+import { createRecurringCalendar, fixtureResponse } from './qonto-fixtures.mjs';
 
 if (process.env.E2E_STACK_PROJECT !== 'jalon-2-qonto-tests' || process.env.NEXT_PUBLIC_SUPABASE_URL !== 'http://127.0.0.1:56321') throw new Error('Dedicated test database required');
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
@@ -18,9 +18,9 @@ const previousDispatcher = getGlobalDispatcher();
 let http: MockAgent;
 let owner: string;
 let revision = 0;
-const today = localDate(new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' }).format(new Date()));
-const future = new Date(`${today}T12:00:00Z`); future.setUTCDate(future.getUTCDate() + 60);
-const range = { startDate: today, endDate: localDate(future.toISOString().slice(0, 10)) };
+let calendar: ReturnType<typeof createRecurringCalendar>;
+let today: ReturnType<typeof localDate>;
+let range: { startDate: ReturnType<typeof localDate>; endDate: ReturnType<typeof localDate> };
 const workspace = () => getRecurringSuggestionWorkspace(user, owner);
 const analyze = () => analyzeRecurring(owner, { store: createAnalysisStore(admin), runId: randomUUID, now: () => new Date() });
 const sync = () => synchronizeQontoForOwner(owner);
@@ -38,6 +38,10 @@ async function checkWrite(result: PromiseLike<{ error: unknown }>) {
 }
 beforeEach(async () => {
   revision = 0;
+  calendar = createRecurringCalendar();
+  today = localDate(calendar.today);
+  const future = new Date(`${today}T12:00:00Z`); future.setUTCDate(future.getUTCDate() + 60);
+  range = { startDate: today, endDate: localDate(future.toISOString().slice(0, 10)) };
   http = new MockAgent();
   http.disableNetConnect();
   http.enableNetConnect('127.0.0.1:56321');
@@ -48,10 +52,10 @@ beforeEach(async () => {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error('Isolated owner creation failed');
   owner = created.data.user.id;
-  await checkWrite(admin.from('app_settings').insert({ owner_user_id: owner }));
+  await checkWrite(admin.from('app_settings').insert({ owner_user_id: owner, timezone: calendar.timezone }));
   if ((await user.auth.signInWithPassword({ email, password })).error) throw new Error('Isolated owner login failed');
   http.get('https://thirdparty.qonto.com').intercept({ path: /^\/v2\/(bank_accounts|transactions)\?/, method: 'GET' }).reply(request => {
-    const response = fixtureResponse(new URL(request.path, 'https://thirdparty.qonto.com'), { revision, scenario: 'recurring' });
+    const response = fixtureResponse(new URL(request.path, 'https://thirdparty.qonto.com'), { revision, scenario: 'recurring', calendar });
     return { statusCode: response.status, data: JSON.stringify(response.body), responseOptions: { headers: { 'content-type': 'application/json' } } };
   }).persist();
   setGlobalDispatcher(http);
@@ -79,7 +83,10 @@ test('published HTTP history becomes an owner-confirmed expense; overrides, supp
   await checkWrite(user.from('recurring_cashflows').update({ amount_cents: 1700 }).eq('id', ids[0]));
   expect((await sync()).success).toBe(true);
   expect(await rows('recurring_cashflows')).toMatchObject([{ id: ids[0], amount_cents: 1700, label: 'Synthetic edited subscription' }]);
-  expect((await projection()).events.every(event => event.amountCents === 1700)).toBe(true);
+  const afterResync = await projection();
+  const linkedEvents = afterResync.events.filter(event => event.sourceType === 'recurring_cashflow' && event.sourceId === ids[0]);
+  expect(linkedEvents.length).toBeGreaterThan(0);
+  expect(linkedEvents.every(event => event.amountCents === 1700)).toBe(true);
   await checkWrite(user.from('recurring_cashflows').delete().eq('id', ids[0]));
   expect((await sync()).success).toBe(true);
   expect((await workspace()).suggestions).toHaveLength(0);

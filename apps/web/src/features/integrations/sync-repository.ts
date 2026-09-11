@@ -92,9 +92,10 @@ function transactionPayload(transaction: NormalizedBankTransaction) {
 }
 
 export function createBankingSyncStore(client: SupabaseClient): BankingSyncStore {
-  async function call(name: string, parameters: Record<string, unknown>): Promise<unknown> {
+  async function call(name: string, parameters: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
     try {
-      const { data, error, status } = await client.rpc(name, parameters);
+      const request = client.rpc(name, parameters);
+      const { data, error, status } = await (signal ? request.abortSignal(signal) : request);
       if (error) throw rpcError(error, status);
       return data;
     } catch (error) {
@@ -104,11 +105,11 @@ export function createBankingSyncStore(client: SupabaseClient): BankingSyncStore
   }
 
   return {
-    async acquire(ownerUserId, runId) {
+    async acquire(ownerUserId, runId, signal) {
       const data = await call("acquire_banking_sync", {
         p_owner_user_id: ownerUserId,
         p_run_id: runId,
-      });
+      }, signal);
       const parsed = acquireSchema.safeParse(data);
       if (!parsed.success || parsed.data.run_id !== runId) throw invalidOutput();
       return {
@@ -122,14 +123,14 @@ export function createBankingSyncStore(client: SupabaseClient): BankingSyncStore
       };
     },
 
-    async renew(ownerUserId, runId) {
+    async renew(ownerUserId, runId, signal) {
       await call("renew_banking_sync", {
         p_owner_user_id: ownerUserId,
         p_run_id: runId,
-      });
+      }, signal);
     },
 
-    async stageAccounts(ownerUserId, runId, page, nextPage, items) {
+    async stageAccounts(ownerUserId, runId, page, nextPage, items, signal) {
       await call("stage_banking_page", {
         p_owner_user_id: ownerUserId,
         p_run_id: runId,
@@ -138,7 +139,7 @@ export function createBankingSyncStore(client: SupabaseClient): BankingSyncStore
         p_page: page,
         p_next_page: nextPage,
         p_items: items.map(accountPayload),
-      });
+      }, signal);
     },
 
     async stageTransactions(
@@ -148,6 +149,7 @@ export function createBankingSyncStore(client: SupabaseClient): BankingSyncStore
       page,
       nextPage,
       items,
+      signal,
     ) {
       await call("stage_banking_page", {
         p_owner_user_id: ownerUserId,
@@ -157,26 +159,26 @@ export function createBankingSyncStore(client: SupabaseClient): BankingSyncStore
         p_page: page,
         p_next_page: nextPage,
         p_items: items.map(transactionPayload),
-      });
+      }, signal);
     },
 
-    async publish(ownerUserId, runId) {
+    async publish(ownerUserId, runId, signal) {
       const data = await call("publish_banking_sync", {
         p_owner_user_id: ownerUserId,
         p_run_id: runId,
-      });
+      }, signal);
       const parsed = publicationSchema.safeParse(data);
       if (!parsed.success) throw invalidOutput();
       return parsed.data;
     },
 
-    async fail(ownerUserId, runId, code, connectionSucceeded) {
+    async fail(ownerUserId, runId, code, connectionSucceeded, signal) {
       await call("fail_banking_sync", {
         p_owner_user_id: ownerUserId,
         p_run_id: runId,
         p_error_code: code,
         p_connection_succeeded: connectionSucceeded,
-      });
+      }, signal);
     },
   };
 }

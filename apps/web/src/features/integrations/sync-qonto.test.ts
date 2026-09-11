@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
@@ -124,4 +124,38 @@ it("never launches analysis after failed banking publication", async () => {
   let ran = false; mocks.analyzeRecurringForOwner.mockImplementation(async () => { ran = true; });
   expect(await synchronizeQontoForOwner(ownerUserId)).toEqual({ success: false, code: "PROVIDER_UNAVAILABLE" });
   expect(ran).toBe(false);
+});
+
+
+afterEach(() => vi.useRealTimers());
+
+it.each(["acknowledged", "uncertain"])("runs analysis only after %s publication with the real banking deadline", async (kind) => {
+  vi.useFakeTimers();
+  const actual = await vi.importActual<typeof import("@fc/integrations/server")>("@fc/integrations/server");
+  mocks.synchronizeBanking.mockImplementation(actual.synchronizeBanking);
+  mocks.loadQontoConfig.mockReturnValue({ login: "synthetic", secretKey: "synthetic" });
+  mocks.getOwnerSettings.mockResolvedValue({ timezone: "Europe/Paris" });
+  mocks.createQontoProvider.mockReturnValue({ listAccounts: async () => ({ items: [], nextPage: null }) });
+  let release!: (receipt: { created: number; updated: number }) => void;
+  const publication = new Promise(resolve => { release = resolve; });
+  const fail = vi.fn();
+  mocks.createBankingSyncStore.mockReturnValue({
+    acquire: async () => ({}), renew: async () => {}, stageAccounts: async () => {},
+    publish: () => publication, fail,
+  });
+  mocks.analyzeRecurringForOwner.mockResolvedValue({ success: true, count: 2 });
+  let settled: unknown;
+  const result = synchronizeQontoForOwner(ownerUserId).then(value => { settled = value; });
+  await vi.advanceTimersByTimeAsync(119_999);
+  expect(mocks.analyzeRecurringForOwner).not.toHaveBeenCalled();
+  if (kind === "acknowledged") release({ created: 4, updated: 5 });
+  await vi.advanceTimersByTimeAsync(1);
+  expect(settled).toEqual(kind === "acknowledged"
+    ? { success: true, created: 4, updated: 5, analysisResult: { success: true, count: 2 } }
+    : { success: false, code: "DATABASE_ERROR" });
+  release({ created: 4, updated: 5 });
+  await vi.advanceTimersByTimeAsync(0);
+  await result;
+  expect(mocks.analyzeRecurringForOwner).toHaveBeenCalledTimes(kind === "acknowledged" ? 1 : 0);
+  expect(fail).not.toHaveBeenCalled();
 });

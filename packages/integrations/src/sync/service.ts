@@ -3,6 +3,7 @@ import type {
   NormalizedBankAccount,
   NormalizedBankTransaction,
 } from "../banking";
+import { withCancellation } from "../cancellation";
 import { IntegrationError } from "../errors";
 import type { IntegrationErrorCode } from "../errors";
 import type { SyncLogEvent, SyncResult, SynchronizeBankingInput } from "./contracts";
@@ -53,8 +54,11 @@ function safeLog(log: ((event: SyncLogEvent) => void) | undefined, event: SyncLo
 }
 
 export async function synchronizeBanking(input: SynchronizeBankingInput): Promise<SyncResult> {
-  const now = input.now ?? Date.now;
+  const now = input.now ?? (() => performance.now());
   const startedAt = now();
+  const controller = new AbortController();
+  const signal = controller.signal;
+  const timer = setTimeout(() => controller.abort(), SYNC_BUDGET_MS);
   let acquired = false;
   let connectionSucceeded = false;
   let requestedPages = 0;
@@ -62,21 +66,32 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
 
   const duration = () => Math.max(0, now() - startedAt);
   const assertWithinBudget = () => {
-    if (duration() > SYNC_BUDGET_MS) throw providerError("PROVIDER_UNAVAILABLE");
+    if (duration() >= SYNC_BUDGET_MS) controller.abort();
+    if (signal.aborted) throw providerError("PROVIDER_UNAVAILABLE");
+  };
+  const boundedDatabase = <T>(operation: () => Promise<T>, publishing = false): Promise<T> => {
+    if (duration() >= SYNC_BUDGET_MS) controller.abort();
+    return withCancellation(() => databaseCall(operation), signal, () => publishing
+      ? new SyncStoreError("DATABASE_ERROR", true)
+      : providerError("PROVIDER_UNAVAILABLE"));
+  };
+  const boundedProvider = <T>(operation: () => Promise<T>): Promise<T> => {
+    assertWithinBudget();
+    return withCancellation(() => providerCall(operation), signal, () => providerError("PROVIDER_UNAVAILABLE"));
   };
   const beforeRequest = async () => {
     assertWithinBudget();
     if (requestedPages >= MAX_PAGES) throw providerError("PROVIDER_INVALID_RESPONSE");
     requestedPages += 1;
-    await databaseCall(() => input.store.renew(input.ownerUserId, input.runId));
+    await boundedDatabase(() => input.store.renew(input.ownerUserId, input.runId, signal));
     assertWithinBudget();
   };
 
   safeLog(input.log, { event: "sync_started", runId: input.runId });
 
   try {
-    const window = await databaseCall(() =>
-      input.store.acquire(input.ownerUserId, input.runId),
+    const window = await boundedDatabase(() =>
+      input.store.acquire(input.ownerUserId, input.runId, signal),
     );
     acquired = true;
     const accounts: NormalizedBankAccount[] = [];
@@ -85,8 +100,8 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
 
     while (true) {
       await beforeRequest();
-      const response: BankingPage<NormalizedBankAccount> = await providerCall(() =>
-        input.provider.listAccounts(accountPage),
+      const response: BankingPage<NormalizedBankAccount> = await boundedProvider(() =>
+        input.provider.listAccounts(accountPage, signal),
       );
       connectionSucceeded = true;
       assertWithinBudget();
@@ -98,16 +113,17 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
         accountIds.add(account.externalId);
         accounts.push(account);
       }
-      await databaseCall(() =>
+      await boundedDatabase(() =>
         input.store.stageAccounts(
           input.ownerUserId,
           input.runId,
           accountPage,
           response.nextPage,
           response.items,
+          signal,
         ),
       );
-      await databaseCall(() => input.store.renew(input.ownerUserId, input.runId));
+      await boundedDatabase(() => input.store.renew(input.ownerUserId, input.runId, signal));
       stagedCount += response.items.length;
       safeLog(input.log, {
         event: "page_staged",
@@ -122,7 +138,7 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
       let transactionPage = 1;
       while (true) {
         await beforeRequest();
-        const response: BankingPage<NormalizedBankTransaction> = await providerCall(() =>
+        const response: BankingPage<NormalizedBankTransaction> = await boundedProvider(() =>
           input.provider.listTransactions({
             accountExternalId: account.externalId,
             page: transactionPage,
@@ -130,12 +146,12 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
             updatedTo: window.updatedTo,
             initialCreatedFrom: window.initialCreatedFromInstant,
             timezone: input.timezone,
-          }),
+          }, signal),
         );
         connectionSucceeded = true;
         assertWithinBudget();
         validateNextPage(transactionPage, response.nextPage);
-        await databaseCall(() =>
+        await boundedDatabase(() =>
           input.store.stageTransactions(
             input.ownerUserId,
             input.runId,
@@ -143,9 +159,10 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
             transactionPage,
             response.nextPage,
             response.items,
+            signal,
           ),
         );
-        await databaseCall(() => input.store.renew(input.ownerUserId, input.runId));
+        await boundedDatabase(() => input.store.renew(input.ownerUserId, input.runId, signal));
         stagedCount += response.items.length;
         safeLog(input.log, {
           event: "page_staged",
@@ -160,14 +177,14 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
     assertWithinBudget();
     let publication: { created: number; updated: number };
     try {
-      publication = await databaseCall(() =>
-        input.store.publish(input.ownerUserId, input.runId),
+      publication = await boundedDatabase(() =>
+        input.store.publish(input.ownerUserId, input.runId, signal), true,
       );
     } catch (error) {
       if (error instanceof SyncStoreError && error.transient) {
         try {
-          publication = await databaseCall(() =>
-            input.store.publish(input.ownerUserId, input.runId),
+          publication = await boundedDatabase(() =>
+            input.store.publish(input.ownerUserId, input.runId, signal), true,
           );
         } catch {
           safeLog(input.log, {
@@ -201,7 +218,7 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
     const code = stableCode(error);
     if (acquired) {
       try {
-        await input.store.fail(input.ownerUserId, input.runId, code, connectionSucceeded);
+        await boundedDatabase(() => input.store.fail(input.ownerUserId, input.runId, code, connectionSucceeded, signal));
       } catch {
         // Cleanup is fenced and best effort; it never replaces the primary result.
       }
@@ -213,5 +230,7 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
       code,
     });
     return { success: false, code };
+  } finally {
+    clearTimeout(timer);
   }
 }

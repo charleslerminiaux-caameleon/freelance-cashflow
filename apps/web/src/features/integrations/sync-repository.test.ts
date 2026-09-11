@@ -1,5 +1,6 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it, vi } from "vitest";
+// @vitest-environment node
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SyncStoreError } from "@fc/integrations/server";
 
@@ -230,3 +231,40 @@ describe("createBankingSyncStore", () => {
     );
   });
 });
+
+
+afterEach(() => vi.useRealTimers());
+
+it.each(["acquire", "renew", "stageAccounts", "stageTransactions", "publish", "fail"] as const)(
+  "cancels the real PostgREST transport for %s", async (method) => {
+    vi.useFakeTimers();
+    let requestSignal: AbortSignal | undefined;
+    let aborted = false;
+    const client = createClient("http://127.0.0.1:56321", "synthetic-test-key", {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: async (_url, init) => {
+        requestSignal = init?.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener("abort", () => { aborted = true; reject(new Error("synthetic abort")); }, { once: true });
+        });
+      } },
+    });
+    const controller = new AbortController();
+    const store = createBankingSyncStore(client);
+    const invoke = () => {
+      if (method === "stageAccounts") return store.stageAccounts(ownerUserId, runId, 1, null, [], controller.signal);
+      if (method === "stageTransactions") return store.stageTransactions(ownerUserId, runId, "synthetic", 1, null, [], controller.signal);
+      if (method === "fail") return store.fail(ownerUserId, runId, "DATABASE_ERROR", true, controller.signal);
+      return store[method](ownerUserId, runId, controller.signal);
+    };
+    let error: unknown;
+    const result = invoke().catch(value => { error = value; });
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(aborted).toBe(true);
+    expect(requestSignal?.aborted).toBe(true);
+    await result;
+    expect(error).toEqual(new SyncStoreError("DATABASE_ERROR", true));
+  },
+);

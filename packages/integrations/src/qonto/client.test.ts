@@ -612,3 +612,46 @@ describe("createQontoProvider response stream lifecycle", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 });
+
+
+it.each(["request", "body", "retry"])("honors caller cancellation during %s without retrying", async (phase) => {
+  vi.useFakeTimers();
+  const controller = new AbortController();
+  const signals: AbortSignal[] = [];
+  const fetch = vi.fn((_url: unknown, init?: RequestInit) => {
+    signals.push(init!.signal!);
+    if (phase === "request") return new Promise<Response>(() => {});
+    if (phase === "body") return Promise.resolve(new Response(new ReadableStream({ pull() { return new Promise(() => {}); } })));
+    return Promise.resolve(new Response(null, { status: 429, headers: { "retry-after": "5" } }));
+  });
+  const provider = createQontoProvider({ ...credentials, fetch });
+  let error: unknown;
+  void provider.listAccounts(1, controller.signal).catch(value => { error = value; });
+  await vi.advanceTimersByTimeAsync(1);
+  controller.abort();
+  await vi.advanceTimersByTimeAsync(0);
+  expectIntegrationCode(error, "PROVIDER_UNAVAILABLE");
+  expect(signals[0]!.aborted).toBe(true);
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it("does not start an account or transaction HTTP request with an already aborted signal", async () => {
+  const controller = new AbortController(); controller.abort();
+  const fetch = vi.fn().mockResolvedValue(jsonResponse({ bank_accounts: [] }));
+  const provider = createQontoProvider({ ...credentials, fetch });
+  await expect(provider.listAccounts(1, controller.signal)).rejects.toMatchObject({ code: "PROVIDER_UNAVAILABLE" });
+  await expect(provider.listTransactions(transactionWindow(), controller.signal)).rejects.toMatchObject({ code: "PROVIDER_UNAVAILABLE" });
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+
+it("disposes a late response when the transport triggers caller cancellation synchronously", async () => {
+  const controller = new AbortController();
+  const cancel = vi.fn();
+  const response = new Response(new ReadableStream({ cancel }));
+  const provider = createQontoProvider({ ...credentials, fetch: async () => { controller.abort(); return response; } });
+  await expect(provider.listAccounts(1, controller.signal)).rejects.toMatchObject({ code: "PROVIDER_UNAVAILABLE" });
+  expect(cancel).toHaveBeenCalledTimes(1);
+});

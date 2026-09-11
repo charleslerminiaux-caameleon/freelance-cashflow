@@ -3,8 +3,8 @@ export const canaries = ['FAKE_QONTO_LOGIN_ACCEPTANCE_ONLY', 'FAKE_QONTO_SECRET_
 export const fakeIban = 'FR00' + '0'.repeat(19) + '1234';
 const instant = '2026-09-10T09:00:00.000Z';
 const meta = (page, count) => ({ current_page: page, next_page: page === 1 ? 2 : null, prev_page: page === 1 ? null : 1, total_pages: 2, total_count: count, per_page: 100 });
-export function fixtureResponse(url, { revision = 0, failure = '', scenario = '' } = {}) {
-  if (scenario === 'recurring') return recurringResponse(url, revision);
+export function fixtureResponse(url, { revision = 0, failure = '', scenario = '', calendar } = {}) {
+  if (scenario === 'recurring') return recurringResponse(url, revision, calendar);
   const page = Number(url.searchParams.get('page'));
   if (failure === 'auth') return { status: 401, body: { error: canaries.join(' ') + fakeIban } };
   if (failure === 'invalid') return { status: 200, body: { unsafe: canaries.join(' ') + fakeIban } };
@@ -20,13 +20,22 @@ export function fixtureResponse(url, { revision = 0, failure = '', scenario = ''
   throw new Error('Unexpected test HTTP path');
 }
 
-// Owner-local calendar dates keep the synthetic monthly history fresh on any run.
+// Synthetic owners start near noon, so both Node and the live SQL business date
+// stay on one day through these bounded acceptance runs, including Paris midnight.
+export function createRecurringCalendar(now = new Date()) {
+  const offsetHours = 12 - now.getUTCHours();
+  const timezone = offsetHours === 0 ? 'Etc/GMT' : `Etc/GMT${offsetHours > 0 ? '-' : '+'}${Math.abs(offsetHours)}`;
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: timezone }).format(now);
+  return Object.freeze({ today, timezone, offsetHours, instant: now.toISOString() });
+}
+
 // IDs are stable across revisions, allowing the real publication update path.
-function recurringResponse(url, revision) {
-  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' }).format(new Date());
+function recurringResponse(url, revision, calendar) {
+  if (!calendar) throw new Error('Recurring fixture requires a shared owner calendar');
+  const { today, offsetHours } = calendar;
   const [year, month] = today.split('-').map(Number);
-  const atMonth = offset => new Date(Date.UTC(year, month - 1 + offset, 1, 9)).toISOString();
-  const updated = `${today}T10:0${revision}:00.000Z`;
+  const atMonth = offset => new Date(Date.UTC(year, month - 1 + offset, 1, 12 - offsetHours)).toISOString();
+  const updated = new Date(Date.parse(calendar.instant) + revision * 60_000).toISOString();
   const account = 'synthetic-recurring-account';
   let items;
   let key;
