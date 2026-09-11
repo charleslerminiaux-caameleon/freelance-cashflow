@@ -365,3 +365,16 @@ describe("paidMonthsForSeries", () => {
     ).toEqual(["2020-01"]);
   });
 });
+
+it("cooperatively stops detection before processing all transactions when its budget expires", () => {
+  let processed = 0;
+  const input = {
+    today: "2026-09-11", currency: "EUR", accounts: [{ id: "a", currency: "EUR", active: true, current: true }],
+    transactions: Array.from({ length: 1000 }, (_, i) => ({
+      id: `budget-${i}`, accountId: "a", currency: "EUR", label: "Synthetic", amountCents: 1000,
+      direction: "outflow" as const, status: "completed", get transactionDate() { processed++; return "2026-09-05"; },
+    })),
+  };
+  expect(() => detectMonthlyOutflows(input, () => { if (processed >= 10) throw new Error("BUDGET_EXHAUSTED"); })).toThrow("BUDGET_EXHAUSTED");
+  expect(processed).toBeLessThan(input.transactions.length);
+});

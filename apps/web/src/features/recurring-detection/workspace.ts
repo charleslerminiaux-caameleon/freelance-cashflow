@@ -75,10 +75,16 @@ export async function getRecurringSuggestionWorkspace(client: SupabaseClient, ow
       list.push({ id: item.transaction.id, label: item.transaction.label, amountCents: item.transaction.amount_cents, transactionDate: item.transaction.transaction_date });
       evidenceById.set(item.suggestion_id, list);
     }
+    const expensesByLabel = new Map<string, z.infer<typeof expenseSchema>[]>();
+    for (const expense of expenses) {
+      if (linked.has(expense.id)) continue;
+      const label = normalizeRecurringLabel(expense.label);
+      const matches = expensesByLabel.get(label) ?? [];
+      matches.push(expense); expensesByLabel.set(label, matches);
+    }
     const candidates = rows.filter(row => row.state !== "confirmed").map(row => ({ ...suggestion(row),
       evidence: (evidenceById.get(row.id) ?? []).sort((a, b) => a.transactionDate.localeCompare(b.transactionDate) || a.id.localeCompare(b.id)),
-      possibleDuplicates: expenses.filter(expense => !linked.has(expense.id) && normalizeRecurringLabel(expense.label) === row.normalized_label
-        && BigInt(Math.abs(expense.amount_cents - row.amount_cents)) * 10n <= BigInt(row.amount_cents))
+      possibleDuplicates: (expensesByLabel.get(row.normalized_label) ?? []).filter(expense => BigInt(Math.abs(expense.amount_cents - row.amount_cents)) * 10n <= BigInt(row.amount_cents))
         .map(expense => ({ id: expense.id, label: expense.label, amountCents: expense.amount_cents })),
     }));
     return { suggestions: candidates.filter(row => row.state === "pending"), ignored: candidates.filter(row => row.state === "dismissed"),

@@ -98,3 +98,45 @@ it("never closes an expired matching lease", async () => {
   expect(await analyzeRecurring(owner, f.deps)).toEqual({ success: false, code: "DETECTION_LOCKED" });
   expect(f.state().error).toBeNull();
 });
+it("interrupts real detection loops on deadline and does not grant cleanup beyond the original 45 seconds", async () => {
+  vi.useFakeTimers(); const f = fixture(); let elapsed = 0; let processed = 0; let cleanupAborted = false;
+  f.deps.monotonicNow = () => elapsed;
+  const originalRead = f.deps.store.snapshot;
+  f.deps.store.snapshot = async (...args) => {
+    const snapshot = await originalRead(...args);
+    elapsed = 39_999;
+    snapshot.fullTransactions = Array.from({ length: 1000 }, (_, i) => ({ ...snapshot.fullTransactions![0]!, id: `budget-${i}` }));
+    return snapshot;
+  };
+  const { detectMonthlyOutflows } = await import("@fc/domain");
+  f.deps.detect = (input, checkBudget) => detectMonthlyOutflows({ ...input, transactions: input.transactions.map(row => ({ ...row,
+    get transactionDate() { processed++; if (processed === 10) elapsed = 42_000; return row.transactionDate; },
+  })) }, checkBudget);
+  f.deps.store.runState = async (_owner, _integration, signal) => {
+    signal.addEventListener("abort", () => { cleanupAborted = true; });
+    return new Promise(() => {});
+  };
+  const result = analyzeRecurring(owner, f.deps);
+  await vi.advanceTimersByTimeAsync(3000);
+  expect(cleanupAborted).toBe(true);
+  expect(await result).toEqual({ success: false, code: "DATABASE_ERROR" });
+  expect(processed).toBeLessThan(1000);
+  expect(f.state()).toMatchObject({ published: [{ label: "Previous" }], lease: runId, error: null });
+});
+it("does not initiate cleanup after the original hard deadline is exhausted", async () => {
+  const f = fixture(); let elapsed = 0; let inspected = false;
+  f.deps.monotonicNow = () => elapsed;
+  f.deps.detect = () => { elapsed = 45_001; throw new Error("DATABASE_ERROR"); };
+  f.deps.store.runState = async () => { inspected = true; return { leaseRunId: runId, leaseExpiresAt: "2026-09-11T12:01:00Z" }; };
+  expect(await analyzeRecurring(owner, f.deps)).toEqual({ success: false, code: "DATABASE_ERROR" });
+  expect(inspected).toBe(false);
+  expect(f.state()).toMatchObject({ published: [{ label: "Previous" }], lease: runId, error: null });
+});
+it("rechecks remaining cleanup time before closing the lease after a slow inspection", async () => {
+  const f = fixture(); let elapsed = 0;
+  f.deps.monotonicNow = () => elapsed;
+  f.deps.detect = () => { elapsed = 40_000; throw new Error("DATABASE_ERROR"); };
+  f.deps.store.runState = async () => { elapsed = 45_000; return { leaseRunId: runId, leaseExpiresAt: "2026-09-11T12:01:00Z" }; };
+  expect(await analyzeRecurring(owner, f.deps)).toEqual({ success: false, code: "DATABASE_ERROR" });
+  expect(f.state()).toMatchObject({ lease: runId, error: null });
+});

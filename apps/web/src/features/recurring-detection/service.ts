@@ -37,6 +37,10 @@ export async function analyzeRecurring(owner: string, deps: AnalysisDependencies
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 40_000);
   const signal = controller.signal;
+  const assertWithinBudget = () => {
+    signal.throwIfAborted();
+    if (monotonicNow() - startedAt >= 40_000) throw new Error("DATABASE_ERROR");
+  };
   let runId: string | undefined;
   let integrationId: string | undefined;
   try {
@@ -49,26 +53,27 @@ export async function analyzeRecurring(owner: string, deps: AnalysisDependencies
     const snapshot = await bounded(deps.store.snapshot(owner, today, signal), signal);
     if (snapshot.integration?.id !== integrationId || snapshot.integration.last_success_at !== lease.sourcePublication) throw new Error("DETECTION_STALE");
     if (!snapshot.fullTransactions || snapshot.fullTransactions.length > 100_000) throw new Error("DATABASE_ERROR");
+    assertWithinBudget();
     const candidates = (deps.detect ?? detectMonthlyOutflows)({ today, currency: settings.currency,
       accounts: snapshot.accounts.map(row => ({ id: row.id, currency: row.currency, active: row.status === "active", current: row.is_current })),
       transactions: detectionTransactions(snapshot.fullTransactions),
-    });
+    }, assertWithinBudget);
     if (candidates.length > 10_000) throw new Error("DATABASE_ERROR");
-    if (monotonicNow() - startedAt >= 40_000) throw new Error("DATABASE_ERROR");
-    signal.throwIfAborted();
+    assertWithinBudget();
     // SQL rechecks the exact current publication and live fenced lease atomically.
     await bounded(deps.store.publish(owner, runId, lease.sourcePublication, candidates, signal), signal);
     return { success: true, count: candidates.length };
   } catch (error) {
     const code = detectionErrorCode(error);
-    if (runId && integrationId) {
+    const cleanupBudget = Math.min(5_000, startedAt + 45_000 - monotonicNow());
+    if (runId && integrationId && cleanupBudget > 0) {
       const cleanup = new AbortController();
-      const cleanupTimer = setTimeout(() => cleanup.abort(), 5_000);
+      const cleanupTimer = setTimeout(() => cleanup.abort(), cleanupBudget);
       try {
         const state = await bounded(deps.store.runState(owner, integrationId, cleanup.signal), cleanup.signal);
         // Uncertain publish responses are not retried: released/replaced runs may
         // already have succeeded. Never overwrite their metadata or decisions.
-        if (state?.leaseRunId === runId && state.leaseExpiresAt && new Date(state.leaseExpiresAt) > deps.now()) {
+        if (!cleanup.signal.aborted && monotonicNow() < startedAt + 45_000 && state?.leaseRunId === runId && state.leaseExpiresAt && new Date(state.leaseExpiresAt) > deps.now()) {
           await bounded(deps.store.fail(owner, runId, code, cleanup.signal), cleanup.signal);
         }
       } catch { /* Preserve prior state if ownership cannot be established. */ }

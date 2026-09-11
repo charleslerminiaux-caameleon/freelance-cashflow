@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { localDate } from "@fc/shared";
 import { createClient } from "@supabase/supabase-js";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { confirmSuggestion, setSuggestionState, getRecurringSuggestionWorkspace, createAnalysisStore } from "./repository";
 const owner = "11111111-1111-4111-8111-111111111111";
 const integration = "22222222-2222-4222-8222-222222222222";
@@ -67,4 +67,36 @@ it("refuses foreign evidence even if an upstream transport violates owner filter
 it("returns an empty review workspace when there is no integration", async () => {
   const client = clientFor(() => null);
   expect(await getRecurringSuggestionWorkspace(client, owner)).toEqual({ suggestions: [], ignored: [], linkedExpenseIds: [], lastAnalyzedAt: null, analysisError: null });
+});
+
+it("groups duplicate discovery by normalized label once across pending and ignored series", async () => {
+  const otherExpense = "55555555-5555-4555-8555-555555555555";
+  const ignoredId = "66666666-6666-4666-8666-666666666666";
+  const client = clientFor(url => {
+    const table = url.pathname.split("/").at(-1);
+    if (table === "integrations") return { id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
+    if (table === "recurring_detection_runs") return null;
+    if (table === "recurring_suggestions") return [row, { ...row, id: owner, label: "Other", normalized_label: "other" }, { ...row, id: ignoredId, state: "dismissed" }, { ...row, id: integration, state: "confirmed", recurring_cashflow_id: linked }];
+    if (table === "recurring_cashflows") return [
+      { id: owner, owner_user_id: owner, label: "CLOUD", amount_cents: 1100 },
+      { id: otherExpense, owner_user_id: owner, label: "Óther", amount_cents: 900 },
+      { id: suggestion, owner_user_id: owner, label: "Cloud", amount_cents: 1101 },
+      { id: linked, owner_user_id: owner, label: "Cloud", amount_cents: 1000 },
+    ];
+    return [];
+  });
+  // An operation budget detects repeated normalization without machine-dependent
+  // wall-clock assertions. The real normalizer still computes every result.
+  const normalize = String.prototype.normalize;
+  let normalizations = 0;
+  const spy = vi.spyOn(String.prototype, "normalize").mockImplementation(function (this: string, form?: string) {
+    if (++normalizations > 3) throw new Error("NORMALIZATION_BUDGET_EXHAUSTED");
+    return normalize.call(this, form);
+  });
+  try {
+    const workspace = await getRecurringSuggestionWorkspace(client, owner);
+    expect(workspace.suggestions.map(item => item.possibleDuplicates.map(expense => expense.id))).toEqual([[owner], [otherExpense]]);
+    expect(workspace.ignored[0]?.possibleDuplicates.map(expense => expense.id)).toEqual([owner]);
+    expect(workspace.linkedExpenseIds).toEqual([linked]);
+  } finally { spy.mockRestore(); }
 });
