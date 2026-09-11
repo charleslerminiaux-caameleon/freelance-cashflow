@@ -21,3 +21,15 @@ export type {
   PlannedForecastSource,
   RecurringForecastSource,
 } from "./event-builder";
+export {
+  detectMonthlyOutflows,
+  nextRecurringDate,
+  normalizeRecurringLabel,
+  paidMonthsForSeries,
+} from "./recurring-detection";
+export type {
+  DetectionAccount,
+  DetectionTransaction,
+  MonthlyDetectionInput,
+  RecurringCandidate,
+} from "./recurring-detection-types";
