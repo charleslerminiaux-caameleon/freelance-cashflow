@@ -4,7 +4,8 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 import type { DashboardViewModel } from "@/features/dashboard/view-model";
 
-const { getDashboardViewModel, requireOwner, createClient, getBankingSnapshot, listBankTransactions } = vi.hoisted(() => ({
+const { getDashboardViewModel, requireOwner, createClient, getBankingSnapshot, listBankTransactions, getOwnerSettings, businessDateForTimezone } = vi.hoisted(() => ({
+  getOwnerSettings: vi.fn(), businessDateForTimezone: vi.fn(),
   createClient: vi.fn(), getBankingSnapshot: vi.fn(), listBankTransactions: vi.fn(),
   getDashboardViewModel: vi.fn(),
   requireOwner: vi.fn(),
@@ -12,7 +13,8 @@ const { getDashboardViewModel, requireOwner, createClient, getBankingSnapshot, l
 
 vi.mock("@/lib/supabase/server", () => ({ createClient }));
 vi.mock("@/features/banking/repository", async (original) => ({...await original<typeof import("@/features/banking/repository")>(), getBankingSnapshot, listBankTransactions}));
-vi.mock("@/features/dashboard/query", () => ({ getDashboardViewModel }));
+vi.mock("@/features/dashboard/query", () => ({ getDashboardViewModel, businessDateForTimezone }));
+vi.mock("@/features/settings/repository", () => ({ getOwnerSettings }));
 vi.mock("@/lib/auth/require-owner", () => ({ requireOwner }));
 
 function model(): DashboardViewModel {
@@ -63,6 +65,8 @@ function model(): DashboardViewModel {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getOwnerSettings.mockResolvedValue({ timezone: "Europe/Paris" });
+  businessDateForTimezone.mockReturnValue(localDate("2026-09-11"));
   createClient.mockResolvedValue({}); getBankingSnapshot.mockResolvedValue({integration:null,accounts:[],history:{items:[],page:1,hasNext:false}}); listBankTransactions.mockResolvedValue({items:[],page:2,hasNext:false});
   requireOwner.mockResolvedValue({ userId: "11111111-1111-4111-8111-111111111111" });
   getDashboardViewModel.mockResolvedValue(model());
@@ -97,9 +101,11 @@ it("shows retained Qonto source and separate paginated history", async () => {
  getBankingSnapshot.mockResolvedValue(banking);
  const {default:Page} = await import("./page"); render(await Page({searchParams:Promise.resolve({bankPage:"2"})}));
  expect(screen.getByText(/Situation Qonto/)).toBeInTheDocument(); expect(screen.getByText(/Actualisation nécessaire/)).toBeInTheDocument(); expect(screen.getByRole("table",{name:"Historique bancaire"})).toBeInTheDocument(); expect(screen.getByRole("table",{name:"Événements de trésorerie"})).toBeInTheDocument();
+ expect(getOwnerSettings).toHaveBeenCalledWith({},"11111111-1111-4111-8111-111111111111");
+ expect(businessDateForTimezone).toHaveBeenCalledWith("Europe/Paris");
  expect(getBankingSnapshot).toHaveBeenCalledTimes(1);
- expect(getBankingSnapshot).toHaveBeenCalledWith({},"11111111-1111-4111-8111-111111111111",{historyPage:2});
- expect(getDashboardViewModel).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111",{searchParameters:{bankPage:"2"},bankingSnapshot:banking});
+ expect(getBankingSnapshot).toHaveBeenCalledWith({},"11111111-1111-4111-8111-111111111111",{historyPage:2,fullHistory:{since:"2026-03-11",until:"2026-09-11"}});
+ expect(getDashboardViewModel).toHaveBeenCalledWith("11111111-1111-4111-8111-111111111111",{searchParameters:{bankPage:"2"},today:"2026-09-11",bankingSnapshot:banking});
  expect(getDashboardViewModel.mock.calls[0]?.[1].bankingSnapshot).toBe(banking);
  expect(listBankTransactions).not.toHaveBeenCalled();
 });

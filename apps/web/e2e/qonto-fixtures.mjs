@@ -3,7 +3,8 @@ export const canaries = ['FAKE_QONTO_LOGIN_ACCEPTANCE_ONLY', 'FAKE_QONTO_SECRET_
 export const fakeIban = 'FR00' + '0'.repeat(19) + '1234';
 const instant = '2026-09-10T09:00:00.000Z';
 const meta = (page, count) => ({ current_page: page, next_page: page === 1 ? 2 : null, prev_page: page === 1 ? null : 1, total_pages: 2, total_count: count, per_page: 100 });
-export function fixtureResponse(url, { revision = 0, failure = '' } = {}) {
+export function fixtureResponse(url, { revision = 0, failure = '', scenario = '' } = {}) {
+  if (scenario === 'recurring') return recurringResponse(url, revision);
   const page = Number(url.searchParams.get('page'));
   if (failure === 'auth') return { status: 401, body: { error: canaries.join(' ') + fakeIban } };
   if (failure === 'invalid') return { status: 200, body: { unsafe: canaries.join(' ') + fakeIban } };
@@ -17,4 +18,31 @@ export function fixtureResponse(url, { revision = 0, failure = '' } = {}) {
     return { status: 200, body: { transactions: [{ transaction_id: `${account}-transaction-${page}`, bank_account_id: account, amount_cents: 1234, side: page === 1 ? 'debit' : 'credit', currency: 'EUR', label: 'Mouvement fictif', emitted_at: instant, settled_at: null, updated_at: revision ? '2026-09-10T09:01:00.000Z' : instant, status: revision ? 'completed' : account.endsWith('1') ? (page === 1 ? 'pending' : 'completed') : (page === 1 ? 'declined' : 'reversed') }], meta: meta(page, 2) } };
   }
   throw new Error('Unexpected test HTTP path');
+}
+
+// Owner-local calendar dates keep the synthetic monthly history fresh on any run.
+// IDs are stable across revisions, allowing the real publication update path.
+function recurringResponse(url, revision) {
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Paris' }).format(new Date());
+  const [year, month] = today.split('-').map(Number);
+  const atMonth = offset => new Date(Date.UTC(year, month - 1 + offset, 1, 9)).toISOString();
+  const updated = `${today}T10:0${revision}:00.000Z`;
+  const account = 'synthetic-recurring-account';
+  let items;
+  let key;
+  if (url.pathname === '/v2/bank_accounts') {
+    key = 'bank_accounts';
+    items = [{ id: account, name: 'Compte fictif récurrences', status: 'active', iban: fakeIban, currency: 'EUR', balance_cents: 500000, authorized_balance_cents: null, updated_at: updated }];
+  } else if (url.pathname === '/v2/transactions' && url.searchParams.get('bank_account_id') === account) {
+    key = 'transactions';
+    const transaction = (id, label, date, side, status = 'completed') => ({ transaction_id: id, bank_account_id: account, amount_cents: 1000, side, currency: 'EUR', label, emitted_at: date, settled_at: date, updated_at: updated, status });
+    items = [
+      ...Array.from({ length: 1000 }, (_, index) => transaction(`synthetic-noise-${index}`, `Synthetic inflow ${index}`, atMonth(0), 'credit')),
+      ...[-2, -1, 0].map(offset => transaction(`synthetic-month-${offset}`, 'Synthetic cloud subscription', atMonth(offset), 'debit', revision === 1 && offset === 0 ? 'reversed' : 'completed')),
+    ];
+  } else throw new Error('Unexpected recurring fixture request');
+  const page = Number(url.searchParams.get('page'));
+  const total = Math.ceil(items.length / 100);
+  if (!Number.isInteger(page) || page < 1 || page > total) throw new Error('Unexpected recurring fixture page');
+  return { status: 200, body: { [key]: items.slice((page - 1) * 100, page * 100), meta: { current_page: page, next_page: page < total ? page + 1 : null, prev_page: page > 1 ? page - 1 : null, total_pages: total, total_count: items.length, per_page: 100 } } };
 }

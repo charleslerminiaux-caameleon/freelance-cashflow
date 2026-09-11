@@ -3,6 +3,8 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
+export const databaseProbes = ['scripts/test-banking-concurrency.mjs', 'scripts/test-recurring-concurrency.mjs'];
+export const browserSpecs = ['manual-cashflow.spec.ts', 'qonto-sync.spec.ts', 'recurring-detection.spec.ts'];
 export const project = 'jalon-2-qonto-tests';
 export const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 export const stack = join(root, '.isolated-tests');
@@ -46,7 +48,7 @@ export function parseStatus(status) {
 }
 export function testEnvironment(inherited = process.env) {
   const env = { ...inherited, QONTO_LOGIN: 'FAKE_QONTO_LOGIN_ACCEPTANCE_ONLY', QONTO_SECRET_KEY: 'FAKE_QONTO_SECRET_ACCEPTANCE_ONLY', NEXT_TELEMETRY_DISABLED: '1' };
-  for (const key of ['NODE_OPTIONS', 'FORCE_COLOR', 'NO_COLOR', 'E2E_BASE_URL']) delete env[key];
+  for (const key of ['NODE_OPTIONS', 'FORCE_COLOR', 'NO_COLOR', 'E2E_BASE_URL', 'E2E_QONTO_SCENARIO']) delete env[key];
   return env;
 }
 // Child output is captured: neither status credentials nor arbitrary process errors are printed.
@@ -82,12 +84,12 @@ export async function main(mode = 'all') {
   if (mode === 'db' || mode === 'all') {
     cli(['db', 'reset', '--local']);
     cli(['test', 'db'], { show: true });
-    run('node', ['scripts/test-banking-concurrency.mjs'], { env, show: true });
+    for (const probe of databaseProbes) run('node', [probe], { env, show: true });
   }
   if (mode === 'integration' || mode === 'all') run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'vitest', 'run', '--config', 'e2e/integration.config.ts'], { env, show: true });
   if (mode === 'e2e' || mode === 'all') {
-    for (const file of ['manual-cashflow.spec.ts', 'qonto-sync.spec.ts']) {
-      run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'playwright', 'test', file], { env, show: true });
+    for (const file of browserSpecs) {
+      run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'playwright', 'test', file], { env: { ...env, E2E_QONTO_SCENARIO: file === 'recurring-detection.spec.ts' ? 'recurring' : '' }, show: true });
     }
   }
 }

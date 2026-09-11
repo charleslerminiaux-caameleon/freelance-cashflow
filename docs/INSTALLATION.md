@@ -1,6 +1,26 @@
-# Installation locale
+# Installation
 
-Ce guide démarre une installation de développement reproductible du parcours manuel. Il ne configure ni Qonto ni un déploiement cloud.
+## Installation choisie : Next.js local et Supabase hébergé
+
+L’application utilisée par le propriétaire tourne localement et se connecte à son projet Supabase hébergé. Docker n’est pas nécessaire pour ce fonctionnement ; il sert aux tests isolés ou à l’alternative de développement décrite plus bas. Ne remplacez pas la configuration hébergée par les clés de la stack de test.
+
+Installez Node.js 24, Corepack/pnpm 10 et les dépendances avec `corepack pnpm install --frozen-lockfile`. Dans le fichier ignoré `apps/web/.env.local`, le propriétaire renseigne l’URL du projet hébergé, sa clé publique et sa clé service-role dans les trois variables Supabase de `.env.example`. La clé service-role et les identifiants Qonto restent exclusivement serveur ; ne les copiez ni dans Git, ni dans un rapport, ni dans les tests. Lancez ensuite `corepack pnpm dev` avec cette configuration. La [procédure Qonto](QONTO.md) décrit la configuration du fournisseur.
+
+Les douze migrations précédentes ont été appliquées au projet hébergé. Les migrations `202609110001_recurring_detection.sql` et `202609110002_recurring_detection_functions.sql` n’y sont **pas encore autorisées**. L’autorisation antérieure ne s’étend pas à ces deux nouvelles migrations. La fonctionnalité récurrences nécessite leur application avant sa validation sur cette installation.
+
+Après accord distinct pour préparer cette évolution sur le projet identifié, authentifiez la CLI et vérifiez le lien du projet ; ne passez aucun mot de passe dans une commande ou un rapport :
+
+```bash
+corepack pnpm dlx supabase@2.116.0 login
+corepack pnpm dlx supabase@2.116.0 link --project-ref <reference-du-projet-heberge>
+corepack pnpm dlx supabase@2.116.0 db push --linked --dry-run
+```
+
+Vérifiez que le dry-run concerne uniquement les deux fichiers attendus, faites relire leur SQL et obtenez l’autorisation explicite de les appliquer. **Seulement après cette autorisation**, l’opérateur peut exécuter `corepack pnpm dlx supabase@2.116.0 db push --linked`, puis valider le parcours réel avec le propriétaire. Ne lancez jamais `db reset` sur le projet hébergé. Les outils de tests ci-dessous ne doivent jamais utiliser ce lien CLI ni ses identifiants.
+
+## Alternative : développement avec Supabase local Docker
+
+Les étapes suivantes concernent exclusivement une installation de développement distincte et des données fictives. Elles ne sont pas nécessaires à l’installation choisie ci-dessus. Ne les exécutez pas dans le dossier de l’application reliée au Supabase hébergé.
 
 ## Prérequis
 
@@ -111,4 +131,4 @@ Cette dernière commande est destructive pour la stack du repository courant. V�
 
 Pour les tests, utilisez `corepack pnpm test:isolated` : ce harness dérive une configuration jetable dans `.isolated-tests/`, sans toucher la configuration source ni copier `.env.local`. Il utilise le projet `jalon-2-qonto-tests`, API 56321, PostgreSQL 56322 et le serveur web 3200, sans réutiliser un serveur existant. `corepack pnpm test:client-boundary` construit avec de faux canaris et inspecte les fichiers clients. Docker doit être démarré et Chromium installé.
 
-Pour Qonto réel, utilisez une autre installation avec son propre project_id et ses ports, puis renseignez vous-même son fichier ignoré `apps/web/.env.local` : [procédure Qonto](QONTO.md). Ne lancez jamais les tests contre cette installation. La préparation Tiime et la demande d’accès sont détaillées dans [TIIME.md](TIIME.md). Aucun accès fournisseur réel n’est requis pour les tests.
+Pour Qonto réel, utilisez l’installation Next.js locale reliée au Supabase hébergé décrite en tête de ce guide, puis renseignez vous-même son fichier ignoré `apps/web/.env.local` : [procédure Qonto](QONTO.md). Ne lancez jamais les tests contre cette installation. La préparation Tiime et la demande d’accès sont détaillées dans [TIIME.md](TIIME.md). Aucun accès fournisseur réel n’est requis pour les tests.

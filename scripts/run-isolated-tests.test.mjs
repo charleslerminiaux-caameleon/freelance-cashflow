@@ -42,3 +42,9 @@ test('refuses foreign projects and local or remote endpoints outside dedicated s
   assert.equal(env.NODE_OPTIONS, undefined);
   assert.equal(env.FORCE_COLOR, undefined);
 });
+
+test('all acceptance entry points include recurring concurrency and browser lifecycle', async () => {
+  const harness = await import('./run-isolated-tests.mjs');
+  assert.ok(harness.databaseProbes?.includes('scripts/test-recurring-concurrency.mjs'), 'recurring contention must run in db/all');
+  assert.ok(harness.browserSpecs?.includes('recurring-detection.spec.ts'), 'recurring browser lifecycle must run in e2e/all');
+});

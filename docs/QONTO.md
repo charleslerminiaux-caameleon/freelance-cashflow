@@ -27,6 +27,12 @@ Les requêtes ont au plus trois tentatives, dix secondes par tentative, un backo
 
 Le dernier solde publié et sa date restent affichés après échec ; l’interface distingue le dernier résultat de connexion. Le dashboard utilise les soldes publiés des comptes courants actifs dans la devise de projection. L’historique bancaire n’est pas ajouté aux événements prévisionnels. Aucun rapprochement automatique facture/banque n’est réalisé ; les paiements manuels et CSV conservent leur fonctionnement.
 
+## Suggestions de charges mensuelles
+
+Une synchronisation bancaire réussie déclenche l’analyse des récurrences. Le résultat bancaire et celui de l’analyse sont affichés séparément : une analyse échouée ne retire ni le solde publié ni les décisions antérieures. Dans **Sorties**, examinez les paiements observés, confirmez ou associez une proposition, ou ignorez-la. **Analyser les transactions importées** traite l’historique déjà présent sans requête Qonto. Les règles, corrections conservées, suppression/réexamen et exclusions des mois payés sont décrites dans [RECURRING_DETECTION.md](RECURRING_DETECTION.md).
+
+Les deux migrations de récurrences du 11 septembre 2026 restent en attente d’une autorisation spécifique sur le Supabase hébergé ; les tests locaux ne les y appliquent pas. Voir [INSTALLATION.md](INSTALLATION.md).
+
 ## Tests reproductibles sans compte Qonto
 
 ```bash
@@ -34,15 +40,15 @@ corepack pnpm test:isolated
 corepack pnpm test:client-boundary
 ```
 
-Le premier lance migrations, pgTAP, concurrence réelle, service/RPC avec HTTP simulé et les deux parcours Chromium. Le second construit avec des canaris fictifs puis inspecte les artefacts clients. Docker, Node 24, les dépendances installées et Chromium (`corepack pnpm --filter @fc/web exec playwright install chromium`) sont nécessaires.
+Le premier lance migrations, pgTAP, concurrence réelle, service/RPC avec HTTP simulé et les trois parcours Chromium (manuel, Qonto et récurrences). Le second construit avec des canaris fictifs puis inspecte les artefacts clients. Docker, Node 24, les dépendances installées et Chromium (`corepack pnpm --filter @fc/web exec playwright install chromium`) sont nécessaires.
 
-La stack jetable `jalon-2-qonto-tests`, dérivée dans `.isolated-tests/`, occupe API 56321, PostgreSQL 56322 et le serveur web 3200. La configuration source et les fichiers `.env.local` ne sont jamais copiés. Le harness garde les clés Supabase en mémoire, remplace les variables Qonto héritées et intercepte exclusivement HTTP sous tests ; les connexions externes non simulées sont refusées. Le serveur existant sur 3100 n’est jamais réutilisé. Les captures, vidéos et traces sont désactivées. Ne mettez aucune donnée réelle dans cette stack.
+La stack jetable `jalon-2-qonto-tests`, dérivée dans `.isolated-tests/`, occupe API 56321, PostgreSQL 56322 et le serveur web 3200. La configuration source et les fichiers `.env.local` ne sont jamais copiés. Le harness garde les clés Supabase en mémoire, remplace les variables Qonto héritées et intercepte exclusivement HTTP sous tests ; les connexions externes non simulées sont refusées. Aucun serveur existant, notamment celui de l’application réelle, n’est réutilisé. Les captures, vidéos et traces sont désactivées. Ne mettez aucune donnée réelle dans cette stack.
 
 Sous-commandes : `node scripts/run-isolated-tests.mjs db|integration|e2e|build|all|stop` (une seule option à la fois). `db` et `all` réinitialisent uniquement cette stack, `stop` supprime uniquement ses volumes. La stack reste démarrée après un test pour permettre un diagnostic local. Les mises à jour annoncées par la CLI épinglée ne sont pas des échecs ; les notices pgTAP de création répétée d’extension sont informatives.
 
 ## Validation réelle : point d’arrêt utilisateur
 
-Ne réutilisez jamais `.isolated-tests/` pour cette validation. Préparez une installation distincte selon [INSTALLATION.md](INSTALLATION.md), avec un autre project_id, des ports libres et un propriétaire unique. N’exécutez aucun harness de test contre elle. Dans le dossier de cette installation, créez le fichier ignoré `apps/web/.env.local` depuis `.env.example` et renseignez vous-même les trois variables Supabase, puis `QONTO_LOGIN` et `QONTO_SECRET_KEY`. C’est le point d’arrêt : aucune clé ne doit être demandée dans une conversation, copiée en Git ou incluse dans un rapport.
+Ne réutilisez jamais `.isolated-tests/` pour cette validation. Utilisez l’installation Next.js locale avec Supabase hébergé décrite dans [INSTALLATION.md](INSTALLATION.md), distincte de la stack jetable, avec un propriétaire unique. Faites autoriser et appliquer les nouvelles migrations avant la validation des récurrences. N’exécutez aucun harness de test contre elle. Dans le dossier de cette installation, créez le fichier ignoré `apps/web/.env.local` depuis `.env.example` et renseignez vous-même les trois variables Supabase, puis `QONTO_LOGIN` et `QONTO_SECRET_KEY`. C’est le point d’arrêt : aucune clé ne doit être demandée dans une conversation, copiée en Git ou incluse dans un rapport.
 
 Après cette configuration locale, démarrez l’application de validation et utilisez le bouton de synchronisation. Comparez vous-même les comptes, devises, soldes, dates et statuts avec Qonto ; relancez pour vérifier l’absence de doublons. Notez uniquement le résultat et les compteurs non sensibles. Le jalon complet attend également l’accès API Tiime et les validations réelles des deux fournisseurs.
 

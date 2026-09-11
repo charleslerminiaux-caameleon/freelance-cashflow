@@ -26,25 +26,19 @@ Le repository est un monorepo pnpm :
 
 Supabase PostgreSQL est la source de vérité. Une installation correspond à un propriétaire, et les tables financières sont isolées par `owner_user_id` et Row Level Security.
 
-## Démarrage local
+## Démarrage
 
-Prérequis : Node.js 24, pnpm 10 via Corepack, Docker et une connexion nécessaire au premier téléchargement des dépendances.
+L’installation choisie utilise **Next.js local avec Supabase hébergé**. Node.js 24 et pnpm 10 via Corepack suffisent au fonctionnement ; Docker est réservé aux tests isolés et à l’alternative de développement locale.
 
 ```bash
 corepack enable
 corepack pnpm install --frozen-lockfile
-corepack pnpm dlx supabase@2.116.0 start
-corepack pnpm dlx supabase@2.116.0 db reset --local
-cp .env.example apps/web/.env.local
-```
-
-Renseignez ensuite dans `apps/web/.env.local` les trois valeurs locales indiquées par `corepack pnpm dlx supabase@2.116.0 status --output env`, puis lancez :
-
-```bash
 corepack pnpm dev
 ```
 
-Le guide détaillé est disponible dans [docs/INSTALLATION.md](docs/INSTALLATION.md). Les règles de manipulation des clés sont décrites dans [docs/SECURITY_LOCAL.md](docs/SECURITY_LOCAL.md).
+Le propriétaire configure auparavant les variables Supabase et Qonto dans le fichier ignoré `apps/web/.env.local`. Le guide [INSTALLATION.md](docs/INSTALLATION.md) distingue cette installation de la stack Docker de test. Les deux nouvelles migrations de détection des récurrences restent en attente d’une autorisation explicite sur le projet hébergé ; aucun reset n’est autorisé sur celui-ci.
+
+Les charges mensuelles détectées apparaissent dans **Sorties** après analyse. Elles restent sans effet financier avant confirmation ou association ; les corrections sont conservées et les mois déjà payés sont exclus de la projection. Voir [Détection des récurrences](docs/RECURRING_DETECTION.md).
 
 ## Vérifications
 
@@ -57,7 +51,7 @@ corepack pnpm test:isolated
 corepack pnpm test:client-boundary
 ```
 
-Les tests isolés dérivent une stack jetable `jalon-2-qonto-tests` (ports 563xx) et lancent Chromium sur 3200. Ils refusent toute autre stack, gardent les identifiants en mémoire et remplacent les variables Qonto par des canaris fictifs sous interception HTTP. Les parcours manuel et Qonto créent chacun leur propriétaire fictif puis le suppriment. Voir les sous-commandes dans [QONTO.md](docs/QONTO.md).
+Les tests isolés dérivent une stack jetable `jalon-2-qonto-tests` (ports 563xx) et lancent Chromium sur 3200. Ils refusent toute autre stack, gardent les identifiants en mémoire et remplacent les variables Qonto par des canaris fictifs sous interception HTTP. Les parcours manuel, Qonto et récurrences créent chacun leur propriétaire fictif puis le suppriment. Voir les sous-commandes dans [QONTO.md](docs/QONTO.md).
 
 ## Statut open source
 

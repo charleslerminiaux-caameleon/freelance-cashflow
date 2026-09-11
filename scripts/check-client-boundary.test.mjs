@@ -10,7 +10,7 @@ test('scans nested client assets and fails on credential canaries or server modu
     await mkdir(join(root, 'chunks'));
     await writeFile(join(root, 'chunks/app.js'), 'safe client code');
     await checkClientBoundary(root, ['fake-runtime-canary']);
-    for (const content of ['fake-runtime-canary', 'QONTO_SECRET_KEY', 'thirdparty.qonto.com', 'acquire_banking_sync']) {
+    for (const content of ['fake-runtime-canary', 'QONTO_SECRET_KEY', 'thirdparty.qonto.com', 'acquire_banking_sync', 'acquire_recurring_analysis', 'publish_recurring_analysis', 'fail_recurring_analysis']) {
       await writeFile(join(root, 'chunks/app.js'), content);
       await assert.rejects(checkClientBoundary(root, ['fake-runtime-canary']), /boundary/);
     }
