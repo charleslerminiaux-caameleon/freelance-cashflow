@@ -98,6 +98,7 @@ export default async function ExpensesPage() {
   const emptySuggestionWorkspace: RecurringSuggestionWorkspace = {
     suggestions: [],
     ignored: [],
+    linkedExpenseOrigins: {},
     linkedExpenseIds: [],
     lastAnalyzedAt: null,
     analysisError: null,

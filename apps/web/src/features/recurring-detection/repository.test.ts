@@ -8,7 +8,7 @@ const integration = "22222222-2222-4222-8222-222222222222";
 const suggestion = "33333333-3333-4333-8333-333333333333";
 const linked = "44444444-4444-4444-8444-444444444444";
 const publication = "2026-09-11T10:00:00.123456Z";
-const row = { id: suggestion, owner_user_id: owner, integration_id: integration, bank_account_id: owner, currency: "EUR", normalized_label: "cloud", state: "pending", eligible: true, label: "Cloud", amount_cents: 1000, day_of_month: 5, last_payment_date: "2026-09-05", next_date: "2026-10-05", source_publication: publication, recurring_cashflow_id: null };
+const row = { creation_source: "detected", id: suggestion, owner_user_id: owner, integration_id: integration, bank_account_id: owner, currency: "EUR", normalized_label: "cloud", state: "pending", eligible: true, label: "Cloud", amount_cents: 1000, day_of_month: 5, last_payment_date: "2026-09-05", next_date: "2026-10-05", source_publication: publication, recurring_cashflow_id: null };
 function clientFor(transport: (url: URL, init?: RequestInit) => unknown) {
   return createClient("https://example.invalid", "synthetic-key", { auth: { persistSession: false }, global: { fetch: async (input, init) => new Response(JSON.stringify(await transport(new URL(String(input)), init)), { headers: { "Content-Type": "application/json" } }) } });
 }
@@ -33,7 +33,7 @@ it("loads paginated suggestions, ignored list, owned safe evidence, duplicate ma
     if (table === "recurring_detection_runs") return { lease_run_id: null, lease_expires_at: null, analyzed_publication: publication, last_success_at: publication, last_error_code: "DATABASE_ERROR" };
     if (table === "recurring_cashflows") return [{ id: linked, owner_user_id: owner, label: "CLOUD", amount_cents: 1050 }];
     expect(url.searchParams.get("integration_id")).toBe(`eq.${integration}`);
-    if (table === "recurring_suggestions") return Number(url.searchParams.get("offset")) === 0 ? Array.from({ length: 1000 }, (_, i) => ({ ...row, id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}` })) : [{ ...row, state: "dismissed" }, { ...row, id: owner, state: "confirmed", recurring_cashflow_id: owner }];
+    if (table === "recurring_suggestions") return Number(url.searchParams.get("offset")) === 0 ? Array.from({ length: 1000 }, (_, i) => ({ ...row, id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}` })) : [{ ...row, state: "dismissed" }, { ...row, id: owner, state: "confirmed", recurring_cashflow_id: owner, creation_source: "history" }];
     expect(url.searchParams.get("select")).not.toContain("*");
     return [{ suggestion_id: "00000000-0000-4000-8000-000000000000", transaction_id: owner, transaction: { id: owner, owner_user_id: owner, integration_id: integration, label: "Cloud", amount_cents: 1000, transaction_date: "2026-09-05" } }];
   });
@@ -41,6 +41,7 @@ it("loads paginated suggestions, ignored list, owned safe evidence, duplicate ma
   expect(workspace.suggestions).toHaveLength(1000);
   expect(workspace.ignored).toHaveLength(1);
   expect(workspace.linkedExpenseIds).toEqual([owner]);
+  expect(workspace.linkedExpenseOrigins).toEqual({ [owner]: "history" });
   expect(workspace.suggestions[0]).toMatchObject({ evidence: [{ id: owner, label: "Cloud", amountCents: 1000, transactionDate: "2026-09-05" }], possibleDuplicates: [{ id: linked, label: "CLOUD", amountCents: 1050 }] });
   expect(workspace.analysisError).toBe("DATABASE_ERROR");
   expect(workspace.lastAnalyzedAt).toBe(publication);
@@ -66,7 +67,7 @@ it("refuses foreign evidence even if an upstream transport violates owner filter
 });
 it("returns an empty review workspace when there is no integration", async () => {
   const client = clientFor(() => null);
-  expect(await getRecurringSuggestionWorkspace(client, owner)).toEqual({ suggestions: [], ignored: [], linkedExpenseIds: [], lastAnalyzedAt: null, analysisError: null });
+  expect(await getRecurringSuggestionWorkspace(client, owner)).toEqual({ suggestions: [], ignored: [], linkedExpenseOrigins: {}, linkedExpenseIds: [], lastAnalyzedAt: null, analysisError: null });
 });
 
 it("groups duplicate discovery by normalized label once across pending and ignored series", async () => {

@@ -25,6 +25,7 @@ export {
   detectMonthlyOutflows,
   nextRecurringDate,
   normalizeRecurringLabel,
+  suggestedRecurringLabel,
   paidMonthsForSeries,
 } from "./recurring-detection";
 export type {

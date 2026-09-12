@@ -156,6 +156,10 @@ function suggestedLabel(label: string, checkBudget: CheckBudget): string {
   return result;
 }
 
+export function suggestedRecurringLabel(label: string): string {
+  return suggestedLabel(label, noBudgetCheck);
+}
+
 function latestSingletonRun(
   transactions: DetectionTransaction[],
   checkBudget: CheckBudget,

@@ -27,6 +27,7 @@ export type ConfirmSuggestionInput = z.infer<typeof confirmationSchema>;
 export const suggestionRowSchema = z.object({
   id: uuid, owner_user_id: uuid, integration_id: uuid, bank_account_id: uuid,
   currency: z.string().regex(/^[A-Z]{3}$/), normalized_label: z.string().min(1),
+  creation_source: z.enum(["detected", "history"]),
   state: z.enum(["pending", "confirmed", "dismissed"]), eligible: z.boolean(),
   label: z.string().min(1).max(160), amount_cents: amount, day_of_month: z.number().int().min(1).max(31),
   last_payment_date: businessDateSchema, next_date: businessDateSchema,
@@ -34,6 +35,7 @@ export const suggestionRowSchema = z.object({
 });
 export type SuggestionRow = z.infer<typeof suggestionRowSchema>;
 export type RecurringSuggestion = {
+  creationSource: "detected" | "history";
   id: string; state: "pending" | "confirmed" | "dismissed"; eligible: boolean;
   label: string; amountCents: number; dayOfMonth: number; nextDate: string;
   lastPaymentDate: string; sourcePublication: string; linkedExpenseId: string | null;
@@ -43,5 +45,6 @@ export type RecurringSuggestion = {
 };
 export type RecurringSuggestionWorkspace = {
   suggestions: RecurringSuggestion[]; ignored: RecurringSuggestion[];
+  linkedExpenseOrigins: Record<string, "detected" | "history">;
   linkedExpenseIds: string[]; lastAnalyzedAt: string | null; analysisError: string | null;
 };

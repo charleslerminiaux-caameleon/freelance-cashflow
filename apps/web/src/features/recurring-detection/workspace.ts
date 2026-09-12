@@ -6,7 +6,7 @@ import { getQontoIntegration } from "@/features/integrations/repository";
 import { businessDateSchema } from "@/features/commercial-schema";
 import { detectionCodeSchema, publicationSchema, suggestionRowSchema, uuid, type SuggestionRow, type RecurringSuggestion, type RecurringSuggestionWorkspace } from "./schema";
 
-const columns = "id, owner_user_id, integration_id, bank_account_id, currency, normalized_label, state, eligible, label, amount_cents, day_of_month, last_payment_date, next_date, source_publication, recurring_cashflow_id";
+const columns = "creation_source, id, owner_user_id, integration_id, bank_account_id, currency, normalized_label, state, eligible, label, amount_cents, day_of_month, last_payment_date, next_date, source_publication, recurring_cashflow_id";
 async function pages<T>(fetchPage: (from: number, to: number) => Promise<T[]>): Promise<T[]> {
   const result: T[] = [];
   for (let from = 0; from <= 100_000; from += 1000) {
@@ -28,7 +28,7 @@ async function listRows(client: SupabaseClient, owner: string, integration: stri
   });
 }
 function suggestion(row: SuggestionRow): RecurringSuggestion {
-  return { id: row.id, accountId: row.bank_account_id, currency: row.currency, normalizedLabel: row.normalized_label,
+  return { creationSource: row.creation_source, id: row.id, accountId: row.bank_account_id, currency: row.currency, normalizedLabel: row.normalized_label,
     state: row.state, eligible: row.eligible, label: row.label, amountCents: row.amount_cents, dayOfMonth: row.day_of_month,
     nextDate: row.next_date, lastPaymentDate: row.last_payment_date, sourcePublication: row.source_publication,
     linkedExpenseId: row.recurring_cashflow_id, evidence: [], possibleDuplicates: [] };
@@ -43,7 +43,7 @@ export async function getRecurringSuggestionWorkspace(client: SupabaseClient, ow
   try {
     uuid.parse(owner); const signal = AbortSignal.timeout(40_000);
     const integration = await getQontoIntegration(client, owner, signal);
-    const empty = { suggestions: [], ignored: [], linkedExpenseIds: [], lastAnalyzedAt: null, analysisError: null };
+    const empty = { suggestions: [], ignored: [], linkedExpenseOrigins: {}, linkedExpenseIds: [], lastAnalyzedAt: null, analysisError: null };
     if (!integration) return empty;
     const [rows, expenses, evidence, runResult] = await Promise.all([
       listRows(client, owner, integration.id, signal),
@@ -88,6 +88,7 @@ export async function getRecurringSuggestionWorkspace(client: SupabaseClient, ow
         .map(expense => ({ id: expense.id, label: expense.label, amountCents: expense.amount_cents })),
     }));
     return { suggestions: candidates.filter(row => row.state === "pending"), ignored: candidates.filter(row => row.state === "dismissed"),
+      linkedExpenseOrigins: Object.fromEntries(rows.flatMap(row => row.recurring_cashflow_id ? [[row.recurring_cashflow_id, row.creation_source]] : [])),
       linkedExpenseIds: [...linked], lastAnalyzedAt: run?.last_success_at ?? null, analysisError: run?.last_error_code ?? null };
   } catch { throw new Error("DATABASE_ERROR"); }
 }
