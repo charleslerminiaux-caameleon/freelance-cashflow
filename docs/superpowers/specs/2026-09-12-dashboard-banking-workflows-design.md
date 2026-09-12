@@ -1,7 +1,7 @@
 # Dashboard, catégories et charges depuis l’historique bancaire
 
 Date : 2026-09-12.
-Statut : conception en conversation approuvée ; spécification écrite à valider.
+Statut : conception et spécification écrite approuvées par l’utilisateur le 12 septembre 2026.
 
 ## Objectif et périmètre
 
