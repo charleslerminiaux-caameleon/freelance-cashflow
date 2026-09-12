@@ -76,6 +76,7 @@ beforeEach(() => {
       },
     ],
     ignored: [],
+    linkedExpenseOrigins: {},
     linkedExpenseIds: [],
     lastAnalyzedAt: "2026-09-11T10:00:00Z",
     analysisError: null,

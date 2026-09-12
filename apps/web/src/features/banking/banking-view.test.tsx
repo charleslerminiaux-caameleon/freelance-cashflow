@@ -13,3 +13,98 @@ it("shows currencies, closed/noncurrent accounts, available balance and stale pu
  expect(screen.getByRole("link",{name:"Transactions précédentes"})).toBeInTheDocument();
 });
 it("provides an empty state without inventing bank data", () => {render(<BankingView banking={{integration:null,accounts:[]}} history={{items:[],page:1,hasNext:false}} currency="EUR" />); expect(screen.getByText(/Aucun compte bancaire publié/)).toBeInTheDocument(); expect(screen.queryByRole("link",{name:"Transactions suivantes"})).not.toBeInTheDocument();});
+
+it("offers history creation only for eligible published outflows with an internal-id URL", () => {
+  const eligibleAccount = {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Compte principal",
+    iban_masked: null,
+    currency: "EUR",
+    current_balance_cents: 50_000,
+    available_balance_cents: null,
+    status: "active" as const,
+    is_current: true,
+    updated_at: "2026-09-11T10:00:00Z",
+  };
+  const eligibleTransaction = {
+    id: "22222222-2222-4222-8222-222222222222",
+    bank_account_id: eligibleAccount.id,
+    currency: "EUR",
+    amount_cents: 12_345,
+    direction: "outflow" as const,
+    status: "completed" as const,
+    label: "Cloud synthétique",
+    counterparty: "Fournisseur synthétique",
+    transaction_date: localDate("2026-09-09"),
+    value_date: null,
+    updated_at: "2026-09-11T10:00:00Z",
+  };
+
+  render(
+    <BankingView
+      banking={{ integration: null, accounts: [eligibleAccount] }}
+      history={{
+        items: [
+          eligibleTransaction,
+          { ...eligibleTransaction, id: "33333333-3333-4333-8333-333333333333", status: "pending" },
+          { ...eligibleTransaction, id: "44444444-4444-4444-8444-444444444444", direction: "inflow" },
+          { ...eligibleTransaction, id: "55555555-5555-4555-8555-555555555555", currency: "USD" },
+          { ...eligibleTransaction, id: "66666666-6666-4666-8666-666666666666", amount_cents: 0 },
+        ],
+        page: 1,
+        hasNext: false,
+      }}
+      currency="EUR"
+    />,
+  );
+
+  const link = screen.getByRole("link", { name: /Créer une charge récurrente/i });
+  expect(link).toHaveAttribute(
+    "href",
+    "/cashflow/recurring/22222222-2222-4222-8222-222222222222",
+  );
+  expect(link.getAttribute("href")).not.toContain("amount");
+  expect(link.getAttribute("href")).not.toContain("label");
+  expect(screen.getAllByRole("link", { name: /Créer une charge récurrente/i })).toHaveLength(1);
+});
+
+it.each([
+  [{ status: "closed" as const }, true],
+  [{ status: "active" as const }, false],
+])("hides history creation for an ineligible account %j", (accountPatch, isCurrent) => {
+  const account = {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Compte principal",
+    iban_masked: null,
+    currency: "EUR",
+    current_balance_cents: 50_000,
+    available_balance_cents: null,
+    is_current: isCurrent,
+    updated_at: "2026-09-11T10:00:00Z",
+    ...accountPatch,
+  };
+  render(
+    <BankingView
+      banking={{ integration: null, accounts: [account] }}
+      history={{
+        items: [{
+          id: "22222222-2222-4222-8222-222222222222",
+          bank_account_id: account.id,
+          currency: "EUR",
+          amount_cents: 12_345,
+          direction: "outflow",
+          status: "completed",
+          label: "Cloud synthétique",
+          counterparty: null,
+          transaction_date: localDate("2026-09-09"),
+          value_date: null,
+          updated_at: "2026-09-11T10:00:00Z",
+        }],
+        page: 1,
+        hasNext: false,
+      }}
+      currency="EUR"
+    />,
+  );
+  expect(screen.queryByRole("link", { name: /Créer une charge récurrente/i })).toBeNull();
+});

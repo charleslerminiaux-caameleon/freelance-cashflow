@@ -38,6 +38,9 @@ beforeEach(() => {
   getRecurringSuggestionWorkspace.mockResolvedValue({
     suggestions: [],
     ignored: [],
+    linkedExpenseOrigins: {
+      "33333333-3333-4333-8333-333333333333": "detected",
+    },
     linkedExpenseIds: ["33333333-3333-4333-8333-333333333333"],
     lastAnalyzedAt: null,
     analysisError: null,
@@ -99,6 +102,28 @@ beforeEach(() => {
       },
     ],
   });
+});
+
+it("distinguishes charges created from history from automatically detected charges", async () => {
+  getRecurringSuggestionWorkspace.mockResolvedValue({
+    suggestions: [],
+    ignored: [],
+    linkedExpenseOrigins: {
+      "33333333-3333-4333-8333-333333333333": "history",
+    },
+    linkedExpenseIds: ["33333333-3333-4333-8333-333333333333"],
+    lastAnalyzedAt: null,
+    analysisError: null,
+  });
+
+  render(await ExpensesPage());
+
+  expect(screen.getByText("Créée depuis Qonto")).toBeInTheDocument();
+  expect(screen.queryByText("Détectée depuis Qonto")).toBeNull();
+  expect(screen.getByRole("heading", { name: "Hébergement" }).closest("article")).toHaveAttribute(
+    "id",
+    "recurring-expense-33333333-3333-4333-8333-333333333333",
+  );
 });
 
 it("renders persisted recurring and planned outflows with owner-scoped CRUD controls", async () => {
@@ -173,6 +198,7 @@ it("loads owner suggestions and keeps pending rows out of configured expense tot
       },
     ],
     ignored: [],
+    linkedExpenseOrigins: {},
     linkedExpenseIds: [],
     lastAnalyzedAt: "2026-09-11T10:00:00Z",
     analysisError: null,

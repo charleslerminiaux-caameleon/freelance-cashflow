@@ -119,6 +119,7 @@ export default async function ExpensesPage() {
   );
   const totalExpenses = workspace.recurringExpenses.length + workspace.plannedExpenses.length;
   const linkedExpenseIds = new Set(suggestionWorkspace.linkedExpenseIds);
+  const linkedExpenseOrigins = suggestionWorkspace.linkedExpenseOrigins;
   const existingExpenses = workspace.recurringExpenses
     .filter(
       (expense) =>
@@ -221,14 +222,22 @@ export default async function ExpensesPage() {
             ) : (
               <div className="expense-record-list">
                 {workspace.recurringExpenses.map((expense) => (
-                  <article key={expense.id} className="expense-record">
+                  <article
+                    key={expense.id}
+                    className="expense-record"
+                    id={`recurring-expense-${expense.id}`}
+                  >
                     <header>
                       <div>
                         <span className={`status-pill ${expense.active ? "status-active" : ""}`}>
                           {expense.active ? "Active" : "Inactive"}
                         </span>
-                        {linkedExpenseIds.has(expense.id) ? (
-                          <span className="status-pill">Détectée depuis Qonto</span>
+                        {linkedExpenseOrigins[expense.id] ? (
+                          <span className="status-pill">
+                            {linkedExpenseOrigins[expense.id] === "history"
+                              ? "Créée depuis Qonto"
+                              : "Détectée depuis Qonto"}
+                          </span>
                         ) : null}
                         <h3>{expense.label}</h3>
                         <p>
