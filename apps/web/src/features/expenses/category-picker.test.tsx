@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 
 import { CategoryPicker } from "./category-picker";
@@ -201,4 +201,164 @@ it("retains a returned category only until authoritative props acknowledge it", 
   );
   await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue(""));
   expect(screen.queryByRole("option", { name: returnedCategory.name })).toBeNull();
+});
+
+it("waits for a deferred second success before selecting it and closing creation", async () => {
+  let resolveSecond!: (value: {
+    message: string;
+    success: boolean;
+    category: { id: string; name: string };
+  }) => void;
+  const createAction = vi
+    .fn()
+    .mockResolvedValueOnce({
+      message: "Catégorie ajoutée.",
+      success: true,
+      category: { id: "first-category-id", name: "Première catégorie" },
+    })
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        }),
+    );
+
+  render(
+    <form>
+      <label htmlFor="deferred-success-label">Libellé</label>
+      <input id="deferred-success-label" defaultValue="Initial" />
+      <label htmlFor="deferred-success-category">Catégorie</label>
+      <CategoryPicker
+        categories={categories}
+        createAction={createAction}
+        id="deferred-success-category"
+      />
+    </form>,
+  );
+
+  fireEvent.change(screen.getByLabelText("Libellé"), {
+    target: { value: "Parent draft" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Créer une catégorie" }));
+  fireEvent.change(screen.getByLabelText("Nom de la nouvelle catégorie"), {
+    target: { value: "Première catégorie" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ajouter la catégorie" }));
+  await waitFor(() => expect(screen.getByLabelText("Catégorie")).toHaveValue("first-category-id"));
+
+  fireEvent.click(screen.getByRole("button", { name: "Créer une catégorie" }));
+  fireEvent.change(screen.getByLabelText("Nom de la nouvelle catégorie"), {
+    target: { value: "Deuxième catégorie" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ajouter la catégorie" }));
+
+  await waitFor(() => expect(createAction).toHaveBeenCalledTimes(2));
+  const pendingDraft = screen.queryByLabelText(
+    "Nom de la nouvelle catégorie",
+  ) as HTMLInputElement | null;
+  const pendingSnapshot = {
+    dialogPresent: screen.queryByRole("dialog") !== null,
+    draft: pendingDraft?.value ?? null,
+    selection: (screen.getByLabelText("Catégorie") as HTMLSelectElement).value,
+    parentDraft: (screen.getByLabelText("Libellé") as HTMLInputElement).value,
+    previousStatus: screen.queryByRole("status")?.textContent ?? null,
+  };
+
+  await act(async () =>
+    resolveSecond({
+      message: "Catégorie ajoutée.",
+      success: true,
+      category: { id: "second-category-id", name: "Deuxième catégorie" },
+    }),
+  );
+
+  expect(pendingSnapshot).toEqual({
+    dialogPresent: true,
+    draft: "Deuxième catégorie",
+    selection: "first-category-id",
+    parentDraft: "Parent draft",
+    previousStatus: null,
+  });
+  await waitFor(() => expect(screen.getByLabelText("Catégorie")).toHaveValue("second-category-id"));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.getByLabelText("Libellé")).toHaveValue("Parent draft");
+});
+
+it("keeps the second draft, parent fields, selection, and error after a deferred failure", async () => {
+  let resolveSecond!: (value: { message: string; success: boolean }) => void;
+  const createAction = vi
+    .fn()
+    .mockResolvedValueOnce({
+      message: "Catégorie ajoutée.",
+      success: true,
+      category: { id: "first-category-id", name: "Première catégorie" },
+    })
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        }),
+    );
+
+  render(
+    <form>
+      <label htmlFor="deferred-failure-label">Libellé</label>
+      <input id="deferred-failure-label" defaultValue="Initial" />
+      <label htmlFor="deferred-failure-category">Catégorie</label>
+      <CategoryPicker
+        categories={categories}
+        createAction={createAction}
+        id="deferred-failure-category"
+      />
+    </form>,
+  );
+
+  fireEvent.change(screen.getByLabelText("Libellé"), {
+    target: { value: "Parent failure draft" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Créer une catégorie" }));
+  fireEvent.change(screen.getByLabelText("Nom de la nouvelle catégorie"), {
+    target: { value: "Première catégorie" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ajouter la catégorie" }));
+  await waitFor(() => expect(screen.getByLabelText("Catégorie")).toHaveValue("first-category-id"));
+
+  fireEvent.click(screen.getByRole("button", { name: "Créer une catégorie" }));
+  fireEvent.change(screen.getByLabelText("Nom de la nouvelle catégorie"), {
+    target: { value: "Doublon différé" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ajouter la catégorie" }));
+  await waitFor(() => expect(createAction).toHaveBeenCalledTimes(2));
+  const pendingDraft = screen.queryByLabelText(
+    "Nom de la nouvelle catégorie",
+  ) as HTMLInputElement | null;
+  const pendingSnapshot = {
+    dialogPresent: screen.queryByRole("dialog") !== null,
+    draft: pendingDraft?.value ?? null,
+    selection: (screen.getByLabelText("Catégorie") as HTMLSelectElement).value,
+    parentDraft: (screen.getByLabelText("Libellé") as HTMLInputElement).value,
+    previousStatus: screen.queryByRole("status")?.textContent ?? null,
+  };
+
+  await act(async () =>
+    resolveSecond({
+      message: "Impossible d’ajouter cette catégorie.",
+      success: false,
+    }),
+  );
+
+  expect(pendingSnapshot).toEqual({
+    dialogPresent: true,
+    draft: "Doublon différé",
+    selection: "first-category-id",
+    parentDraft: "Parent failure draft",
+    previousStatus: null,
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Impossible d’ajouter cette catégorie.",
+  );
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(screen.getByLabelText("Nom de la nouvelle catégorie")).toHaveValue("Doublon différé");
+  expect(screen.getByLabelText("Catégorie")).toHaveValue("first-category-id");
+  expect(screen.getByLabelText("Libellé")).toHaveValue("Parent failure draft");
 });

@@ -36,9 +36,9 @@ corepack pnpm install --frozen-lockfile
 corepack pnpm dev
 ```
 
-Le propriétaire configure auparavant les variables Supabase et Qonto dans le fichier ignoré `apps/web/.env.local`. Le guide [INSTALLATION.md](docs/INSTALLATION.md) distingue cette installation de la stack Docker de test. Les deux nouvelles migrations de détection des récurrences restent en attente d’une autorisation explicite sur le projet hébergé ; aucun reset n’est autorisé sur celui-ci.
+Le propriétaire configure auparavant les variables Supabase et Qonto dans le fichier ignoré `apps/web/.env.local`. Le guide [INSTALLATION.md](docs/INSTALLATION.md) distingue cette installation de la stack Docker de test. Les migrations `202609110001_recurring_detection.sql` et `202609110002_recurring_detection_functions.sql` sont déjà appliquées. Les migrations `202609120001_history_recurring_decisions.sql` et `202609120002_automatic_qonto_admission.sql` restent en attente d’une autorisation explicite sur le projet hébergé ; aucun reset n’est autorisé sur celui-ci.
 
-Les charges mensuelles détectées apparaissent dans **Sorties** après analyse. Elles restent sans effet financier avant confirmation ou association ; les corrections sont conservées et les mois déjà payés sont exclus de la projection. Voir [Détection des récurrences](docs/RECURRING_DETECTION.md).
+Les charges mensuelles détectées apparaissent dans **Charges** après analyse. Elles restent sans effet financier avant confirmation ou association ; les corrections sont conservées et les mois déjà payés sont exclus de la projection. Voir [Détection des récurrences](docs/RECURRING_DETECTION.md).
 
 ## Vérifications
 

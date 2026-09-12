@@ -16,6 +16,64 @@ function mergeCategories(current: CategoryOption[], incoming: CategoryOption[]):
   return [...categories.values()];
 }
 
+function CategoryCreationDialog({
+  createAction,
+  id,
+  onCancel,
+  onCreated,
+}: {
+  createAction: ExpenseFormAction;
+  id: string;
+  onCancel: () => void;
+  onCreated: (category: CategoryOption) => void;
+}): JSX.Element {
+  const [state, submit, pending] = useActionState(createAction, initialState);
+  const [nameDraft, setNameDraft] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const dialogTitleId = useId();
+
+  useEffect(() => {
+    nameInputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!state.success || !state.category) return;
+    onCreated(state.category);
+  }, [onCreated, state]);
+
+  return createPortal(
+    <div className="category-create-backdrop">
+      <div aria-labelledby={dialogTitleId} className="category-create-dialog" role="dialog">
+        <h2 id={dialogTitleId}>Nouvelle catégorie</h2>
+        <form action={submit} className="commercial-form category-create-form">
+          <label htmlFor={`${id}-new-name`}>Nom de la nouvelle catégorie</label>
+          <input
+            id={`${id}-new-name`}
+            maxLength={80}
+            name="name"
+            ref={nameInputRef}
+            required
+            value={nameDraft}
+            onChange={(event) => setNameDraft(event.target.value)}
+          />
+          {state.message ? (
+            <p role={state.success ? "status" : "alert"}>{state.message}</p>
+          ) : null}
+          <div className="category-create-actions">
+            <button type="submit" disabled={pending}>
+              {pending ? "Ajout en cours…" : "Ajouter la catégorie"}
+            </button>
+            <button type="button" className="button-secondary" onClick={onCancel}>
+              Annuler la création
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export function CategoryPicker({
   categories,
   createAction,
@@ -29,18 +87,12 @@ export function CategoryPicker({
   name?: string;
   createAction: ExpenseFormAction;
 }): JSX.Element {
-  const [state, submit, pending] = useActionState(createAction, initialState);
   const [unacknowledgedCategory, setUnacknowledgedCategory] =
     useState<CategoryOption | null>(null);
   const [selected, setSelected] = useState(defaultValue);
   const [creating, setCreating] = useState(false);
-  const [showResult, setShowResult] = useState(false);
-  const [nameDraft, setNameDraft] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const dialogTitleId = useId();
-  const returnedCategory = showResult && state.success ? state.category : undefined;
-  const temporaryCategory = unacknowledgedCategory ?? returnedCategory;
+  const temporaryCategory = unacknowledgedCategory;
   const options = mergeCategories(categories, temporaryCategory ? [temporaryCategory] : []);
 
   useEffect(() => {
@@ -60,72 +112,31 @@ export function CategoryPicker({
     setSelected((current) => (current !== "" && !availableIds.has(current) ? "" : current));
   }, [categories, temporaryCategory, unacknowledgedCategory]);
 
-  useEffect(() => {
-    if (creating) nameInputRef.current?.focus();
-  }, [creating]);
-
-  useEffect(() => {
-    if (!showResult || !state.success || !state.category) return;
-    setUnacknowledgedCategory(state.category);
-    setSelected(state.category.id);
-    setNameDraft("");
-    setCreating(false);
-    setShowResult(false);
-    triggerRef.current?.focus();
-  }, [showResult, state]);
-
   function openCreation() {
-    setNameDraft("");
-    setShowResult(false);
     setCreating(true);
   }
 
   function cancelCreation() {
     setCreating(false);
-    setShowResult(false);
+    triggerRef.current?.focus();
+  }
+
+  function finishCreation(category: CategoryOption) {
+    setUnacknowledgedCategory(category);
+    setSelected(category.id);
+    setCreating(false);
     triggerRef.current?.focus();
   }
 
   const creationDialog =
     creating && typeof document !== "undefined"
-      ? createPortal(
-          <div className="category-create-backdrop">
-            <div
-              aria-labelledby={dialogTitleId}
-              className="category-create-dialog"
-              role="dialog"
-            >
-              <h2 id={dialogTitleId}>Nouvelle catégorie</h2>
-              <form
-                action={submit}
-                className="commercial-form category-create-form"
-                onSubmit={() => setShowResult(true)}
-              >
-                <label htmlFor={`${id}-new-name`}>Nom de la nouvelle catégorie</label>
-                <input
-                  id={`${id}-new-name`}
-                  maxLength={80}
-                  name="name"
-                  ref={nameInputRef}
-                  required
-                  value={nameDraft}
-                  onChange={(event) => setNameDraft(event.target.value)}
-                />
-                {showResult && state.message ? (
-                  <p role={state.success ? "status" : "alert"}>{state.message}</p>
-                ) : null}
-                <div className="category-create-actions">
-                  <button type="submit" disabled={pending}>
-                    {pending ? "Ajout en cours…" : "Ajouter la catégorie"}
-                  </button>
-                  <button type="button" className="button-secondary" onClick={cancelCreation}>
-                    Annuler la création
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body,
+      ? (
+          <CategoryCreationDialog
+            createAction={createAction}
+            id={id}
+            onCancel={cancelCreation}
+            onCreated={finishCreation}
+          />
         )
       : null;
 
