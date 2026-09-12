@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getQontoIntegration } from "./repository";
 import { isQontoConfigured } from "./qonto-config";
 import { synchronizeQontoForOwner } from "./sync-qonto";
-import type { AutoSyncActionResult } from "./auto-sync-policy";
+import { publicationTimestamp, type AutoSyncActionResult } from "./auto-sync-policy";
 
 // This optional proof lets another tab's successful manual publication clear a
 // local automatic error. Its short independent budget cannot extend banking work.
@@ -18,7 +18,8 @@ async function publicationProof(ownerUserId: string): Promise<{ lastSuccessAt?: 
       (async () => {
         const client = await createClient();
         const integration = await getQontoIntegration(client, ownerUserId, controller.signal);
-        return integration?.last_success_at ? { lastSuccessAt: integration.last_success_at } : {};
+        const proof = integration?.last_success_at;
+        return proof && publicationTimestamp(proof, Date.now()) !== null ? { lastSuccessAt: proof } : {};
       })(),
       new Promise<{ lastSuccessAt?: string }>(resolve => { timer = setTimeout(() => { controller.abort(); resolve({}); }, 5_000); }),
     ]);

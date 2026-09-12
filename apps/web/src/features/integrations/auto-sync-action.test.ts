@@ -65,3 +65,16 @@ it("bounds optional publication proof and aborts it without converting skip to f
   expect(signal?.aborted).toBe(true);
   expect(mocks.revalidatePath).not.toHaveBeenCalled();
 });
+
+it.each(["2026-09-13T00:00:00Z", "invalid"])("omits unsafe publication proof %s without changing the skip result", async last_success_at => {
+  vi.useFakeTimers(); vi.setSystemTime(new Date("2026-09-12T00:00:00Z"));
+  mocks.synchronizeQontoForOwner.mockResolvedValue({ success: true, skipped: true });
+  mocks.getQontoIntegration.mockResolvedValue({ last_success_at });
+  expect(await autoSyncQontoAction()).toEqual({ status: "skipped" });
+});
+it("returns a newer owner publication in error metadata without claiming bank success", async () => {
+  vi.useFakeTimers(); vi.setSystemTime(new Date("2026-09-12T00:00:00Z"));
+  mocks.synchronizeQontoForOwner.mockResolvedValue({ success: false, code: "PROVIDER_AUTH_EXPIRED" });
+  mocks.getQontoIntegration.mockResolvedValue({ last_success_at: "2026-09-11T23:00:00Z" });
+  expect(await autoSyncQontoAction()).toEqual({ status: "error", code: "PROVIDER_AUTH_EXPIRED", lastSuccessAt: "2026-09-11T23:00:00Z" });
+});

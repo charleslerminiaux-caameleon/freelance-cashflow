@@ -12,8 +12,13 @@ export type AutoSyncActionResult = {
   lastSuccessAt?: string;
 };
 export const AUTO_SYNC_CHECK_INTERVAL_MS = 300_000;
-export const AUTO_SYNC_ERROR_COOLDOWN_MS = 900_000;
 
-export function canCheckAutomatically(visible: boolean, inFlight: boolean, now: number, retryAfter: number): boolean {
-  return visible && !inFlight && now >= retryAfter;
+export function canCheckAutomatically(visible: boolean, inFlight: boolean): boolean {
+  return visible && !inFlight;
+}
+
+/** Recovery evidence must describe an actual publication, never a future date. */
+export function publicationTimestamp(value: string | null | undefined, now: number): number | null {
+  const timestamp = Date.parse(value ?? "");
+  return Number.isFinite(timestamp) && timestamp <= now ? timestamp : null;
 }
