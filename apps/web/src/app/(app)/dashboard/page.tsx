@@ -45,6 +45,8 @@ export default async function DashboardPage({
       </header>
 
       <KpiStrip
+        timezone={model.timezone}
+        bankSyncInProgress={model.bankSyncInProgress}
         openingBalanceSource={model.openingBalanceSource}
         openingBalanceAsOf={model.openingBalanceAsOf}
         lastBankSyncSucceeded={model.lastBankSyncSucceeded}

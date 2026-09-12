@@ -72,11 +72,15 @@ nav a {
   padding: 0.7rem 0.75rem;
 }
 
+nav a[aria-current="page"],
 nav a:hover,
 nav a:focus-visible {
   background: #e8f2ef;
   color: var(--fc-petrol);
 }
+
+nav a[aria-current="page"] { font-weight: 700; }
+nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; }
 
 .sync-status {
   color: var(--fc-muted);
@@ -1167,6 +1171,7 @@ details.panel[open] > summary {
   border-radius: 1rem;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 11.5rem;
   padding: 1.35rem 1.2rem;
 }
@@ -1183,8 +1188,9 @@ details.panel[open] > summary {
   font-size: clamp(1.45rem, 2vw, 2rem);
   letter-spacing: -0.045em;
   line-height: 1;
-  margin: 1.5rem 0 auto;
-  white-space: nowrap;
+  margin: 1.1rem 0 auto;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .dashboard-kpi small {
@@ -1381,7 +1387,8 @@ details.panel[open] > summary {
   border-radius: 1rem;
   display: grid;
   gap: 0.75rem 1rem;
-  grid-template-columns: minmax(18rem, auto) minmax(0, 1fr);
+  container-type: inline-size;
+  grid-template-columns: minmax(0, 1fr);
   padding: 1rem 1.15rem;
 }
 
@@ -1395,8 +1402,9 @@ details.panel[open] > summary {
 
 .scenario-controls fieldset {
   border: 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
   gap: 0.55rem;
   margin: 0;
   padding: 0;
@@ -1407,6 +1415,7 @@ details.panel[open] > summary {
 }
 
 .scenario-controls .scenario-choices {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
 }
 
@@ -1422,6 +1431,8 @@ details.panel[open] > summary {
 }
 
 .scenario-choice > label {
+  width: 100%;
+  height: 100%;
   align-items: center;
   cursor: pointer;
   display: inline-flex;
@@ -1453,6 +1464,7 @@ details.panel[open] > summary {
 .scenario-choice input[type="radio"],
 .scenario-controls input[type="checkbox"] {
   accent-color: var(--fc-petrol);
+  flex-shrink: 0;
   height: 1rem;
   width: 1rem;
 }
@@ -1471,6 +1483,49 @@ details.panel[open] > summary {
   width: min(18rem, 75vw);
   z-index: 2;
 }
+
+/* The actual panel width controls the inclusion grid, including with a sidebar. */
+@container (max-width: 48rem) {
+  .scenario-controls fieldset:not(.scenario-choices) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 30rem) {
+  .scenario-controls .scenario-choices,
+  .scenario-controls fieldset:not(.scenario-choices) { grid-template-columns: minmax(0, 1fr); }
+}
+.scenario-choice:focus-within,
+.scenario-controls fieldset:not(.scenario-choices) label:focus-within {
+  outline: 2px solid var(--fc-petrol);
+  outline-offset: 2px;
+}
+.scenario-choice:last-child .scenario-tooltip { left: auto; right: 0; }
+
+.qonto-status { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.75rem; }
+.qonto-badge-anchor { display: inline-flex; position: relative; }
+.qonto-badge {
+  display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.75rem;
+  padding: 0.35rem 0.55rem; border: 1px solid #c9b780; border-radius: 0.55rem;
+  background: #fff8e8; color: #785717; cursor: pointer;
+}
+.qonto-badge img { display: block; }
+.qonto-badge-fresh { background: #e8f2ef; color: #17624f; border-color: #a5cbbb; }
+.qonto-badge-error { background: #fff0ed; color: #a13528; border-color: #dcafa7; }
+.qonto-badge-checking, .qonto-badge-syncing, .qonto-badge-unconfigured {
+  background: #f2f4f3; color: #53635e; border-color: var(--fc-border);
+}
+.qonto-badge:focus-visible, .qonto-error-link:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 3px; }
+.qonto-error-link { color: #a13528; font-size: 0.75rem; text-decoration: underline; }
+.qonto-tooltip {
+  position: absolute; left: 0; top: calc(100% + 0.3rem); z-index: 3;
+  width: min(17rem, calc(100vw - 6rem)); padding: 0.65rem 0.75rem;
+  background: var(--fc-ink); color: white; border-radius: 0.55rem;
+  font-size: 0.75rem; font-weight: 400; line-height: 1.5;
+}
+.qonto-tooltip::before, .scenario-tooltip::before {
+  content: ""; position: absolute; left: 0; right: 0; height: 0.5rem; top: -0.5rem;
+}
+.qonto-spinner { animation: qonto-spin 1s linear infinite; }
+@keyframes qonto-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .qonto-spinner { animation: none; } }
 
 .dashboard-actions {
   border-top: 4px solid var(--fc-coral);

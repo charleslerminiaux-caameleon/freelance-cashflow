@@ -5,7 +5,7 @@ vi.mock("@/lib/auth/require-owner",()=>({requireOwner:m.requireOwner}));
 vi.mock("@/lib/supabase/server",()=>({createClient:m.createClient}));
 vi.mock("@/features/integrations/repository",()=>({getQontoIntegration:m.getQontoIntegration}));
 vi.mock("@/features/integrations/qonto-config",()=>({isQontoConfigured:m.isQontoConfigured}));
-vi.mock("next/navigation",()=>({useRouter:()=>({refresh:vi.fn()})}));
+vi.mock("next/navigation",()=>({usePathname:()=>"/dashboard",useRouter:()=>({refresh:vi.fn()})}));
 vi.mock("@/features/integrations/auto-sync-action",()=>({autoSyncQontoAction:async()=>({status:"skipped"})}));
 import Layout from "./layout";
 beforeEach(()=>{vi.clearAllMocks();m.requireOwner.mockResolvedValue({userId:"owner"});m.createClient.mockResolvedValue({});m.isQontoConfigured.mockReturnValue(true);m.getQontoIntegration.mockResolvedValue({status:"connected",last_success_at:"2026-09-10T10:00:00Z"});});

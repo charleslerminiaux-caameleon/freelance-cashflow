@@ -1,17 +1,25 @@
 import { formatMoney, moneyCents } from "@fc/shared";
 
+import { QontoBadge } from "@/features/integrations/qonto-badge";
+
 import { scenarioCopy } from "./scenario-copy";
 import type { DashboardViewModel } from "./view-model";
 
 export function KpiStrip({
   kpis,
+  timezone = "Europe/Paris",
+  bankSyncInProgress = false,
   horizonDays,
   scenario,
   openingBalanceSource = "manual",
   openingBalanceAsOf,
   lastBankSyncSucceeded,
   excludedBankCurrencies = [],
-}: Pick<DashboardViewModel, "kpis" | "horizonDays" | "scenario"> & Partial<Pick<DashboardViewModel, "openingBalanceSource" | "openingBalanceAsOf" | "lastBankSyncSucceeded" | "excludedBankCurrencies">>) {
+}: Pick<DashboardViewModel, "kpis" | "horizonDays" | "scenario"> & Partial<Pick<DashboardViewModel, "openingBalanceSource" | "openingBalanceAsOf" | "lastBankSyncSucceeded" | "excludedBankCurrencies" | "timezone" | "bankSyncInProgress">>) {
+  // A manual balance date is a business day, not an instant in the owner timezone.
+  const manualDate = openingBalanceAsOf && openingBalanceSource === "manual"
+    ? new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric" })
+      .format(new Date(`${openingBalanceAsOf}T12:00:00Z`)) : null;
   const reservedCents = moneyCents(kpis.currentBalanceCents - kpis.availableBalanceCents);
 
   return (
@@ -19,7 +27,10 @@ export function KpiStrip({
       <article className="dashboard-kpi dashboard-kpi-balance">
         <span>Solde</span>
         <strong>{formatMoney(kpis.currentBalanceCents)}</strong>
-        <small>{openingBalanceSource === "qonto" ? "Solde Qonto" : "Solde manuel"}{openingBalanceAsOf ? ` au ${openingBalanceAsOf}` : " actuel"}</small>
+        {openingBalanceSource === "qonto" ? (
+          <QontoBadge lastSuccessAt={openingBalanceAsOf ?? null} timezone={timezone}
+            lastAttemptFailed={lastBankSyncSucceeded === false} syncInProgress={bankSyncInProgress} />
+        ) : <small>Solde manuel{manualDate ? ` au ${manualDate}` : " actuel"}</small>}
         {openingBalanceSource === "qonto" && lastBankSyncSucceeded === false && <small>Actualisation nécessaire · données conservées</small>}
         {excludedBankCurrencies.length > 0 && <small>Devises exclues : {excludedBankCurrencies.join(", ")}</small>}
       </article>

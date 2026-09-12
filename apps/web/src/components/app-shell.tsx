@@ -1,15 +1,6 @@
 import type { ReactNode } from "react";
 
-const navigation = [
-  ["Dashboard", "/dashboard"],
-  ["Opportunités", "/opportunities"],
-  ["Commandes", "/engagements"],
-  ["Facturation", "/invoices"],
-  ["Trésorerie", "/cashflow"],
-  ["Charges", "/expenses"],
-  ["Intégrations", "/integrations"],
-  ["Paramètres", "/settings"],
-] as const;
+import { NavigationLinks } from "./navigation-links";
 
 export function AppShell({ children, syncStatus = "Qonto : à configurer" }: { children: ReactNode; syncStatus?: string }) {
   return (
@@ -24,13 +15,7 @@ export function AppShell({ children, syncStatus = "Qonto : à configurer" }: { c
       </header>
 
       <nav className="mobile-navigation" aria-label="Navigation mobile">
-        <ul>
-          {navigation.map(([label, href]) => (
-            <li key={href}>
-              <a href={href}>{label}</a>
-            </li>
-          ))}
-        </ul>
+        <NavigationLinks />
       </nav>
 
       <aside className="sidebar" aria-label="Navigation principale">
@@ -39,13 +24,7 @@ export function AppShell({ children, syncStatus = "Qonto : à configurer" }: { c
           <span>Freelance Cashflow</span>
         </a>
         <nav aria-label="Sections de Freelance Cashflow">
-          <ul>
-            {navigation.map(([label, href]) => (
-              <li key={href}>
-                <a href={href}>{label}</a>
-              </li>
-            ))}
-          </ul>
+          <NavigationLinks />
         </nav>
         <div className="sync-status" aria-label="État de synchronisation">
           {syncStatus}

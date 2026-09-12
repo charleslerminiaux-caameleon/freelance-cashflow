@@ -86,6 +86,8 @@ export type DashboardTreasuryEvent = CashflowEvent & {
 };
 
 export type DashboardViewModel = {
+  timezone: string;
+  bankSyncInProgress: boolean;
   currency: string;
   today: LocalDate;
   horizonDays: DashboardHorizonDays;
@@ -236,9 +238,9 @@ export function selectOpeningBalance(data: Pick<DashboardSourceData, "settings" 
       .map(account => account.currency),
   )].sort();
   const accounts = currentAccounts.filter(account => account.currency === data.settings.currency);
-  const lastSyncSucceeded = integration?.last_success_at
-    ? integration.status === "connected"
-    : integration?.last_error_code ? false : null;
+  const lastSyncSucceeded = integration?.status === "syncing" ? null
+    : integration?.last_error_code || integration?.status === "error" ? false
+    : integration?.last_success_at ? integration.status === "connected" : null;
 
   if (!integration?.last_success_at || accounts.length === 0) {
     return {
@@ -367,6 +369,8 @@ export function buildDashboardViewModel(
 
   return {
     currency: data.settings.currency,
+    timezone: data.settings.timezone,
+    bankSyncInProgress: data.banking?.integration?.status === "syncing",
     today: options.today,
     horizonDays: options.horizonDays,
     scenario: options.scenario,

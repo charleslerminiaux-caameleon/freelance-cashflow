@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { localDate, moneyCents } from "@fc/shared";
 import { afterAll, beforeEach, expect, it, vi } from "vitest";
 
@@ -24,6 +24,8 @@ afterAll(() => vi.unstubAllGlobals());
 function model(): DashboardViewModel {
   return {
     currency: "EUR",
+    timezone: "Europe/Paris",
+    bankSyncInProgress: false,
     today: localDate("2026-09-05"),
     horizonDays: 90,
     scenario: "certain",
@@ -83,4 +85,20 @@ it("renders the real-data dashboard hierarchy and linkable controls", async () =
   expect(scenarioControls.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole("heading", { name: "À traiter" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "90 j" })).toHaveAttribute("aria-current", "page");
+});
+
+
+it("renders the published Qonto balance with owner timezone and another tab's sync progress", async () => {
+  const data = model();
+  data.openingBalanceSource = "qonto";
+  data.openingBalanceAsOf = "2026-09-01T00:30:00Z";
+  data.timezone = "America/Los_Angeles";
+  data.bankSyncInProgress = true;
+  getDashboardViewModel.mockResolvedValue(data);
+  const { default: DashboardPage } = await import("./page");
+  render(await DashboardPage({searchParams: Promise.resolve({})}));
+  const badge = screen.getByRole("button", {name: /Solde Qonto · Synchronisation en cours/});
+  fireEvent.focus(badge);
+  expect(screen.getByRole("tooltip")).toHaveTextContent("31/08/2026 à 17:30 (America/Los_Angeles)");
+  expect(screen.queryByText(/Actualisation nécessaire · données conservées/)).not.toBeInTheDocument();
 });

@@ -414,3 +414,13 @@ it("does not suppress manual-balance forecasts from a detached paid-month map", 
   data.paidMonthsByRecurringId = { [id]: ["2026-09", "2026-10", "2026-11"] };
   expect(bankModel(data).treasuryEvents).toEqual(withoutPayments.treasuryEvents);
 });
+
+
+it("distinguishes an in-progress server sync from a failed publication", () => {
+ const data = bankingData(); data.banking!.integration!.status = "syncing";
+ const model = bankModel(data);
+ expect(model.bankSyncInProgress).toBe(true);
+ expect(model.lastBankSyncSucceeded).toBeNull();
+ expect(model.timezone).toBe("Europe/Paris");
+ expect(model.openingBalanceSource).toBe("qonto");
+});

@@ -53,3 +53,8 @@ Ne réutilisez jamais `.isolated-tests/` pour cette validation. Utilisez l’ins
 Après cette configuration locale, démarrez l’application de validation et utilisez le bouton de synchronisation. Comparez vous-même les comptes, devises, soldes, dates et statuts avec Qonto ; relancez pour vérifier l’absence de doublons. Notez uniquement le résultat et les compteurs non sensibles. Le jalon complet attend également l’accès API Tiime et les validations réelles des deux fournisseurs.
 
 Pour déconnecter, retirez les deux variables puis redémarrez le serveur ; les données déjà publiées restent consultables. Pour renouveler ou révoquer une clé, utilisez les contrôles Qonto de gestion des clés, remplacez la valeur locale et redémarrez. Retirer une variable ne révoque pas la clé chez Qonto. En cas d’exposition, révoquez immédiatement et auditez les accès et l’historique Git.
+
+
+## Logo officiel local
+
+Le badge du dashboard utilise `/qonto-logo.svg`, copie inchangée du [logo vectoriel officiel Qonto](https://qonto.com/blog/assets/logo-7d4cecd23c516a73d28522b73227cb8bdc80cbbe1d7c83d9228a7e0ab84a0852.svg) présent sur le [kit presse Qonto](https://qonto.com/en/press/kit), vérifié le 12 septembre 2026. Le SVG d’origine (85 × 24) contient uniquement des tracés, sans script ni référence externe. Son rendu a été vérifié avant intégration. Il est servi localement sans requête vers Qonto au chargement du dashboard.

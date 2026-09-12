@@ -33,6 +33,8 @@ function model(): DashboardViewModel {
   };
   return {
     currency: "EUR",
+    timezone: "Europe/Paris",
+    bankSyncInProgress: false,
     today: localDate("2026-09-05"),
     horizonDays: 180,
     scenario: "probable",
