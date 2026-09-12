@@ -19,11 +19,14 @@ import { createBankingSyncStore } from "./sync-repository";
 
 export type QontoSyncResult =
   | Extract<SyncResult, { success: false }>
-  | (Extract<SyncResult, { success: true }> & { analysisResult: AnalysisResult });
+  | Extract<SyncResult, { skipped: true }>
+  | (Extract<SyncResult, { created: number }> & { analysisResult: AnalysisResult });
 
-export async function synchronizeQontoForOwner(ownerUserId: string): Promise<QontoSyncResult> {
+export async function synchronizeQontoForOwner(ownerUserId: string, options?: { mode?: "manual" | "automatic" }): Promise<QontoSyncResult> {
   const config = loadQontoConfig();
-  if (config === null) return { success: false, code: "PROVIDER_AUTH_EXPIRED" };
+  if (config === null) return options?.mode === "automatic"
+    ? { success: true, skipped: true }
+    : { success: false, code: "PROVIDER_AUTH_EXPIRED" };
 
   try {
     const client = createAdminClient();
@@ -33,9 +36,10 @@ export async function synchronizeQontoForOwner(ownerUserId: string): Promise<Qon
       runId: randomUUID(),
       timezone: settings.timezone,
       provider: createQontoProvider(config),
-      store: createBankingSyncStore(client),
+      store: options ? createBankingSyncStore(client, options) : createBankingSyncStore(client),
       log: logSyncEvent,
     });
+    if (bankingResult.success && bankingResult.skipped) return bankingResult;
     if (bankingResult.success) {
       let analysisResult: AnalysisResult;
       try {

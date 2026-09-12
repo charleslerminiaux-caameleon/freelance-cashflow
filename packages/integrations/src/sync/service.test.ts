@@ -643,3 +643,16 @@ it("never starts recovery or failure closure after an uncertain publication cros
   expect(store.publish).toHaveBeenCalledTimes(1);
   expect(store.failCalls).toEqual([]);
 });
+
+
+it("returns a neutral admission skip before any provider or publication effects", async () => {
+  const store = new FakeStore();
+  const automaticStore: BankingSyncStore = { ...store, acquire: async () => null, renew: vi.fn(), stageAccounts: vi.fn(), stageTransactions: vi.fn(), publish: vi.fn(), fail: vi.fn() };
+  const provider = { listAccounts: vi.fn(), listTransactions: vi.fn() };
+  const log = vi.fn();
+  expect(await synchronizeBanking({ ownerUserId, runId, timezone: "Europe/Paris", store: automaticStore, provider, log })).toEqual({ success: true, skipped: true });
+  expect(provider.listAccounts).not.toHaveBeenCalled();
+  expect(automaticStore.publish).not.toHaveBeenCalled();
+  expect(automaticStore.fail).not.toHaveBeenCalled();
+  expect(log).not.toHaveBeenCalledWith(expect.objectContaining({ event: "sync_succeeded" }));
+});

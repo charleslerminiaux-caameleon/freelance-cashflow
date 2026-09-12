@@ -93,6 +93,7 @@ export async function synchronizeBanking(input: SynchronizeBankingInput): Promis
     const window = await boundedDatabase(() =>
       input.store.acquire(input.ownerUserId, input.runId, signal),
     );
+    if (window === null) return { success: true, skipped: true };
     acquired = true;
     const accounts: NormalizedBankAccount[] = [];
     const accountIds = new Set<string>();

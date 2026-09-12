@@ -19,6 +19,7 @@ export async function syncQontoAction(
   let state: SyncActionState;
   try {
     const result = await synchronizeQontoForOwner(userId);
+    if (result.success && result.skipped) return { success: false, message: null };
     state = result.success
       ? {
           success: true,

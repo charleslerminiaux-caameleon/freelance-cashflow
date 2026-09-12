@@ -159,3 +159,18 @@ it.each(["acknowledged", "uncertain"])("runs analysis only after %s publication 
   expect(mocks.analyzeRecurringForOwner).toHaveBeenCalledTimes(kind === "acknowledged" ? 1 : 0);
   expect(fail).not.toHaveBeenCalled();
 });
+
+
+it("does not acquire an unconfigured automatic integration", async () => {
+  mocks.loadQontoConfig.mockReturnValue(null);
+  expect(await synchronizeQontoForOwner(ownerUserId, { mode: "automatic" })).toEqual({ success: true, skipped: true });
+  expect(mocks.createAdminClient).not.toHaveBeenCalled();
+});
+it("passes automatic admission skip without launching analysis", async () => {
+  mocks.loadQontoConfig.mockReturnValue({ login: "synthetic", secretKey: "synthetic" });
+  mocks.getOwnerSettings.mockResolvedValue({ timezone: "Europe/Paris" });
+  mocks.synchronizeBanking.mockResolvedValue({ success: true, skipped: true });
+  expect(await synchronizeQontoForOwner(ownerUserId, { mode: "automatic" })).toEqual({ success: true, skipped: true });
+  expect(mocks.createBankingSyncStore).toHaveBeenCalledWith(expect.anything(), { mode: "automatic" });
+  expect(mocks.analyzeRecurringForOwner).not.toHaveBeenCalled();
+});

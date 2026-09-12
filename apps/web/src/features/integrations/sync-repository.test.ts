@@ -268,3 +268,11 @@ it.each(["acquire", "renew", "stageAccounts", "stageTransactions", "publish", "f
     expect(error).toEqual(new SyncStoreError("DATABASE_ERROR", true));
   },
 );
+
+
+it("accepts a NULL automatic admission without weakening the manual contract", async () => {
+  const { client, rpc } = clientWithRpc({ data: null, error: null });
+  await expect(createBankingSyncStore(client, { mode: "automatic" }).acquire(ownerUserId, runId)).resolves.toBeNull();
+  expect(rpc).toHaveBeenCalledWith("acquire_automatic_banking_sync", { p_owner_user_id: ownerUserId, p_run_id: runId });
+  await expect(createBankingSyncStore(client).acquire(ownerUserId, runId)).rejects.toEqual(new SyncStoreError("DATABASE_ERROR", false));
+});

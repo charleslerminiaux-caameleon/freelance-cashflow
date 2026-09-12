@@ -3,7 +3,7 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-export const databaseProbes = ['scripts/test-banking-concurrency.mjs', 'scripts/test-recurring-concurrency.mjs'];
+export const databaseProbes = ['scripts/test-banking-concurrency.mjs', 'scripts/test-automatic-banking-concurrency.mjs', 'scripts/test-recurring-concurrency.mjs'];
 export const browserSpecs = ['manual-cashflow.spec.ts', 'qonto-sync.spec.ts', 'recurring-detection.spec.ts'];
 export const project = 'jalon-2-qonto-tests';
 export const root = resolve(fileURLToPath(new URL('..', import.meta.url)));

@@ -14,7 +14,8 @@ export type SyncLogEvent = {
 };
 
 export type SyncResult =
-  | { success: true; created: number; updated: number }
+  | { success: true; skipped: true }
+  | { success: true; skipped?: false; created: number; updated: number }
   | { success: false; code: IntegrationErrorCode };
 
 export interface BankingSyncStore {
@@ -28,7 +29,7 @@ export interface BankingSyncStore {
     initialCreatedFromInstant: string;
     updatedFrom: string;
     updatedTo: string;
-  }>;
+  } | null>;
   renew(ownerUserId: string, runId: string, signal?: AbortSignal): Promise<void>;
   stageAccounts(
     ownerUserId: string,
