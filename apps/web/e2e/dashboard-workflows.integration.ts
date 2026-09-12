@@ -133,23 +133,34 @@ test('history association preserves fields and excludes paid month using observe
   const id = randomUUID();
   await checkWrite(user.from('recurring_cashflows').insert({ id, owner_user_id: owner, direction: 'outflow', cashflow_kind: 'expense', label: 'Synthetic association', amount_cents: 1800, frequency: 'monthly', day_of_month: Number(today.slice(-2)), start_date: today, certainty: 'certain', probability_basis_points: 10000 }));
   const original = await rows('recurring_cashflows');
-  await confirmRecurringFromTransaction(user, owner, { ...input(form), existingExpenseId: id });
-  expect(await rows('recurring_cashflows')).toEqual(original);
-  const events = (await projection()).events;
-  expect(events.length).toBeGreaterThan(0);
-  expect(events.some(event => event.plannedDate.slice(0, 7) === today.slice(0, 7))).toBe(false);
-  revision = 1;
-  expect((await sync()).success).toBe(true);
-  expect((await projection()).events.some(event => event.plannedDate === today)).toBe(true);
+  const decisionsBefore = await rows('recurring_suggestions');
+  const evidenceBefore = await rows('recurring_suggestion_evidence');
   const password = randomBytes(24).toString('base64url');
   const created = await admin.auth.admin.createUser({ email: 'foreign-history@example.test', password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error('Isolated foreign owner unavailable');
   foreignOwner = created.data.user.id;
   const foreign = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, options);
   if ((await foreign.auth.signInWithPassword({ email: 'foreign-history@example.test', password })).error) throw new Error('Isolated foreign login failed');
-  const denied = await foreign.rpc('confirm_recurring_from_transaction', { p_transaction_id: form.transactionId, p_source_publication: form.sourcePublication, p_command: input(form).command });
-  expect(denied.error).not.toBeNull();
+  const request = { p_transaction_id: form.transactionId, p_source_publication: form.sourcePublication, p_command: input(form).command, p_existing_expense_id: id };
+  // The source is still completed/current and no series has been confirmed yet.
+  const denied = await foreign.rpc('confirm_recurring_from_transaction', request);
+  expect(denied.error).toMatchObject({ code: '42501', message: 'DETECTION_INVALID' });
+  expect(denied.data).toBeNull();
   expect(await rows('recurring_cashflows')).toEqual(original);
+  expect(await rows('recurring_suggestions')).toEqual(decisionsBefore);
+  expect(await rows('recurring_suggestion_evidence')).toEqual(evidenceBefore);
+  // Exact same arguments succeed for the owner, excluding stale/invalid rejection.
+  const allowed = await user.rpc('confirm_recurring_from_transaction', request);
+  expect(allowed.error).toBeNull();
+  expect(allowed.data).toBe(id);
+  expect(await rows('recurring_cashflows')).toEqual(original);
+  expect(await rows('recurring_suggestions')).toMatchObject([{ state: 'confirmed', recurring_cashflow_id: id }]);
+  const events = (await projection()).events;
+  expect(events.length).toBeGreaterThan(0);
+  expect(events.some(event => event.plannedDate.slice(0, 7) === today.slice(0, 7))).toBe(false);
+  revision = 1;
+  expect((await sync()).success).toBe(true);
+  expect((await projection()).events.some(event => event.plannedDate === today)).toBe(true);
 });
 
 test('automatic admission counts zero provider requests for no import/fresh/cooldown and retains bank success when analysis fails', async () => {
