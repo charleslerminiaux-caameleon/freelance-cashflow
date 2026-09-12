@@ -2,9 +2,12 @@
 
 import { useActionState, useId, useState } from "react";
 
+import { CategoryPicker } from "./category-picker";
+
 export type ExpenseActionState = {
   message: string | null;
   success: boolean;
+  category?: { id: string; name: string };
 };
 
 export type ExpenseFormAction = (
@@ -44,6 +47,7 @@ export type PlannedExpenseFormValue = {
 type ExpenseFormProps = {
   action: ExpenseFormAction;
   categories: CategoryOption[];
+  createCategoryAction?: ExpenseFormAction;
   today: string;
 } & (
   | {
@@ -107,18 +111,27 @@ export function ExpenseForm(props: ExpenseFormProps) {
         </div>
         <div>
           <label htmlFor={`${fieldId}-category`}>Catégorie</label>
-          <select
-            id={`${fieldId}-category`}
-            name="categoryId"
-            defaultValue={props.value?.categoryId ?? ""}
-          >
-            <option value="">Sans catégorie</option>
-            {props.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          {props.createCategoryAction ? (
+            <CategoryPicker
+              categories={props.categories}
+              createAction={props.createCategoryAction}
+              defaultValue={props.value?.categoryId}
+              id={`${fieldId}-category`}
+            />
+          ) : (
+            <select
+              id={`${fieldId}-category`}
+              name="categoryId"
+              defaultValue={props.value?.categoryId ?? ""}
+            >
+              <option value="">Sans catégorie</option>
+              {props.categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div>
           <label htmlFor={`${fieldId}-amount`}>Montant</label>

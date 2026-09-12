@@ -17,6 +17,7 @@ it("collects a categorized recurring remuneration without hidden tax calculation
     <ExpenseForm
       action={idleAction}
       categories={categories}
+      createCategoryAction={idleAction}
       mode="recurring"
       today="2026-09-07"
     />,
@@ -24,6 +25,7 @@ it("collects a categorized recurring remuneration without hidden tax calculation
 
   expect(screen.getByLabelText("Type de sortie")).toHaveValue("expense");
   expect(screen.getByLabelText("Catégorie")).toHaveTextContent("Logiciels");
+  expect(screen.getByRole("button", { name: "Créer une catégorie" })).toBeInTheDocument();
   expect(screen.getByLabelText("Fréquence")).toHaveValue("monthly");
   expect(screen.getByLabelText("Début")).toHaveValue("2026-09-07");
   expect(screen.getByRole("button", { name: "Créer la sortie récurrente" })).toBeInTheDocument();

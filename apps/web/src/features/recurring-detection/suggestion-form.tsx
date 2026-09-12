@@ -2,6 +2,8 @@
 
 import { useActionState, useId, useState } from "react";
 
+import { CategoryPicker } from "../expenses/category-picker";
+import type { ExpenseFormAction } from "../expenses/expense-form";
 import type { SuggestionActionState } from "./actions";
 
 export type SuggestionFormAction = (
@@ -36,11 +38,13 @@ function expenseOption(option: { label: string; amountCents: number }): string {
 export function SuggestionForm({
   action,
   categories,
+  createCategoryAction,
   existingExpenses,
   suggestion,
 }: {
   action: SuggestionFormAction;
   categories: CategoryOption[];
+  createCategoryAction?: ExpenseFormAction;
   existingExpenses: ExistingExpenseOption[];
   suggestion: SuggestionFormValue;
 }) {
@@ -96,14 +100,22 @@ export function SuggestionForm({
         </div>
         <div>
           <label htmlFor={`${fieldId}-category`}>Catégorie{suffix}</label>
-          <select id={`${fieldId}-category`} name="categoryId" defaultValue="">
-            <option value="">Sans catégorie</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          {createCategoryAction ? (
+            <CategoryPicker
+              categories={categories}
+              createAction={createCategoryAction}
+              id={`${fieldId}-category`}
+            />
+          ) : (
+            <select id={`${fieldId}-category`} name="categoryId" defaultValue="">
+              <option value="">Sans catégorie</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div>
           <label htmlFor={`${fieldId}-certainty`}>Niveau de certitude{suffix}</label>

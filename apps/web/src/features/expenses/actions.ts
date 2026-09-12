@@ -144,9 +144,13 @@ export async function createCategoryAction(
   try {
     const command = categoryFormSchema.parse({ name: formData.get("name") });
     const client = await createClient();
-    await createCategory(client, userId, command);
+    const category = await createCategory(client, userId, command);
     revalidatePath("/expenses");
-    return { message: "Catégorie ajoutée.", success: true };
+    return {
+      message: "Catégorie ajoutée.",
+      success: true,
+      category: { id: category.id, name: category.name },
+    };
   } catch {
     return { message: "Impossible d’ajouter cette catégorie.", success: false };
   }

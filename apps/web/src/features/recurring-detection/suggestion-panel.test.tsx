@@ -58,6 +58,7 @@ function props(overrides: Partial<SuggestionPanelProps> = {}): SuggestionPanelPr
     lastAnalyzedAt: "2026-09-11T10:00:00Z",
     analysisFailed: false,
     confirmAction: idleAction,
+    createCategoryAction: idleAction,
     dismissAction: idleAction,
     reexamineAction: idleAction,
     analyzeAction: idleAction,
@@ -86,6 +87,7 @@ it("shows estimate, evidence details, and committed uncategorized defaults", () 
   fireEvent.click(screen.getByText("2 paiements observés"));
   expect(screen.getByText(/Cloud juillet/)).toBeInTheDocument();
   expect(screen.getByLabelText("Catégorie pour Cloud synthétique")).toHaveValue("");
+  expect(screen.getByRole("button", { name: "Créer une catégorie" })).toBeInTheDocument();
   expect(screen.getByLabelText("Niveau de certitude pour Cloud synthétique")).toHaveValue(
     "committed",
   );

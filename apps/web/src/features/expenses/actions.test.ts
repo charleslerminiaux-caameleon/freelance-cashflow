@@ -172,13 +172,38 @@ it("sanitizes unexpected persistence failures", async () => {
 });
 
 it("creates a validated owner category", async () => {
+  createCategory.mockResolvedValueOnce({
+    id: expenseId,
+    name: "Logiciels",
+    owner_user_id: "owner-1",
+    type: "outflow",
+    system_category: false,
+    created_at: "2026-09-12T10:00:00Z",
+  });
   const formData = new FormData();
   formData.set("name", "Logiciels");
 
   const result = await createCategoryAction(initialState, formData);
 
   expect(createCategory).toHaveBeenCalledWith({}, "owner-1", { name: "Logiciels" });
-  expect(result).toEqual({ message: "Catégorie ajoutée.", success: true });
+  expect(result).toEqual({
+    message: "Catégorie ajoutée.",
+    success: true,
+    category: { id: expenseId, name: "Logiciels" },
+  });
+});
+
+it("authenticates before reading category form data", async () => {
+  requireOwner.mockRejectedValue(new Error("redirect"));
+  const formData = new FormData();
+  formData.set("name", "Logiciels");
+  const get = vi.spyOn(formData, "get");
+
+  await expect(createCategoryAction(initialState, formData)).rejects.toThrow("redirect");
+
+  expect(get).not.toHaveBeenCalled();
+  expect(createClient).not.toHaveBeenCalled();
+  expect(createCategory).not.toHaveBeenCalled();
 });
 
 it("validates and renames an owner category", async () => {

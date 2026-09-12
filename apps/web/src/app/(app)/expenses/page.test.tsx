@@ -109,6 +109,14 @@ it("renders persisted recurring and planned outflows with owner-scoped CRUD cont
   expect(listExpenseWorkspace).toHaveBeenCalledWith({ kind: "SSR client" }, ownerUserId);
   expect(getOwnerBusinessDate).toHaveBeenCalledWith({ kind: "SSR client" }, ownerUserId);
   expect(screen.getByRole("heading", { level: 1, name: "Charges et réserves" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Gérer les catégories" })).toHaveAttribute(
+    "href",
+    "#expense-categories",
+  );
+  expect(screen.getByRole("region", { name: "Catégories de sorties" })).toHaveAttribute(
+    "id",
+    "expense-categories",
+  );
   expect(screen.getByRole("heading", { name: "Hébergement" })).toBeInTheDocument();
   expect(screen.getByText("Détectée depuis Qonto")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Réserve Urssaf" })).toBeInTheDocument();
@@ -119,6 +127,7 @@ it("renders persisted recurring and planned outflows with owner-scoped CRUD cont
   expect(screen.getByRole("button", { name: "Renommer la catégorie Logiciels" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Renommer la catégorie Fiscalité" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Supprimer la catégorie Fiscalité" })).toBeNull();
+  expect(screen.getAllByRole("button", { name: "Créer une catégorie" })).toHaveLength(4);
   expect(screen.getByText(/ne constituent pas un calcul fiscal ou social officiel/i)).toBeInTheDocument();
 });
 

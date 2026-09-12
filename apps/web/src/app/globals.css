@@ -960,6 +960,64 @@ details.panel[open] > summary {
   margin-top: 1.5rem;
 }
 
+.category-management-link {
+  align-self: center;
+  color: var(--fc-petrol);
+  font-weight: 700;
+}
+
+.category-picker {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.commercial-form .category-create-trigger,
+.category-create-trigger {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fc-petrol);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.category-create-actions .button-secondary {
+  border: 1px solid var(--fc-border);
+  background: var(--fc-surface);
+  color: var(--fc-petrol);
+}
+
+.category-create-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(15 23 42 / 45%);
+}
+
+.category-create-dialog {
+  width: min(100%, 30rem);
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgb(15 23 42 / 25%);
+}
+
+.category-create-dialog h2 {
+  margin-top: 0;
+}
+
+.category-create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
 .category-layout {
   align-items: start;
   display: grid;

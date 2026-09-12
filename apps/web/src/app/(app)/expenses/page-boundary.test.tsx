@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 
 import type { SuggestionPanelProps } from "@/features/recurring-detection/suggestion-panel";
+import { createCategoryAction } from "@/features/expenses/actions";
 
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
@@ -86,6 +87,7 @@ it("passes display-only evidence and duplicate warnings to the client panel", as
 
   expect(mocks.suggestionPanel).toHaveBeenCalledOnce();
   const panelProps = mocks.suggestionPanel.mock.calls[0]![0];
+  expect(panelProps.createCategoryAction).toBe(createCategoryAction);
   const review = panelProps.suggestions[0]!;
   expect(review.evidence).toEqual([
     {

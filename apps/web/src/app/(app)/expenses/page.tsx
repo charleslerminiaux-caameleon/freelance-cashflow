@@ -145,6 +145,9 @@ export default async function ExpensesPage() {
         <span className="count-badge">
           {totalExpenses} sortie{totalExpenses === 1 ? "" : "s"}
         </span>
+        <a className="category-management-link" href="#expense-categories">
+          Gérer les catégories
+        </a>
       </header>
 
       <aside className="planning-notice" aria-label="Limites des réserves fiscales et sociales">
@@ -164,6 +167,7 @@ export default async function ExpensesPage() {
         analysisFailed={suggestionWorkspace.analysisError !== null}
         loadError={suggestionResult.loadError}
         confirmAction={confirmSuggestionAction}
+        createCategoryAction={createCategoryAction}
         dismissAction={dismissSuggestionAction}
         reexamineAction={reexamineSuggestionAction}
         analyzeAction={analyzeRecurringAction}
@@ -175,6 +179,7 @@ export default async function ExpensesPage() {
           <ExpenseForm
             action={createExpenseAction}
             categories={categoryOptions}
+            createCategoryAction={createCategoryAction}
             mode="recurring"
             today={today}
           />
@@ -184,6 +189,7 @@ export default async function ExpensesPage() {
           <ExpenseForm
             action={createExpenseAction}
             categories={categoryOptions}
+            createCategoryAction={createCategoryAction}
             mode="planned"
             today={today}
           />
@@ -262,6 +268,7 @@ export default async function ExpensesPage() {
                         <ExpenseForm
                           action={updateExpenseAction}
                           categories={categoryOptions}
+                          createCategoryAction={createCategoryAction}
                           linkedFromQonto={linkedExpenseIds.has(expense.id)}
                           mode="recurring"
                           today={today}
@@ -346,6 +353,7 @@ export default async function ExpensesPage() {
                         <ExpenseForm
                           action={updateExpenseAction}
                           categories={categoryOptions}
+                          createCategoryAction={createCategoryAction}
                           mode="planned"
                           today={today}
                           value={{
@@ -378,7 +386,11 @@ export default async function ExpensesPage() {
         </div>
       )}
 
-      <section className="panel category-panel" aria-labelledby="expense-categories-title">
+      <section
+        className="panel category-panel"
+        id="expense-categories"
+        aria-labelledby="expense-categories-title"
+      >
         <div className="section-heading">
           <div>
             <p className="eyebrow">Classement</p>

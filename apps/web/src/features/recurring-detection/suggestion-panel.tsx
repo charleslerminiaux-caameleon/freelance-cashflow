@@ -2,6 +2,8 @@
 
 import { formatMoney, moneyCents } from "@fc/shared";
 
+import type { ExpenseFormAction } from "../expenses/expense-form";
+
 import {
   AnalyzeRecurringForm,
   SuggestionForm,
@@ -38,6 +40,7 @@ export type SuggestionPanelProps = {
   analysisFailed: boolean;
   loadError?: boolean;
   confirmAction: SuggestionFormAction;
+  createCategoryAction: ExpenseFormAction;
   dismissAction: SuggestionFormAction;
   reexamineAction: SuggestionFormAction;
   analyzeAction: SuggestionFormAction;
@@ -127,6 +130,7 @@ export function SuggestionPanel(props: SuggestionPanelProps) {
               <SuggestionForm
                 action={props.confirmAction}
                 categories={props.categories}
+                createCategoryAction={props.createCategoryAction}
                 existingExpenses={props.existingExpenses}
                 suggestion={reviewItem(suggestion)}
               />
