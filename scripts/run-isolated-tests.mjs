@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 export const databaseProbes = ['scripts/test-banking-concurrency.mjs', 'scripts/test-automatic-banking-concurrency.mjs', 'scripts/test-recurring-concurrency.mjs'];
-export const browserSpecs = ['manual-cashflow.spec.ts', 'qonto-sync.spec.ts', 'recurring-detection.spec.ts'];
+export const browserSpecs = ['manual-cashflow.spec.ts', 'qonto-sync.spec.ts', 'recurring-detection.spec.ts', 'dashboard-workflows.spec.ts'];
 export const project = 'jalon-2-qonto-tests';
 export const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 export const stack = join(root, '.isolated-tests');
@@ -89,7 +89,7 @@ export async function main(mode = 'all') {
   if (mode === 'integration' || mode === 'all') run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'vitest', 'run', '--config', 'e2e/integration.config.ts'], { env, show: true });
   if (mode === 'e2e' || mode === 'all') {
     for (const file of browserSpecs) {
-      run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'playwright', 'test', file], { env: { ...env, E2E_QONTO_SCENARIO: file === 'recurring-detection.spec.ts' ? 'recurring' : '', E2E_RECURRING_ANCHOR: new Date().toISOString() }, show: true });
+      run('corepack', ['pnpm', '--filter', '@fc/web', 'exec', 'playwright', 'test', file], { env: { ...env, E2E_QONTO_SCENARIO: file === 'recurring-detection.spec.ts' ? 'recurring' : file === 'dashboard-workflows.spec.ts' ? 'dashboard' : '', E2E_RECURRING_ANCHOR: new Date().toISOString() }, show: true });
     }
   }
 }

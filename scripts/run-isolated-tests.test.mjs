@@ -48,3 +48,9 @@ test('all acceptance entry points include recurring concurrency and browser life
   assert.ok(harness.databaseProbes?.includes('scripts/test-recurring-concurrency.mjs'), 'recurring contention must run in db/all');
   assert.ok(harness.browserSpecs?.includes('recurring-detection.spec.ts'), 'recurring browser lifecycle must run in e2e/all');
 });
+
+test('dashboard workflows run through both isolated acceptance suites', async () => {
+  const harness = await import('./run-isolated-tests.mjs');
+  assert.ok(harness.browserSpecs.includes('dashboard-workflows.spec.ts'));
+  assert.ok((await readFile(new URL('../apps/web/e2e/integration.config.ts', import.meta.url), 'utf8')).includes('e2e/dashboard-workflows.integration.ts'));
+});

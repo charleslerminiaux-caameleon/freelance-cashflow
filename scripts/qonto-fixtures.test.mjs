@@ -31,3 +31,15 @@ for (const instant of ['2026-12-31T23:59:59Z', '2027-01-01T00:00:01Z', '2026-03-
     assert.equal(transaction.updated_at, now.toISOString());
   });
 }
+
+test('history workflow begins with one debit and exposes a second same-series transaction only on request', () => {
+  const calendar = createRecurringCalendar();
+  const request = new URL('https://thirdparty.qonto.com/v2/transactions?bank_account_id=synthetic-recurring-account&page=1');
+  const first = fixtureResponse(request, { scenario: 'dashboard', calendar });
+  assert.equal(first.body.transactions.length, 1);
+  assert.equal(first.body.transactions[0].status, 'completed');
+  const next = fixtureResponse(request, { scenario: 'dashboard', calendar, revision: 2 });
+  assert.equal(next.body.transactions.length, 2);
+  assert.notEqual(next.body.transactions[0].transaction_id, next.body.transactions[1].transaction_id);
+  assert.equal(next.body.transactions[0].label, next.body.transactions[1].label);
+});

@@ -4,6 +4,7 @@ export const fakeIban = 'FR00' + '0'.repeat(19) + '1234';
 const instant = '2026-09-10T09:00:00.000Z';
 const meta = (page, count) => ({ current_page: page, next_page: page === 1 ? 2 : null, prev_page: page === 1 ? null : 1, total_pages: 2, total_count: count, per_page: 100 });
 export function fixtureResponse(url, { revision = 0, failure = '', scenario = '', calendar } = {}) {
+  if (scenario === 'dashboard' && !failure) return recurringResponse(url, revision, calendar, true);
   if (scenario === 'recurring') return recurringResponse(url, revision, calendar);
   const page = Number(url.searchParams.get('page'));
   if (failure === 'auth') return { status: 401, body: { error: canaries.join(' ') + fakeIban } };
@@ -30,7 +31,7 @@ export function createRecurringCalendar(now = new Date()) {
 }
 
 // IDs are stable across revisions, allowing the real publication update path.
-function recurringResponse(url, revision, calendar) {
+function recurringResponse(url, revision, calendar, historyOnly = false) {
   if (!calendar) throw new Error('Recurring fixture requires a shared owner calendar');
   const { today, offsetHours } = calendar;
   const [year, month] = today.split('-').map(Number);
@@ -50,6 +51,7 @@ function recurringResponse(url, revision, calendar) {
       ...[-2, -1, 0].map(offset => transaction(`synthetic-month-${offset}`, 'Synthetic cloud subscription', atMonth(offset), 'debit', revision === 1 && offset === 0 ? 'reversed' : 'completed')),
     ];
   } else throw new Error('Unexpected recurring fixture request');
+  if (historyOnly && key === 'transactions') items = items.filter(row => row.transaction_id === 'synthetic-month-0' || (revision >= 2 && row.transaction_id === 'synthetic-month--1'));
   const page = Number(url.searchParams.get('page'));
   const total = Math.ceil(items.length / 100);
   if (!Number.isInteger(page) || page < 1 || page > total) throw new Error('Unexpected recurring fixture page');

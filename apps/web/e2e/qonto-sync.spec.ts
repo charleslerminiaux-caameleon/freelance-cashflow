@@ -23,7 +23,7 @@ test('owner synchronizes simulated Qonto and keeps published balances after a fa
     await expect(page.getByRole('table', { name: 'Historique bancaire' }).locator('tbody tr')).toHaveCount(4);
     await page.goto('/dashboard');
     await expect(page.getByLabel('Indicateurs de trésorerie')).toContainText(/5.?000,00/);
-    await expect(page.getByLabel('Indicateurs de trésorerie')).toContainText('Qonto');
+    await expect(page.getByLabel('Indicateurs de trésorerie').getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 24 h', exact: true })).toBeVisible();
     await page.goto('/integrations');
   }
   await page.getByRole('button', { name: 'Synchroniser Qonto' }).click();

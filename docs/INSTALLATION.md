@@ -6,7 +6,14 @@ L’application utilisée par le propriétaire tourne localement et se connecte 
 
 Installez Node.js 24, Corepack/pnpm 10 et les dépendances avec `corepack pnpm install --frozen-lockfile`. Dans le fichier ignoré `apps/web/.env.local`, le propriétaire renseigne l’URL du projet hébergé, sa clé publique et sa clé service-role dans les trois variables Supabase de `.env.example`. La clé service-role et les identifiants Qonto restent exclusivement serveur ; ne les copiez ni dans Git, ni dans un rapport, ni dans les tests. Lancez ensuite `corepack pnpm dev` avec cette configuration. La [procédure Qonto](QONTO.md) décrit la configuration du fournisseur.
 
-Les douze migrations précédentes et les migrations `202609110001_recurring_detection.sql` et `202609110002_recurring_detection_functions.sql` sont appliquées sur cette installation hébergée. Ces deux dernières ont été explicitement autorisées et appliquées le 12 septembre 2026 ; leur présence a été vérifiée et aucune migration ne restait en attente. La procédure ci-dessous reste celle à suivre pour une autre installation ou une évolution ultérieure, avec une autorisation portant sur les fichiers concernés.
+Les douze migrations précédentes et les migrations `202609110001_recurring_detection.sql` et `202609110002_recurring_detection_functions.sql` sont appliquées sur cette installation hébergée. Ces deux dernières ont été explicitement autorisées et appliquées le 12 septembre 2026 ; leur présence a été vérifiée à cette étape. La procédure ci-dessous reste celle à suivre pour une autre installation ou une évolution ultérieure, avec une autorisation portant sur les fichiers concernés.
+
+Les évolutions dashboard/historique préparent désormais deux nouvelles migrations, **en attente d’autorisation explicite et non appliquées au projet hébergé** :
+
+- `202609120001_history_recurring_decisions.sql` : provenance et confirmation propriétaire depuis l’historique ;
+- `202609120002_automatic_qonto_admission.sql` : admission automatique atomique et temporisation serveur.
+
+Les accords sur les quatorze migrations précédentes ne valent pas autorisation pour ces fichiers. Les tests et remises à zéro concernent seulement la stack jetable dédiée.
 
 Après accord distinct pour préparer cette évolution sur le projet identifié, authentifiez la CLI et vérifiez le lien du projet ; ne passez aucun mot de passe dans une commande ou un rapport :
 
@@ -132,3 +139,5 @@ Cette dernière commande est destructive pour la stack du repository courant. V�
 Pour les tests, utilisez `corepack pnpm test:isolated` : ce harness dérive une configuration jetable dans `.isolated-tests/`, sans toucher la configuration source ni copier `.env.local`. Il utilise le projet `jalon-2-qonto-tests`, API 56321, PostgreSQL 56322 et le serveur web 3200, sans réutiliser un serveur existant. `corepack pnpm test:client-boundary` construit avec de faux canaris et inspecte les fichiers clients. Docker doit être démarré et Chromium installé.
 
 Pour Qonto réel, utilisez l’installation Next.js locale reliée au Supabase hébergé décrite en tête de ce guide, puis renseignez vous-même son fichier ignoré `apps/web/.env.local` : [procédure Qonto](QONTO.md). Ne lancez jamais les tests contre cette installation. La préparation Tiime et la demande d’accès sont détaillées dans [TIIME.md](TIIME.md). Aucun accès fournisseur réel n’est requis pour les tests.
+
+La recette dashboard/historique vérifie aussi les confirmations simultanées depuis deux opérations, le mois déjà payé, les corrections et suppressions, la recréation/association explicite, les contrôles propriétaire, les compteurs HTTP d’actualisation automatique et la conservation du solde après échec d’analyse. Chromium couvre création de catégorie avec conservation du brouillon, actualisation réelle RSC, paramètres de scénario, navigation active, tooltips clavier/toucher et absence de débordement aux largeurs 1440/1024/390. Les captures explicites sont limitées à ce propriétaire synthétique, dans `/private/tmp/libra-dashboard-*.png` ; vidéos, traces et captures automatiques restent désactivées. N’utilisez jamais de données financières réelles pour ces captures.
