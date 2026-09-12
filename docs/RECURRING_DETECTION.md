@@ -34,12 +34,12 @@ Si le paiement passe à `reversed`, le mois redevient prévisionnel à la procha
 
 ## Installation hébergée et recette
 
-L’installation choisie exécute Next.js localement avec **Supabase hébergé**. Les deux migrations de cette fonctionnalité sont **en attente d’une autorisation distincte** :
+L’installation choisie exécute Next.js localement avec **Supabase hébergé**. Les deux migrations de cette fonctionnalité ont été **explicitement autorisées et appliquées le 12 septembre 2026** sur cette installation :
 
 - `202609110001_recurring_detection.sql` ;
 - `202609110002_recurring_detection_functions.sql`.
 
-L’accord antérieur sur les douze migrations précédentes ne couvre pas ces fichiers. Aucune migration hébergée n’est appliquée par les tests. Suivez la procédure de préparation et de revue dans [INSTALLATION.md](INSTALLATION.md), puis obtenez l’autorisation portant sur ces deux migrations avant leur application. N’utilisez jamais de remise à zéro sur le projet hébergé.
+Leur application a fait l’objet d’un accord distinct de celui des douze migrations précédentes. Aucune migration hébergée n’est appliquée par les tests. Pour une autre installation, suivez la procédure de préparation et de revue dans [INSTALLATION.md](INSTALLATION.md), puis obtenez l’autorisation portant sur les migrations avant leur application. N’utilisez jamais de remise à zéro sur le projet hébergé.
 
 ```bash
 corepack pnpm test:isolated

@@ -6,7 +6,7 @@ L’application utilisée par le propriétaire tourne localement et se connecte 
 
 Installez Node.js 24, Corepack/pnpm 10 et les dépendances avec `corepack pnpm install --frozen-lockfile`. Dans le fichier ignoré `apps/web/.env.local`, le propriétaire renseigne l’URL du projet hébergé, sa clé publique et sa clé service-role dans les trois variables Supabase de `.env.example`. La clé service-role et les identifiants Qonto restent exclusivement serveur ; ne les copiez ni dans Git, ni dans un rapport, ni dans les tests. Lancez ensuite `corepack pnpm dev` avec cette configuration. La [procédure Qonto](QONTO.md) décrit la configuration du fournisseur.
 
-Les douze migrations précédentes ont été appliquées au projet hébergé. Les migrations `202609110001_recurring_detection.sql` et `202609110002_recurring_detection_functions.sql` n’y sont **pas encore autorisées**. L’autorisation antérieure ne s’étend pas à ces deux nouvelles migrations. La fonctionnalité récurrences nécessite leur application avant sa validation sur cette installation.
+Les douze migrations précédentes et les migrations `202609110001_recurring_detection.sql` et `202609110002_recurring_detection_functions.sql` sont appliquées sur cette installation hébergée. Ces deux dernières ont été explicitement autorisées et appliquées le 12 septembre 2026 ; leur présence a été vérifiée et aucune migration ne restait en attente. La procédure ci-dessous reste celle à suivre pour une autre installation ou une évolution ultérieure, avec une autorisation portant sur les fichiers concernés.
 
 Après accord distinct pour préparer cette évolution sur le projet identifié, authentifiez la CLI et vérifiez le lien du projet ; ne passez aucun mot de passe dans une commande ou un rapport :
 
