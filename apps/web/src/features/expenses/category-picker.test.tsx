@@ -134,3 +134,71 @@ it("deduplicates a returned category by id", async () => {
   await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue("existing-category-id"));
   expect(screen.getAllByRole("option", { name: "Logiciels renommés" })).toHaveLength(1);
 });
+
+it("removes an authoritative category deletion and clears its selection", () => {
+  const createAction = async () => ({ message: null, success: false });
+  const removedCategory = { id: "removed-category-id", name: "À supprimer" };
+  const { rerender } = render(
+    <CategoryPicker
+      categories={[...categories, removedCategory]}
+      createAction={createAction}
+      defaultValue={removedCategory.id}
+      id="reconciled-category"
+    />,
+  );
+
+  expect(screen.getByRole("combobox")).toHaveValue(removedCategory.id);
+  rerender(
+    <CategoryPicker
+      categories={categories}
+      createAction={createAction}
+      defaultValue={removedCategory.id}
+      id="reconciled-category"
+    />,
+  );
+
+  expect(screen.queryByRole("option", { name: removedCategory.name })).toBeNull();
+  expect(screen.getByRole("combobox")).toHaveValue("");
+});
+
+it("retains a returned category only until authoritative props acknowledge it", async () => {
+  const returnedCategory = { id: "new-category-id", name: "Télécoms" };
+  const createAction = async () => ({
+    message: "Catégorie ajoutée.",
+    success: true,
+    category: returnedCategory,
+  });
+  const { rerender } = render(
+    <CategoryPicker
+      categories={categories}
+      createAction={createAction}
+      id="temporary-category"
+    />,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Créer une catégorie" }));
+  fireEvent.change(screen.getByLabelText("Nom de la nouvelle catégorie"), {
+    target: { value: returnedCategory.name },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ajouter la catégorie" }));
+  await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue(returnedCategory.id));
+
+  rerender(
+    <CategoryPicker
+      categories={[...categories, returnedCategory]}
+      createAction={createAction}
+      id="temporary-category"
+    />,
+  );
+  expect(screen.getAllByRole("option", { name: returnedCategory.name })).toHaveLength(1);
+
+  rerender(
+    <CategoryPicker
+      categories={categories}
+      createAction={createAction}
+      id="temporary-category"
+    />,
+  );
+  await waitFor(() => expect(screen.getByRole("combobox")).toHaveValue(""));
+  expect(screen.queryByRole("option", { name: returnedCategory.name })).toBeNull();
+});

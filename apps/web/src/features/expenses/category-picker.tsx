@@ -30,7 +30,8 @@ export function CategoryPicker({
   createAction: ExpenseFormAction;
 }): JSX.Element {
   const [state, submit, pending] = useActionState(createAction, initialState);
-  const [options, setOptions] = useState(() => mergeCategories([], categories));
+  const [unacknowledgedCategory, setUnacknowledgedCategory] =
+    useState<CategoryOption | null>(null);
   const [selected, setSelected] = useState(defaultValue);
   const [creating, setCreating] = useState(false);
   const [showResult, setShowResult] = useState(false);
@@ -38,10 +39,26 @@ export function CategoryPicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const dialogTitleId = useId();
+  const returnedCategory = showResult && state.success ? state.category : undefined;
+  const temporaryCategory = unacknowledgedCategory ?? returnedCategory;
+  const options = mergeCategories(categories, temporaryCategory ? [temporaryCategory] : []);
 
   useEffect(() => {
-    setOptions((current) => mergeCategories(current, categories));
-  }, [categories]);
+    if (
+      unacknowledgedCategory &&
+      categories.some(
+        (category) =>
+          category.id === unacknowledgedCategory.id &&
+          category.name === unacknowledgedCategory.name,
+      )
+    ) {
+      setUnacknowledgedCategory(null);
+    }
+
+    const availableIds = new Set(categories.map((category) => category.id));
+    if (temporaryCategory) availableIds.add(temporaryCategory.id);
+    setSelected((current) => (current !== "" && !availableIds.has(current) ? "" : current));
+  }, [categories, temporaryCategory, unacknowledgedCategory]);
 
   useEffect(() => {
     if (creating) nameInputRef.current?.focus();
@@ -49,7 +66,7 @@ export function CategoryPicker({
 
   useEffect(() => {
     if (!showResult || !state.success || !state.category) return;
-    setOptions((current) => mergeCategories(current, [state.category!]));
+    setUnacknowledgedCategory(state.category);
     setSelected(state.category.id);
     setNameDraft("");
     setCreating(false);
