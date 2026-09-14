@@ -8,12 +8,12 @@ Installez Node.js 24, Corepack/pnpm 10 et les dépendances avec `corepack pnpm i
 
 Les douze migrations précédentes et les migrations `202609110001_recurring_detection.sql` et `202609110002_recurring_detection_functions.sql` sont appliquées sur cette installation hébergée. Ces deux dernières ont été explicitement autorisées et appliquées le 12 septembre 2026 ; leur présence a été vérifiée à cette étape. La procédure ci-dessous reste celle à suivre pour une autre installation ou une évolution ultérieure, avec une autorisation portant sur les fichiers concernés.
 
-Les évolutions dashboard/historique préparent désormais deux nouvelles migrations, **en attente d’autorisation explicite et non appliquées au projet hébergé** :
+Les évolutions dashboard/historique ont été **explicitement autorisées et appliquées le 14 septembre 2026 sur le projet hébergé**, avec les deux migrations suivantes :
 
 - `202609120001_history_recurring_decisions.sql` : provenance et confirmation propriétaire depuis l’historique ;
 - `202609120002_automatic_qonto_admission.sql` : admission automatique atomique et temporisation serveur.
 
-Les accords sur les quatorze migrations précédentes ne valent pas autorisation pour ces fichiers. Les tests et remises à zéro concernent seulement la stack jetable dédiée.
+Cette application a reçu un accord distinct de celui des quatorze migrations précédentes. Le dry-run final ne signale plus de migration en attente ; les colonnes utilisées par le dashboard et l’admission automatique sont accessibles. Les seize migrations sont donc appliquées sur cette installation. Les tests et remises à zéro concernent seulement la stack jetable dédiée. La procédure ci-dessous reste applicable aux autres installations et aux évolutions ultérieures.
 
 Après accord distinct pour préparer cette évolution sur le projet identifié, authentifiez la CLI et vérifiez le lien du projet ; ne passez aucun mot de passe dans une commande ou un rapport :
 

@@ -31,7 +31,7 @@ Le dernier solde publié et sa date restent affichés après échec ; l’interf
 
 Une synchronisation bancaire réussie déclenche l’analyse des récurrences. Le résultat bancaire et celui de l’analyse sont affichés séparément : une analyse échouée ne retire ni le solde publié ni les décisions antérieures. Dans **Sorties**, examinez les paiements observés, confirmez ou associez une proposition, ou ignorez-la. **Analyser les transactions importées** traite l’historique déjà présent sans requête Qonto. Les règles, corrections conservées, suppression/réexamen et exclusions des mois payés sont décrites dans [RECURRING_DETECTION.md](RECURRING_DETECTION.md).
 
-Les quatorze migrations antérieures, dont celles du 11 septembre 2026, ont déjà été appliquées. Les nouvelles migrations `202609120001_history_recurring_decisions.sql` et `202609120002_automatic_qonto_admission.sql` restent en attente d’une autorisation explicite distincte sur le Supabase hébergé ; les tests locaux ne les y appliquent pas. Voir [INSTALLATION.md](INSTALLATION.md).
+Les seize migrations sont appliquées sur cette installation hébergée. Les migrations `202609120001_history_recurring_decisions.sql` et `202609120002_automatic_qonto_admission.sql` ont reçu une autorisation explicite distincte et ont été appliquées le 14 septembre 2026. Le dry-run final ne signale aucune migration en attente ; les tests locaux ne modifient pas cette base. Voir [INSTALLATION.md](INSTALLATION.md).
 
 ## Tests reproductibles sans compte Qonto
 
