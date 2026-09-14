@@ -2,6 +2,7 @@ import { formatMoney, moneyCents } from "@fc/shared";
 
 import { QontoBadge } from "@/features/integrations/qonto-badge";
 
+import { KpiValue } from "./kpi-value";
 import { scenarioCopy } from "./scenario-copy";
 import type { DashboardViewModel } from "./view-model";
 
@@ -26,7 +27,7 @@ export function KpiStrip({
     <section className="dashboard-kpis" aria-label="Indicateurs de trésorerie">
       <article className="dashboard-kpi dashboard-kpi-balance">
         <span>Solde</span>
-        <strong>{formatMoney(kpis.currentBalanceCents)}</strong>
+        <KpiValue>{formatMoney(kpis.currentBalanceCents)}</KpiValue>
         {openingBalanceSource === "qonto" ? (
           <QontoBadge lastSuccessAt={openingBalanceAsOf ?? null} timezone={timezone}
             lastAttemptFailed={lastBankSyncSucceeded === false} syncInProgress={bankSyncInProgress} />
@@ -36,27 +37,27 @@ export function KpiStrip({
       </article>
       <article className="dashboard-kpi dashboard-kpi-available">
         <span>Disponible</span>
-        <strong>{formatMoney(kpis.availableBalanceCents)}</strong>
+        <KpiValue>{formatMoney(kpis.availableBalanceCents)}</KpiValue>
         <small>− {formatMoney(reservedCents)} réservés</small>
       </article>
       <article className="dashboard-kpi">
         <span>Entrées 30 j</span>
-        <strong className="positive">+{formatMoney(kpis.inflows30DaysCents)}</strong>
+        <KpiValue className="positive">{`+${formatMoney(kpis.inflows30DaysCents)}`}</KpiValue>
         <small>flux inclus dans la projection</small>
       </article>
       <article className="dashboard-kpi">
         <span>Sorties 30 j</span>
-        <strong className="negative">−{formatMoney(kpis.outflows30DaysCents)}</strong>
+        <KpiValue className="negative">{`−${formatMoney(kpis.outflows30DaysCents)}`}</KpiValue>
         <small>charges et réserves incluses</small>
       </article>
       <article className="dashboard-kpi">
         <span>Projeté 30 j</span>
-        <strong>{formatMoney(kpis.projected30DaysCents)}</strong>
+        <KpiValue>{formatMoney(kpis.projected30DaysCents)}</KpiValue>
         <small>{scenarioCopy[scenario].label}</small>
       </article>
       <article className="dashboard-kpi dashboard-kpi-runway">
         <span>Runway</span>
-        <strong>{kpis.runwayDays === null ? `>${horizonDays} jours` : `${kpis.runwayDays} jours`}</strong>
+        <KpiValue>{kpis.runwayDays === null ? `>${horizonDays} jours` : `${kpis.runwayDays} jours`}</KpiValue>
         <small>avant passage sous le seuil</small>
       </article>
     </section>

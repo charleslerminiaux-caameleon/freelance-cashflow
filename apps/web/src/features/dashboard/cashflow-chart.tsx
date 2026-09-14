@@ -55,7 +55,7 @@ export function CashflowChart({
         aria-describedby="cashflow-chart-summary"
         data-currency={currency}
       >
-        <ResponsiveContainer width="100%" height={340}>
+        <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chart.points} margin={{ top: 18, right: 12, bottom: 4, left: 6 }}>
             <CartesianGrid stroke="#e3ebe8" vertical={false} />
             <XAxis

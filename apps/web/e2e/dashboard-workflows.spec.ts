@@ -27,6 +27,25 @@ async function readyDashboard(page: Page) {
   // another native onChange/GET submission is attempted.
   await expect(page.getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 24 h', exact: true })).toBeVisible({ timeout: 30000 });
 }
+async function settleChart(page: Page) {
+  // Recharts animates SVG paths in JavaScript, outside screenshot's CSS animation control.
+  await page.locator('.cashflow-chart svg').evaluate(async svg => {
+    await new Promise<void>((resolve, reject) => {
+      let previous = '';
+      let stableSince = performance.now();
+      const started = stableSince;
+      const sample = () => {
+        const now = performance.now();
+        const current = [...svg.querySelectorAll('path')].map(path => path.getAttribute('d')).join('|');
+        if (current !== previous) { previous = current; stableSince = now; }
+        if (now - stableSince >= 300) resolve();
+        else if (now - started > 5000) reject(new Error('Chart did not settle'));
+        else requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+  });
+}
 async function publication(owner: string) {
   const result = await admin.from('integrations').select('last_success_at').eq('owner_user_id', owner).single();
   if (result.error) throw new Error('Dedicated publication unavailable');
@@ -140,6 +159,25 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
   await expect(badge).toBeVisible({ timeout: 30000 });
   await expect(page).toHaveURL(stableUrl);
   await expect(page.getByRole('radio', { name: 'Pipeline pondéré', exact: true })).toBeChecked();
+  await safeWrite(admin.from('bank_accounts').update({ current_balance_cents: 2345678 }).eq('owner_user_id', owner));
+  await page.reload();
+  await readyDashboard(page);
+  // Regressions: tall KPI auto-margins and a two-row desktop strip pushed the
+  // chart below the fold; money could split the currency onto a second line.
+  for (const viewport of [{ width: 1366, height: 768 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => document.fonts.ready);
+    const geometry = await page.locator('.dashboard-kpi').evaluateAll(cards => cards.map(card => {
+      const amount = card.querySelector('strong')!;
+      const footer = amount.nextElementSibling!;
+      return { height: card.getBoundingClientRect().height, gap: footer.getBoundingClientRect().top - amount.getBoundingClientRect().bottom };
+    }));
+    console.log('compact geometry', viewport, geometry, await page.evaluate(() => ({ height: document.documentElement.scrollHeight, width: document.documentElement.scrollWidth })));
+    for (const card of geometry) expect.soft(card.gap, 'amount and footer stay adjacent').toBeLessThanOrEqual(12);
+    expect.soft(await page.evaluate(() => document.documentElement.scrollHeight), 'complete desktop dashboard fits viewport').toBeLessThanOrEqual(viewport.height);
+    await settleChart(page);
+    await page.screenshot({ path: `/private/tmp/libra-compact-${viewport.width}.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+  }
   for (const width of [1440, 1024, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -149,7 +187,8 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
       const labels = [...element.querySelectorAll('label')];
       return labels.filter(label => Math.abs(label.getBoundingClientRect().top - labels[0]!.getBoundingClientRect().top) < 1).length;
     });
-    await page.screenshot({ path: `/private/tmp/libra-dashboard-layout-${width}.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+    await settleChart(page);
+    await page.screenshot({ path: width === 390 ? "/private/tmp/libra-compact-390.png" : `/private/tmp/libra-dashboard-layout-${width}.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
     expect(columns).toBe(width === 1440 ? 4 : width === 1024 ? 2 : 1);
     for (const element of await page.locator('.scenario-controls label, .qonto-badge').all()) {
       const box = await element.boundingBox();
@@ -197,10 +236,36 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
   await expect(page.getByRole('button', { name: 'Solde Qonto · Échec de synchronisation', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Échec · Intégrations' })).toHaveAttribute('href', '/integrations');
   await page.screenshot({ path: '/private/tmp/libra-dashboard-error-390.png', fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
-  // Large synthetic balance exercises KPI wrapping without provider/private data.
-  await safeWrite(admin.from('bank_accounts').update({ current_balance_cents: 999999999999 }).eq('owner_user_id', owner));
-  await page.reload();
-  await expect(page.getByLabel('Indicateurs de trésorerie')).toContainText(/9.?999.?999.?999,99/);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.screenshot({ path: '/private/tmp/libra-dashboard-large-390.png', fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+  // Large positive/negative synthetic balances must stay complete on one line.
+  for (const balance of [999999999999, -999999999999]) {
+    await safeWrite(admin.from('bank_accounts').update({ current_balance_cents: balance }).eq('owner_user_id', owner));
+    await page.reload();
+    await expect(page.getByLabel('Indicateurs de trésorerie')).toContainText(/9.?999.?999.?999,99/);
+    let desktopFontSize = 0;
+    for (const width of [1440, 1366, 1024, 390, 320, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect.poll(() => page.locator('.dashboard-kpi strong').evaluateAll(amounts => amounts.every(amount => {
+        const range = document.createRange();
+        range.selectNodeContents(amount.querySelector("span") ?? amount);
+        const rects = [...range.getClientRects()];
+        const card = amount.closest('article')!;
+        const bounds = card.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        return rects.length > 0 && rects.every(rect => Math.abs(rect.top - rects[0]!.top) < 1
+          && rect.left >= bounds.left + parseFloat(style.paddingLeft) - 1
+          && rect.right <= bounds.right - parseFloat(style.paddingRight) + 1);
+      })), { message: 'every complete KPI value, including sign and euro, fits one line after resize' }).toBe(true);
+      const fontSize = await page.locator('.dashboard-kpi-balance strong span').evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+      expect(fontSize, 'large amounts remain readable').toBeGreaterThanOrEqual(14);
+      if (width === 1440 && !desktopFontSize) desktopFontSize = fontSize;
+      else if (width === 1440) expect(fontSize).toBeCloseTo(desktopFontSize, 0);
+      if (width === 390) await expect.poll(() => page.locator('.dashboard-kpi-balance strong span').evaluate(element => parseFloat(getComputedStyle(element).fontSize)), { message: 'amount grows again in a wider card' }).toBeGreaterThan(desktopFontSize);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      if (width === 390) {
+        expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight), 'small windows scroll to preserve all content').toBe(true);
+        await settleChart(page);
+        await page.screenshot({ path: `/private/tmp/libra-compact-large-${balance < 0 ? "negative" : "positive"}-390.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+      }
+    }
+  }
 });
