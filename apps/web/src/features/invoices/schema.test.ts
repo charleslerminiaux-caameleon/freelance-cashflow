@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { invoiceFormSchema, paymentFormSchema } from "./schema";
+import {
+  invoiceFormSchema,
+  invoiceUpdateFormSchema,
+  paymentDeletionFormSchema,
+  paymentFormSchema,
+} from "./schema";
 
 const customerId = "11111111-1111-4111-8111-111111111111";
 const paymentIdempotencyKey = "33333333-3333-4333-8333-333333333333";
@@ -94,5 +99,42 @@ describe("paymentFormSchema", () => {
     expect(paymentFormSchema.safeParse({ ...input, idempotencyKey: "retry-1" }).success).toBe(
       false,
     );
+  });
+});
+
+it("parses an invoice correction with its existing invoice id", () => {
+  expect(
+    invoiceUpdateFormSchema.parse({
+      invoiceId: "22222222-2222-4222-8222-222222222222",
+      invoiceNumber: " F-2026-002 ",
+      customerId,
+      issuedAt: "2026-09-02",
+      dueAt: "2026-10-02",
+      expectedPaymentDate: "2026-10-05",
+      amountHt: "1 500,00",
+      vat: "300,00",
+    }),
+  ).toEqual({
+    invoiceId: "22222222-2222-4222-8222-222222222222",
+    invoiceNumber: "F-2026-002",
+    customerId,
+    issuedAt: "2026-09-02",
+    dueAt: "2026-10-02",
+    expectedPaymentDate: "2026-10-05",
+    amountHtCents: 150_000,
+    vatCents: 30_000,
+    amountTtcCents: 180_000,
+  });
+});
+
+it("requires both invoice and payment ids to remove one payment", () => {
+  expect(
+    paymentDeletionFormSchema.parse({
+      invoiceId: "22222222-2222-4222-8222-222222222222",
+      paymentId: "44444444-4444-4444-8444-444444444444",
+    }),
+  ).toEqual({
+    invoiceId: "22222222-2222-4222-8222-222222222222",
+    paymentId: "44444444-4444-4444-8444-444444444444",
   });
 });

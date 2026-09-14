@@ -5,17 +5,21 @@ import { RepositoryError } from "../repository-error";
 const {
   createClient,
   createInvoice,
+  deleteInvoicePayment,
   importInvoiceRows,
   recordInvoicePayment,
   requireOwner,
   revalidatePath,
+  updateInvoice,
 } = vi.hoisted(() => ({
   createClient: vi.fn(),
   createInvoice: vi.fn(),
+  deleteInvoicePayment: vi.fn(),
   importInvoiceRows: vi.fn(),
   recordInvoicePayment: vi.fn(),
   requireOwner: vi.fn(),
   revalidatePath: vi.fn(),
+  updateInvoice: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/require-owner", () => ({ requireOwner }));
@@ -23,14 +27,18 @@ vi.mock("@/lib/supabase/server", () => ({ createClient }));
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("./repository", () => ({
   createInvoice,
+  deleteInvoicePayment,
   importInvoiceRows,
   recordInvoicePayment,
+  updateInvoice,
 }));
 
 import {
   createInvoiceAction,
+  deleteInvoicePaymentAction,
   importInvoiceCsvAction,
   recordInvoicePaymentAction,
+  updateInvoiceAction,
 } from "./actions";
 
 const initialState = { message: null, success: false };
@@ -79,6 +87,8 @@ beforeEach(() => {
   createInvoice.mockResolvedValue(invoiceId);
   importInvoiceRows.mockResolvedValue({ createdCount: 1, unchangedCount: 0 });
   recordInvoicePayment.mockResolvedValue("33333333-3333-4333-8333-333333333333");
+  updateInvoice.mockResolvedValue(invoiceId);
+  deleteInvoicePayment.mockResolvedValue("44444444-4444-4444-8444-444444444444");
 });
 
 it("creates a manual invoice with owner-scoped exact-cent input", async () => {
@@ -219,4 +229,49 @@ it("maps overpayment to a safe message without leaking the RPC error", async () 
     success: false,
   });
   expect(JSON.stringify(result)).not.toContain("FC_PAYMENT_EXCEEDS_BALANCE");
+});
+
+it("updates an invoice and revalidates its detail and the list", async () => {
+  const formData = manualInvoiceFormData();
+  formData.set("invoiceId", invoiceId);
+
+  const result = await updateInvoiceAction(initialState, formData);
+
+  expect(result).toEqual({ message: "Facture modifiée.", success: true });
+  expect(updateInvoice).toHaveBeenCalledWith(
+    {},
+    "owner-1",
+    expect.objectContaining({ invoiceId, amountTtcCents: 120_001 }),
+  );
+  expect(revalidatePath).toHaveBeenCalledWith(`/invoices/${invoiceId}`);
+  expect(revalidatePath).toHaveBeenCalledWith("/invoices");
+});
+
+it("explains when retained payments prevent reducing an invoice total", async () => {
+  updateInvoice.mockRejectedValue(new RepositoryError("FC_INVOICE_TOTAL_BELOW_PAYMENTS"));
+  const formData = manualInvoiceFormData();
+  formData.set("invoiceId", invoiceId);
+
+  const result = await updateInvoiceAction(initialState, formData);
+
+  expect(result).toEqual({
+    message: "Le total ne peut pas être inférieur aux paiements conservés.",
+    success: false,
+  });
+});
+
+it("deletes one mistaken payment and revalidates invoice status", async () => {
+  const formData = new FormData();
+  formData.set("invoiceId", invoiceId);
+  formData.set("paymentId", "44444444-4444-4444-8444-444444444444");
+
+  const result = await deleteInvoicePaymentAction(initialState, formData);
+
+  expect(result).toEqual({ message: "Paiement supprimé.", success: true });
+  expect(deleteInvoicePayment).toHaveBeenCalledWith({}, "owner-1", {
+    invoiceId,
+    paymentId: "44444444-4444-4444-8444-444444444444",
+  });
+  expect(revalidatePath).toHaveBeenCalledWith(`/invoices/${invoiceId}`);
+  expect(revalidatePath).toHaveBeenCalledWith("/invoices");
 });

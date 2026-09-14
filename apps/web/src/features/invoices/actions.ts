@@ -6,8 +6,19 @@ import { revalidatePath } from "next/cache";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
 import { RepositoryError } from "../repository-error";
-import { createInvoice, importInvoiceRows, recordInvoicePayment } from "./repository";
-import { invoiceFormSchema, paymentFormSchema } from "./schema";
+import {
+  createInvoice,
+  deleteInvoicePayment,
+  importInvoiceRows,
+  recordInvoicePayment,
+  updateInvoice,
+} from "./repository";
+import {
+  invoiceFormSchema,
+  invoiceUpdateFormSchema,
+  paymentDeletionFormSchema,
+  paymentFormSchema,
+} from "./schema";
 
 export type InvoiceActionState = {
   completedIdempotencyKey?: string;
@@ -173,5 +184,63 @@ export async function recordInvoicePaymentAction(
     };
   } catch (error) {
     return { message: paymentErrorMessage(error), success: false };
+  }
+}
+
+export async function updateInvoiceAction(
+  _state: InvoiceActionState,
+  formData: FormData,
+): Promise<InvoiceActionState> {
+  const { userId } = await requireOwner();
+
+  try {
+    const command = invoiceUpdateFormSchema.parse({
+      invoiceId: formData.get("invoiceId"),
+      invoiceNumber: formData.get("invoiceNumber"),
+      customerId: formData.get("customerId"),
+      issuedAt: formData.get("issuedAt"),
+      dueAt: formData.get("dueAt"),
+      expectedPaymentDate: formData.get("expectedPaymentDate"),
+      amountHt: formData.get("amountHt"),
+      vat: formData.get("vat"),
+    });
+    const client = await createClient();
+    await updateInvoice(client, userId, command);
+    revalidatePath(`/invoices/${command.invoiceId}`);
+    revalidatePath("/invoices");
+    revalidatePath("/engagements");
+    return { message: "Facture modifiée.", success: true };
+  } catch (error) {
+    if (error instanceof RepositoryError && error.code === "FC_INVOICE_TOTAL_BELOW_PAYMENTS") {
+      return {
+        message: "Le total ne peut pas être inférieur aux paiements conservés.",
+        success: false,
+      };
+    }
+    return { message: invoiceErrorMessage(error), success: false };
+  }
+}
+
+export async function deleteInvoicePaymentAction(
+  _state: InvoiceActionState,
+  formData: FormData,
+): Promise<InvoiceActionState> {
+  const { userId } = await requireOwner();
+
+  try {
+    const command = paymentDeletionFormSchema.parse({
+      invoiceId: formData.get("invoiceId"),
+      paymentId: formData.get("paymentId"),
+    });
+    const client = await createClient();
+    await deleteInvoicePayment(client, userId, command);
+    revalidatePath(`/invoices/${command.invoiceId}`);
+    revalidatePath("/invoices");
+    return { message: "Paiement supprimé.", success: true };
+  } catch {
+    return {
+      message: "Impossible de supprimer ce paiement. Rechargez la page puis réessayez.",
+      success: false,
+    };
   }
 }

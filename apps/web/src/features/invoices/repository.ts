@@ -6,7 +6,12 @@ import { z } from "zod";
 
 import { businessDateSchema } from "../commercial-schema";
 import { repositoryError, RepositoryError } from "../repository-error";
-import type { InvoiceCommand, PaymentCommand } from "./schema";
+import type {
+  InvoiceCommand,
+  InvoiceUpdateCommand,
+  PaymentCommand,
+  PaymentDeletionCommand,
+} from "./schema";
 
 const invoiceCustomerSchema = z.object({ name: z.string() });
 
@@ -450,6 +455,46 @@ export async function recordInvoicePayment(
     p_idempotency_key: command.idempotencyKey,
     p_amount_cents: command.amountCents,
     p_paid_at: command.paidAt,
+  });
+
+  if (error) throw repositoryError(error);
+  return z.string().uuid().parse(data);
+}
+
+export async function updateInvoice(
+  client: SupabaseClient,
+  ownerUserId: string,
+  command: InvoiceUpdateCommand,
+): Promise<string> {
+  await requireOwnedRow(client, "invoices", command.invoiceId, ownerUserId, "FC_INVOICE_NOT_FOUND");
+  await requireOwnedRow(client, "customers", command.customerId, ownerUserId, "FC_CUSTOMER_NOT_FOUND");
+
+  const { data, error } = await client.rpc("update_invoice", {
+    p_invoice_id: command.invoiceId,
+    p_customer_id: command.customerId,
+    p_invoice_number: command.invoiceNumber,
+    p_issued_at: command.issuedAt,
+    p_due_at: command.dueAt,
+    p_expected_payment_date: command.expectedPaymentDate,
+    p_amount_ht_cents: command.amountHtCents,
+    p_vat_cents: command.vatCents,
+    p_amount_ttc_cents: command.amountTtcCents,
+  });
+
+  if (error) throw repositoryError(error);
+  return z.string().uuid().parse(data);
+}
+
+export async function deleteInvoicePayment(
+  client: SupabaseClient,
+  ownerUserId: string,
+  command: PaymentDeletionCommand,
+): Promise<string> {
+  await requireOwnedRow(client, "invoices", command.invoiceId, ownerUserId, "FC_INVOICE_NOT_FOUND");
+
+  const { data, error } = await client.rpc("delete_invoice_payment", {
+    p_invoice_id: command.invoiceId,
+    p_payment_id: command.paymentId,
   });
 
   if (error) throw repositoryError(error);

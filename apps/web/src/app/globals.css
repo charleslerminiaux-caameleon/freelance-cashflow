@@ -828,6 +828,23 @@ details.panel[open] > summary {
   margin: 0;
 }
 
+.invoice-edit-panel {
+  margin-top: 1.5rem;
+}
+
+.invoice-payment-actions {
+  align-items: flex-end;
+}
+
+.invoice-payment-delete-form {
+  margin-top: 0;
+}
+
+.invoice-payment-delete-form button {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.55rem;
+}
+
 .payment-balance {
   align-items: center;
   background: #eef6f4;

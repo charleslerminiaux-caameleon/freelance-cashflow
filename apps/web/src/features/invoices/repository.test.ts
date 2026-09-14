@@ -7,9 +7,11 @@ vi.mock("server-only", () => ({}));
 import { RepositoryError } from "../repository-error";
 import {
   createInvoice,
+  deleteInvoicePayment,
   importInvoiceRows,
   listInvoices,
   recordInvoicePayment,
+  updateInvoice,
 } from "./repository";
 
 const ownerUserId = "11111111-1111-4111-8111-111111111111";
@@ -386,5 +388,53 @@ it("checks invoice ownership before recording exact integer cents", async () => 
     p_idempotency_key: paymentIdempotencyKey,
     p_invoice_id: invoiceId,
     p_paid_at: "2026-09-20",
+  });
+});
+
+it("updates an owned invoice through the atomic correction RPC", async () => {
+  const rpc = vi.fn().mockResolvedValue({ data: invoiceId, error: null });
+  const { client, queries } = clientWith({
+    customers: { data: { id: customerId }, error: null },
+    invoices: { data: { id: invoiceId }, error: null },
+    rpc,
+  });
+
+  await expect(
+    updateInvoice(client, ownerUserId, {
+      invoiceId,
+      ...manualInvoice,
+      invoiceNumber: "F-2026-002",
+    }),
+  ).resolves.toBe(invoiceId);
+  expect(queries.invoices.eq).toHaveBeenCalledWith("owner_user_id", ownerUserId);
+  expect(queries.customers.eq).toHaveBeenCalledWith("owner_user_id", ownerUserId);
+  expect(rpc).toHaveBeenCalledWith("update_invoice", {
+    p_amount_ht_cents: 100_000,
+    p_amount_ttc_cents: 120_000,
+    p_customer_id: customerId,
+    p_due_at: "2026-09-30",
+    p_expected_payment_date: "2026-09-30",
+    p_invoice_id: invoiceId,
+    p_invoice_number: "F-2026-002",
+    p_issued_at: "2026-09-01",
+    p_vat_cents: 20_000,
+  });
+});
+
+it("deletes one owned invoice payment through the recalculation RPC", async () => {
+  const paymentId = "55555555-5555-4555-8555-555555555555";
+  const rpc = vi.fn().mockResolvedValue({ data: paymentId, error: null });
+  const { client, queries } = clientWith({
+    invoices: { data: { id: invoiceId }, error: null },
+    rpc,
+  });
+
+  await expect(
+    deleteInvoicePayment(client, ownerUserId, { invoiceId, paymentId }),
+  ).resolves.toBe(paymentId);
+  expect(queries.invoices.eq).toHaveBeenCalledWith("owner_user_id", ownerUserId);
+  expect(rpc).toHaveBeenCalledWith("delete_invoice_payment", {
+    p_invoice_id: invoiceId,
+    p_payment_id: paymentId,
   });
 });

@@ -4,9 +4,16 @@ import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
-import { recordInvoicePaymentAction } from "@/features/invoices/actions";
+import { listCustomers } from "@/features/customers/repository";
+import {
+  deleteInvoicePaymentAction,
+  recordInvoicePaymentAction,
+  updateInvoiceAction,
+} from "@/features/invoices/actions";
 import { getOwnerBusinessDate } from "@/features/invoices/business-date";
+import { InvoiceEditForm } from "@/features/invoices/invoice-edit-form";
 import { PaymentForm } from "@/features/invoices/payment-form";
+import { PaymentDeletionForm } from "@/features/invoices/payment-deletion-form";
 import {
   getInvoice,
   listInvoicePayments,
@@ -38,9 +45,10 @@ export default async function InvoiceDetailPage({
   const invoice = await getInvoice(client, userId, parsedId.data);
   if (!invoice) notFound();
 
-  const [payments, today] = await Promise.all([
+  const [payments, today, customers] = await Promise.all([
     listInvoicePayments(client, userId, invoice.id),
     getOwnerBusinessDate(client, userId),
+    listCustomers(client, userId),
   ]);
   const currentStatus =
     invoice.status === "draft"
@@ -108,7 +116,14 @@ export default async function InvoiceDetailPage({
                     <strong>Paiement manuel</strong>
                     <small>{payment.paid_at}</small>
                   </span>
-                  <strong>{formatMoney(moneyCents(payment.amount_cents))}</strong>
+                  <span className="invoice-payment-actions">
+                    <strong>{formatMoney(moneyCents(payment.amount_cents))}</strong>
+                    <PaymentDeletionForm
+                      action={deleteInvoicePaymentAction}
+                      invoiceId={invoice.id}
+                      paymentId={payment.id}
+                    />
+                  </span>
                 </article>
               ))}
             </div>
@@ -135,6 +150,24 @@ export default async function InvoiceDetailPage({
           )}
         </section>
       </div>
+
+      <details className="panel invoice-edit-panel">
+        <summary>Modifier la facture</summary>
+        <InvoiceEditForm
+          action={updateInvoiceAction}
+          customers={customers.map(({ id, name }) => ({ id, name }))}
+          invoice={{
+            id: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            customerId: invoice.customer_id,
+            issuedAt: invoice.issued_at,
+            dueAt: invoice.due_at,
+            expectedPaymentDate: invoice.expected_payment_date,
+            amountHtCents: invoice.amount_ht_cents,
+            vatCents: invoice.vat_cents,
+          }}
+        />
+      </details>
     </div>
   );
 }

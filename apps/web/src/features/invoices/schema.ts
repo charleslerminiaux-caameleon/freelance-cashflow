@@ -71,5 +71,55 @@ export const paymentFormSchema = z
     amountCents: amount,
   }));
 
+export const invoiceUpdateFormSchema = z
+  .object({
+    invoiceId: z.string().uuid(),
+    invoiceNumber: z.string().trim().min(1, "Le numéro de facture est requis.").max(160),
+    customerId: z.string().uuid(),
+    issuedAt: businessDateSchema,
+    dueAt: businessDateSchema,
+    expectedPaymentDate: businessDateSchema,
+    amountHt: nonNegativeMoneyInputSchema,
+    vat: nonNegativeMoneyInputSchema,
+  })
+  .superRefine((invoice, context) => {
+    if (invoice.dueAt < invoice.issuedAt) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["dueAt"],
+        message: "L’échéance ne peut pas précéder l’émission.",
+      });
+    }
+
+    if (invoice.expectedPaymentDate < invoice.issuedAt) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expectedPaymentDate"],
+        message: "La date d’encaissement prévue ne peut pas précéder l’émission.",
+      });
+    }
+
+    if (!Number.isSafeInteger(invoice.amountHt + invoice.vat)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["vat"],
+        message: "Le total TTC dépasse la limite prise en charge.",
+      });
+    }
+  })
+  .transform(({ amountHt, vat, ...invoice }) => ({
+    ...invoice,
+    amountHtCents: amountHt,
+    vatCents: vat,
+    amountTtcCents: moneyCents(amountHt + vat),
+  }));
+
+export const paymentDeletionFormSchema = z.object({
+  invoiceId: z.string().uuid(),
+  paymentId: z.string().uuid(),
+});
+
 export type InvoiceCommand = z.infer<typeof invoiceFormSchema>;
+export type InvoiceUpdateCommand = z.infer<typeof invoiceUpdateFormSchema>;
 export type PaymentCommand = z.infer<typeof paymentFormSchema>;
+export type PaymentDeletionCommand = z.infer<typeof paymentDeletionFormSchema>;

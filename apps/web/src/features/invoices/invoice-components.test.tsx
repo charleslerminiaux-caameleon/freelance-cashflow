@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CsvImportForm } from "./csv-import-form";
 import { InvoiceForm } from "./invoice-form";
+import { InvoiceEditForm } from "./invoice-edit-form";
 import { InvoiceGroups } from "./invoice-groups";
+import { PaymentDeletionForm } from "./payment-deletion-form";
 import { PaymentForm } from "./payment-form";
 
 const idleAction = async () => ({ message: null, success: false });
@@ -200,4 +202,54 @@ describe("InvoiceGroups", () => {
     expect(within(section("Payé")).getByText("F-PAID")).toBeInTheDocument();
     expect(within(section("En retard")).getByText("F-LATE")).toBeInTheDocument();
   });
+});
+
+it("prefills every editable value of an existing invoice", () => {
+  render(
+    <InvoiceEditForm
+      action={idleAction}
+      customers={[
+        { id: "customer-1", name: "Atelier Bleu" },
+        { id: "customer-2", name: "Client Vert" },
+      ]}
+      invoice={{
+        id: "invoice-1",
+        invoiceNumber: "F-2026-001",
+        customerId: "customer-2",
+        issuedAt: "2026-09-01",
+        dueAt: "2026-09-30",
+        expectedPaymentDate: "2026-10-02",
+        amountHtCents: 100_001,
+        vatCents: 20_000,
+      }}
+    />,
+  );
+
+  expect(screen.getByDisplayValue("invoice-1")).toHaveAttribute("name", "invoiceId");
+  expect(screen.getByLabelText("Numéro de facture")).toHaveValue("F-2026-001");
+  expect(screen.getByLabelText("Client")).toHaveValue("customer-2");
+  expect(screen.getByLabelText("Date d’émission")).toHaveValue("2026-09-01");
+  expect(screen.getByLabelText("Date d’échéance")).toHaveValue("2026-09-30");
+  expect(screen.getByLabelText("Encaissement prévu")).toHaveValue("2026-10-02");
+  expect(screen.getByLabelText("Montant HT")).toHaveValue("1000,01");
+  expect(screen.getByLabelText("TVA")).toHaveValue("200,00");
+  expect(screen.getByRole("button", { name: "Enregistrer les modifications" })).toBeInTheDocument();
+});
+
+it("asks for confirmation before deleting one payment", () => {
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  render(
+    <PaymentDeletionForm
+      action={idleAction}
+      invoiceId="invoice-1"
+      paymentId="payment-1"
+    />,
+  );
+
+  fireEvent.submit(screen.getByRole("button", { name: "Supprimer ce paiement" }).closest("form")!);
+
+  expect(confirm).toHaveBeenCalledWith(
+    "Supprimer ce paiement ? Le solde et le statut de la facture seront recalculés.",
+  );
+  confirm.mockRestore();
 });
