@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("owner completes and revisits installation on desktop and mobile", async ({ page }) => {
+test("owner completes and revisits installation on desktop and mobile", async ({ page }, testInfo) => {
   await page.goto("/settings/installation");
   await expect(page).toHaveURL(/\/login/);
   const form = page.locator("form").filter({ has: page.getByText("Connexion", { exact: true }) });
@@ -15,7 +15,7 @@ test("owner completes and revisits installation on desktop and mobile", async ({
     await page.setViewportSize({ width, height: 960 });
     await expect(page.getByRole("link", { name: "Ouvrir le dashboard" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.screenshot({ path: `/private/tmp/libra-installation-${width}.png`, fullPage: true, animations: "disabled", style: "nextjs-portal { visibility: hidden; }" });
+    await page.screenshot({ path: testInfo.outputPath(`libra-installation-${width}.png`), fullPage: true, animations: "disabled", style: "nextjs-portal { visibility: hidden; }" });
   }
   await page.getByRole("link", { name: "Ouvrir le dashboard" }).click();
   await page.goto("/settings");

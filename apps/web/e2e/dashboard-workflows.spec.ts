@@ -52,7 +52,7 @@ async function publication(owner: string) {
   return result.data.last_success_at as string;
 }
 
-test('synthetic owner completes dashboard/history/category workflows, automatic RSC refresh and responsive accessible controls', async ({ page, context, browser }) => {
+test('synthetic owner completes dashboard/history/category workflows, automatic RSC refresh and responsive accessible controls', async ({ page, context, browser }, testInfo) => {
   test.setTimeout(240000);
   await context.route('**/*', route => ['http://127.0.0.1:3200', 'http://127.0.0.1:56321'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort());
   await page.goto('/login');
@@ -179,7 +179,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
     for (const card of geometry) expect.soft(card.gap, 'amount and footer stay adjacent').toBeLessThanOrEqual(12);
     expect.soft(await page.evaluate(() => document.documentElement.scrollHeight), 'complete desktop dashboard fits viewport').toBeLessThanOrEqual(viewport.height);
     await settleChart(page);
-    await page.screenshot({ path: `/private/tmp/libra-compact-${viewport.width}.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+    await page.screenshot({ path: testInfo.outputPath(`libra-compact-${viewport.width}.png`), fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
   }
   for (const width of [1440, 1024, 390]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -191,7 +191,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
       return labels.filter(label => Math.abs(label.getBoundingClientRect().top - labels[0]!.getBoundingClientRect().top) < 1).length;
     });
     await settleChart(page);
-    await page.screenshot({ path: width === 390 ? "/private/tmp/libra-compact-390.png" : `/private/tmp/libra-dashboard-layout-${width}.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+    await page.screenshot({ path: testInfo.outputPath(width === 390 ? 'libra-compact-390.png' : `libra-dashboard-layout-${width}.png`), fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
     expect(columns).toBe(width === 390 ? 1 : 3);
     for (const element of await page.locator('.scenario-controls label, .qonto-badge').all()) {
       const box = await element.boundingBox();
@@ -202,7 +202,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
     await expect(tooltip).toBeVisible();
     await expect(tooltip).toContainText(calendar.timezone);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await page.screenshot({ path: `/private/tmp/libra-dashboard-${width}.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+    await page.screenshot({ path: testInfo.outputPath(`libra-dashboard-${width}.png`), fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
     await badge.press('Escape');
     await expect(tooltip).toBeHidden();
     await badge.blur();
@@ -238,7 +238,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
   await page.reload();
   await expect(page.getByRole('button', { name: 'Solde Qonto · Échec de synchronisation', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Échec · Intégrations' })).toHaveAttribute('href', '/integrations');
-  await page.screenshot({ path: '/private/tmp/libra-dashboard-error-390.png', fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+  await page.screenshot({ path: testInfo.outputPath('libra-dashboard-error-390.png'), fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
   // Large positive/negative synthetic balances must stay complete on one line.
   for (const balance of [999999999999, -999999999999]) {
     await safeWrite(admin.from('bank_accounts').update({ current_balance_cents: balance }).eq('owner_user_id', owner));
@@ -267,7 +267,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
       if (width === 390) {
         expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight), 'small windows scroll to preserve all content').toBe(true);
         await settleChart(page);
-        await page.screenshot({ path: `/private/tmp/libra-compact-large-${balance < 0 ? "negative" : "positive"}-390.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
+        await page.screenshot({ path: testInfo.outputPath(`libra-compact-large-${balance < 0 ? 'negative' : 'positive'}-390.png`), fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
       }
     }
   }
