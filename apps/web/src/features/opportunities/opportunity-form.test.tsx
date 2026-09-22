@@ -19,7 +19,7 @@ it("collects the customer, commercial amount, probability and business dates", (
   expect(screen.getByLabelText("Client")).toHaveValue("customer-1");
   expect(screen.getByLabelText("Montant HT")).toHaveAttribute("inputmode", "decimal");
   expect(screen.getByLabelText("Probabilité (%)")).toHaveAttribute("inputmode", "decimal");
-  expect(screen.getByLabelText("Date de clôture prévue")).toHaveAttribute("type", "date");
+  expect(screen.getByLabelText("Date de signature prévue")).toHaveAttribute("type", "date");
   expect(screen.queryByRole("option", { name: "Gagnée" })).toBeNull();
   expect(screen.getByRole("button", { name: "Créer l’opportunité" })).toBeInTheDocument();
 });

@@ -9,5 +9,26 @@ vi.mock("next/navigation",()=>({usePathname:()=>"/dashboard",useRouter:()=>({ref
 vi.mock("@/features/integrations/auto-sync-action",()=>({autoSyncQontoAction:async()=>({status:"skipped"})}));
 import Layout from "./layout";
 beforeEach(()=>{vi.clearAllMocks();m.requireOwner.mockResolvedValue({userId:"owner"});m.createClient.mockResolvedValue({});m.isQontoConfigured.mockReturnValue(true);m.getQontoIntegration.mockResolvedValue({status:"connected",last_success_at:"2026-09-10T10:00:00Z"});});
-it("loads owner integration state into both shell variants",async()=>{const layout=await Layout({children:"Contenu"});await act(async()=>{render(layout);});expect(m.getQontoIntegration).toHaveBeenCalledWith({},"owner");expect(screen.getAllByText("Qonto : données synchronisées")).toHaveLength(2);});
+it("loads owner integration state into both shell variants",async()=>{const layout=await Layout({children:"Contenu"});await act(async()=>{render(layout);});expect(m.getQontoIntegration).toHaveBeenCalledWith({},"owner",expect.any(AbortSignal));expect(screen.getAllByText("Qonto : données synchronisées")).toHaveLength(2);});
 it("guards reads before shell loading",async()=>{m.requireOwner.mockRejectedValue(new Error("redirect"));await expect(Layout({children:null})).rejects.toThrow("redirect");expect(m.createClient).not.toHaveBeenCalled();});
+it("keeps diagnostic children accessible when integration metadata is unavailable", async () => {
+  m.getQontoIntegration.mockRejectedValueOnce(new Error("DATABASE_ERROR private payload"));
+  await act(async () => { render(await Layout({ children: <h1>Installation et diagnostic</h1> })); });
+  expect(screen.getByRole("heading", { name: "Installation et diagnostic" })).toBeVisible();
+  expect(screen.getAllByText("Qonto : état indisponible")).toHaveLength(2);
+  expect(screen.queryByText(/private payload/)).not.toBeInTheDocument();
+});
+it("bounds a stalled integration read and aborts its request", async () => {
+  vi.useFakeTimers();
+  let signal: AbortSignal | undefined;
+  m.getQontoIntegration.mockImplementationOnce((_client, _owner, requestSignal) => {
+    signal = requestSignal; return new Promise(() => {});
+  });
+  try {
+    const rendering = Layout({ children: "Diagnostic accessible" });
+    await vi.advanceTimersByTimeAsync(5001);
+    await act(async () => { render(await rendering); });
+    expect(screen.getByText("Diagnostic accessible")).toBeVisible();
+    expect(signal?.aborted).toBe(true);
+  } finally { vi.useRealTimers(); }
+});

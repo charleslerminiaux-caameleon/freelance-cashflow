@@ -14,6 +14,20 @@ Il comprend aussi l’import de factures CSV, les charges récurrentes et ponctu
 
 La connexion Qonto en lecture seule, sa synchronisation atomique et ses vues bancaires sont implémentées et testées avec HTTP fictif et PostgreSQL réel. La validation du compte réel reste à effectuer. Tiime dispose de contrats internes et d’un écran de préparation ; son connecteur attend l’accès API officiel. Le Jalon 2 complet reste donc en attente des validations réelles. Voir [Qonto](docs/QONTO.md) et [Tiime](docs/TIIME.md). Les parcours manuels/CSV restent disponibles.
 
+## Jalon 3 : installation et durcissement
+
+Le parcours **Paramètres → Installation et diagnostic** guide la configuration
+et vérifie le contrat de base. Après application des migrations du jalon 3,
+Qonto s'actualise si sa dernière publication date de plus de cinq minutes,
+uniquement pendant l'utilisation de l'application. Aucun worker Scaleway ni cron
+n'est requis. Next.js reste local avec Supabase hébergé.
+
+Les deux nouvelles migrations restent à appliquer séparément sur la base
+hébergée : voir [mise à jour](docs/UPDATES.md). Guides disponibles :
+[sauvegarde/restauration](docs/BACKUP_RESTORE.md),
+[déploiement web facultatif](docs/DEPLOYMENT.md),
+[contribution](CONTRIBUTING.md) et [sécurité](SECURITY.md).
+
 ## Architecture
 
 Le repository est un monorepo pnpm :
@@ -53,8 +67,12 @@ corepack pnpm test:client-boundary
 
 Les tests isolés dérivent une stack jetable `jalon-2-qonto-tests` (ports 563xx) et lancent Chromium sur 3200. Ils refusent toute autre stack, gardent les identifiants en mémoire et remplacent les variables Qonto par des canaris fictifs sous interception HTTP. Les parcours manuel, Qonto et récurrences créent chacun leur propriétaire fictif puis le suppriment. Voir les sous-commandes dans [QONTO.md](docs/QONTO.md).
 
-## Statut open source
+## Licence
 
-Le code est destiné à être publié en open source, mais le repository doit rester privé tant que le propriétaire n’a pas choisi la licence et audité l’historique Git. Aucune licence n’est attribuée implicitement.
+Le code du projet est distribué sous la licence [GNU AGPL-3.0](LICENSE). Les noms et logos des services tiers restent la propriété de leurs titulaires.
 
 Les données et calculs présentés ne constituent ni une comptabilité complète ni un conseil fiscal, social ou financier.
+
+### Autres connexions directes
+
+Pennylane, Revolut Business et bunq disposent désormais de connecteurs serveur en lecture seule, sans agrégateur. Leur activation nécessite la migration `202609180001_direct_integrations.sql` et les identifiants du titulaire. Consultez [Connexions directes](docs/DIRECT_INTEGRATIONS.md) ou **Intégrations → Configurer** pour les offres requises et les limites. La validation sur compte réel reste à effectuer.

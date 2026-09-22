@@ -1,0 +1,35 @@
+import { afterAll, beforeAll, expect, test } from "vitest";
+import { createClient } from "@supabase/supabase-js";
+import { randomBytes } from "node:crypto";
+import { loadInstallationReport } from "../src/features/installation/repository";
+if (process.env.E2E_STACK_PROJECT !== "jalon-2-qonto-tests" || process.env.NEXT_PUBLIC_SUPABASE_URL !== "http://127.0.0.1:56321") throw new Error("Dedicated stack required");
+const options = { auth: { persistSession: false, autoRefreshToken: false } };
+const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY!, options);
+const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, options);
+let owner: string;
+beforeAll(async () => {
+  const state = await admin.from("app_settings").select("owner_user_id");
+  if (state.error || state.data.length) throw new Error("Refusing existing owner");
+  const password = randomBytes(24).toString("base64url");
+  const created = await admin.auth.admin.createUser({ email: "installation@example.test", password, email_confirm: true });
+  if (created.error || !created.data.user) throw new Error("Synthetic account unavailable");
+  owner = created.data.user.id;
+  if ((await client.auth.signInWithPassword({ email: "installation@example.test", password })).error) throw new Error("Synthetic login failed");
+  if ((await client.rpc("onboard_owner", { p_country: "FR", p_currency: "EUR", p_legal_form: null, p_opening_balance_cents: 100000, p_safety_threshold_cents: 10000, p_timezone: "Europe/Paris" })).error) throw new Error("Synthetic onboarding failed");
+});
+afterAll(async () => { if (owner && (await admin.auth.admin.deleteUser(owner)).error) throw new Error("Synthetic cleanup failed"); });
+test("real SSR-style client reads owner-only installation state without any Qonto request", async () => {
+  const report = await loadInstallationReport(client, owner, false);
+  expect(report.checks.find(c => c.id === "database")?.state).toBe("ok");
+  expect(report.checks.find(c => c.id === "schema")?.state).toBe("ok");
+  expect(report.steps.find(s => s.id === "expenses")?.state).toBe("optional");
+  const inserted = await client.from("planned_cashflows").insert({ owner_user_id: owner, direction: "outflow", cashflow_kind: "expense", label: "Synthetic expense", amount_cents: 4000, planned_date: "2026-09-16" });
+  if (inserted.error) throw new Error("Synthetic expense failed");
+  const populated = await loadInstallationReport(client, owner, false);
+  expect(populated.steps.find(s => s.id === "expenses")?.state).toBe("ready");
+  expect(populated.steps.find(s => s.id === "reserves")?.state).toBe("optional");
+  const anonymous = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, options);
+  const denied = await anonymous.rpc("installation_diagnostic");
+  expect(denied.error).not.toBeNull();
+  expect(denied.data).toBeNull();
+});

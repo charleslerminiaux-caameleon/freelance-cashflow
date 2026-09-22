@@ -25,7 +25,7 @@ async function history(page: Page) {
 async function readyDashboard(page: Page) {
   // The clock effect proves the newly navigated dashboard has hydrated before
   // another native onChange/GET submission is attempted.
-  await expect(page.getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 24 h', exact: true })).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 5 min', exact: true })).toBeVisible({ timeout: 30000 });
 }
 async function settleChart(page: Page) {
   // Recharts animates SVG paths in JavaScript, outside screenshot's CSS animation control.
@@ -64,6 +64,8 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
   await page.getByLabel('Solde d’ouverture').fill('1000,00');
   await page.getByLabel('Seuil de sécurité').fill('100,00');
   await page.getByRole('button', { name: 'Terminer la configuration' }).click();
+  await expect(page).toHaveURL(/\/settings\/installation/);
+  await page.getByRole('link', { name: 'Ouvrir le dashboard' }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   const settings = await admin.from('app_settings').select('owner_user_id').single();
   if (settings.error) throw new Error('Dedicated synthetic owner unavailable');
@@ -140,25 +142,26 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
 
   await page.goto('/dashboard?horizon=90&scenario=committed&filters=1&invoices=1&expenses=1&signedOrders=1');
   await readyDashboard(page);
-  await page.getByRole('radio', { name: 'Pipeline pondéré', exact: true }).check();
+  await page.getByRole('radio', { name: 'Facturé + signé + opportunités', exact: true }).check();
   await expect(page).toHaveURL(/scenario=probable/);
   await readyDashboard(page);
-  await page.getByRole('checkbox', { name: 'Charges', exact: true }).uncheck();
-  await expect(page.getByRole('checkbox', { name: 'Charges', exact: true })).not.toBeChecked();
-  await expect(page).toHaveURL(url => !url.searchParams.has('expenses'));
+  await expect(page.getByRole('checkbox')).toHaveCount(0);
+  await expect(page.getByText(/Les charges sont incluses dans tous les scénarios/)).toBeVisible();
+  await page.getByRole('radio', { name: 'Facturé', exact: true }).check();
+  await expect(page).toHaveURL(/scenario=certain/);
   await readyDashboard(page);
-  await page.getByRole('checkbox', { name: 'Charges', exact: true }).check();
-  await expect(page).toHaveURL(/expenses=1/);
+  await page.getByRole('radio', { name: 'Facturé + signé + opportunités', exact: true }).check();
+  await expect(page).toHaveURL(/scenario=probable/);
   await readyDashboard(page);
   const stableUrl = page.url();
   const previousPublication = await publication(owner);
   await safeWrite(admin.from('integrations').update({ last_success_at: new Date(Date.now() - 25 * 3600000).toISOString(), last_auto_attempt_at: null }).eq('owner_user_id', owner));
   await page.reload();
   await expect.poll(() => publication(owner), { timeout: 30000 }).not.toBe(previousPublication);
-  const badge = page.getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 24 h', exact: true });
+  const badge = page.getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 5 min', exact: true });
   await expect(badge).toBeVisible({ timeout: 30000 });
   await expect(page).toHaveURL(stableUrl);
-  await expect(page.getByRole('radio', { name: 'Pipeline pondéré', exact: true })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Facturé + signé + opportunités', exact: true })).toBeChecked();
   await safeWrite(admin.from('bank_accounts').update({ current_balance_cents: 2345678 }).eq('owner_user_id', owner));
   await page.reload();
   await readyDashboard(page);
@@ -182,14 +185,14 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
     await page.setViewportSize({ width, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect(page.getByRole('link', { name: 'Dashboard', exact: true }).filter({ visible: true })).toHaveAttribute('aria-current', 'page');
-    const choices = page.locator('.scenario-controls fieldset').nth(1);
+    const choices = page.locator('.scenario-choices');
     const columns = await choices.evaluate(element => {
       const labels = [...element.querySelectorAll('label')];
       return labels.filter(label => Math.abs(label.getBoundingClientRect().top - labels[0]!.getBoundingClientRect().top) < 1).length;
     });
     await settleChart(page);
     await page.screenshot({ path: width === 390 ? "/private/tmp/libra-compact-390.png" : `/private/tmp/libra-dashboard-layout-${width}.png`, fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
-    expect(columns).toBe(width === 1440 ? 4 : width === 1024 ? 2 : 1);
+    expect(columns).toBe(width === 390 ? 1 : 3);
     for (const element of await page.locator('.scenario-controls label, .qonto-badge').all()) {
       const box = await element.boundingBox();
       expect(box && box.x >= 0 && box.x + box.width <= width).toBe(true);
@@ -222,7 +225,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
   await touch.route('**/*', route => ['http://127.0.0.1:3200', 'http://127.0.0.1:56321'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort());
   const touchPage = await touch.newPage();
   await touchPage.goto('http://127.0.0.1:3200/dashboard');
-  const touchBadge = touchPage.getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 24 h', exact: true });
+  const touchBadge = touchPage.getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 5 min', exact: true });
   await touchBadge.tap();
   await expect(touchPage.getByRole('tooltip').filter({ hasText: 'Dernière synchronisation' })).toBeVisible();
   await touchBadge.tap();

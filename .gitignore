@@ -14,3 +14,7 @@ supabase/.temp/
 supabase/.branches/
 
 .isolated-tests/
+
+.next-isolated/
+# Local bank authentication contexts (contain private keys and tokens)
+**/.libra/

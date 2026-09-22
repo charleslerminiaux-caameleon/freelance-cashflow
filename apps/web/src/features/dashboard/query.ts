@@ -348,12 +348,13 @@ export async function loadDashboardSourceData(
       adapter.listRelevantBillingScheduleItems(client, parsedOwnerId, range),
       adapter.listRelevantRecurringCashflows(client, parsedOwnerId, range),
       adapter.listRelevantPlannedCashflows(client, parsedOwnerId, range),
-      knownBankingSnapshot && (!knownBankingSnapshot.integration?.last_success_at || knownBankingSnapshot.fullTransactions)
+      knownBankingSnapshot && (!(knownBankingSnapshot.integrations ?? [knownBankingSnapshot.integration]).some(row => row?.last_success_at) || knownBankingSnapshot.fullTransactions)
         ? knownBankingSnapshot : adapter.getBankingSnapshot(client, parsedOwnerId, range.startDate),
     ]);
 
-  const confirmed = banking.integration?.last_success_at && adapter.listConfirmedRecurringSuggestions
-    ? await adapter.listConfirmedRecurringSuggestions(client, parsedOwnerId, banking.integration.id) : [];
+  const publishedIntegrations = (banking.integrations ?? (banking.integration ? [banking.integration] : [])).filter(row => row.last_success_at);
+  const confirmed = adapter.listConfirmedRecurringSuggestions
+    ? (await Promise.all(publishedIntegrations.map(row => adapter.listConfirmedRecurringSuggestions!(client, parsedOwnerId, row.id)))).flat() : [];
   const includedAccounts = new Set(banking.accounts.filter(account => account.status === "active" && account.is_current && account.currency === settings.currency).map(account => account.id));
   const paidMonthsByRecurringId = paidMonthsByExpense(confirmed, (banking.fullTransactions ?? []).filter(transaction => includedAccounts.has(transaction.bank_account_id)));
 

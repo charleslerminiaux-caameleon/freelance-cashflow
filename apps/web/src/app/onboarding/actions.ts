@@ -66,5 +66,5 @@ export async function onboardOwner(
     return { message: onboardingErrorMessage(error) };
   }
 
-  redirect("/dashboard");
+  redirect("/settings/installation");
 }

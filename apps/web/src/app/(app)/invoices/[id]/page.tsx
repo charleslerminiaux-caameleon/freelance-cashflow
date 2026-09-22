@@ -61,8 +61,9 @@ export default async function InvoiceDetailPage({
           today,
         });
   const remainingCents = invoice.amount_ttc_cents - invoice.paid_amount_cents;
+  const providerManaged = invoice.provider === "pennylane";
   const canPay =
-    remainingCents > 0 && currentStatus !== "draft" && currentStatus !== "cancelled";
+    !providerManaged && remainingCents > 0 && currentStatus !== "draft" && currentStatus !== "cancelled";
 
   return (
     <div className="commercial-page invoice-page">
@@ -107,7 +108,7 @@ export default async function InvoiceDetailPage({
             <span>{payments.length}</span>
           </div>
           {payments.length === 0 ? (
-            <p className="muted-copy">Aucun paiement enregistré pour cette facture.</p>
+            <p className="muted-copy">{providerManaged ? "Le solde est fourni par Pennylane ; le détail et la date des règlements ne sont pas importés." : "Aucun paiement enregistré pour cette facture."}</p>
           ) : (
             <div className="invoice-group-list">
               {payments.map((payment) => (
@@ -133,7 +134,7 @@ export default async function InvoiceDetailPage({
         <section className="panel" aria-labelledby="new-payment-title">
           <p className="eyebrow">Encaissement</p>
           <h2 id="new-payment-title">Enregistrer un paiement</h2>
-          {canPay ? (
+          {providerManaged ? <p>Les montants et règlements se modifient dans Pennylane. Synchronisez ensuite depuis les intégrations.</p> : canPay ? (
             <PaymentForm
               action={recordInvoicePaymentAction}
               invoiceId={invoice.id}
@@ -151,7 +152,7 @@ export default async function InvoiceDetailPage({
         </section>
       </div>
 
-      <details className="panel invoice-edit-panel">
+      {!providerManaged && <details className="panel invoice-edit-panel">
         <summary>Modifier la facture</summary>
         <InvoiceEditForm
           action={updateInvoiceAction}
@@ -167,7 +168,7 @@ export default async function InvoiceDetailPage({
             vatCents: invoice.vat_cents,
           }}
         />
-      </details>
+      </details>}
     </div>
   );
 }

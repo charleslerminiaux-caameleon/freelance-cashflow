@@ -53,15 +53,18 @@ export function InvoiceEditForm({
         </div>
         <div>
           <label htmlFor={`${fieldId}-issued`}>Date d’émission</label>
-          <input id={`${fieldId}-issued`} name="issuedAt" type="date" defaultValue={invoice.issuedAt} required />
+          <input id={`${fieldId}-issued`} aria-describedby={`${fieldId}-issued-hint`} name="issuedAt" type="date" defaultValue={invoice.issuedAt} required />
+          <p className="form-hint" id={`${fieldId}-issued-hint`}>Date à laquelle la facture est établie.</p>
         </div>
         <div>
           <label htmlFor={`${fieldId}-due`}>Date d’échéance</label>
-          <input id={`${fieldId}-due`} name="dueAt" type="date" defaultValue={invoice.dueAt} required />
+          <input id={`${fieldId}-due`} aria-describedby={`${fieldId}-due-hint`} name="dueAt" type="date" defaultValue={invoice.dueAt} required />
+          <p className="form-hint" id={`${fieldId}-due-hint`}>Date limite de paiement indiquée au client.</p>
         </div>
         <div>
           <label htmlFor={`${fieldId}-expected`}>Encaissement prévu</label>
-          <input id={`${fieldId}-expected`} name="expectedPaymentDate" type="date" defaultValue={invoice.expectedPaymentDate} required />
+          <input id={`${fieldId}-expected`} aria-describedby={`${fieldId}-expected-hint`} name="expectedPaymentDate" type="date" defaultValue={invoice.expectedPaymentDate} required />
+          <p className="form-hint" id={`${fieldId}-expected-hint`}>Date à laquelle vous estimez recevoir l’argent. Utilisée pour la prévision de trésorerie.</p>
         </div>
         <div>
           <label htmlFor={`${fieldId}-amount`}>Montant HT</label>

@@ -1,0 +1,13 @@
+begin;
+select no_plan();
+insert into auth.users(id) values ('10000000-0000-4000-8000-000000000001'),('10000000-0000-4000-8000-000000000002');
+insert into public.app_settings(owner_user_id) values ('10000000-0000-4000-8000-000000000001');
+select ok(not has_function_privilege('anon','public.installation_diagnostic()','EXECUTE'),'anonymous cannot read diagnostic');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002',true);
+select throws_ok($$select public.installation_diagnostic()$$,'42501','OWNER_REQUIRED','foreign user cannot read diagnostic');
+select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
+select is(public.installation_diagnostic(),'{"version":1,"syncIntervalSeconds":300}'::jsonb,'owner receives only the supported installation contract');
+reset role;
+select * from finish();
+rollback;

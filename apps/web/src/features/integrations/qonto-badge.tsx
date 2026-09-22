@@ -4,7 +4,7 @@ import { startTransition, useEffect, useId, useState } from "react";
 import { AlertTriangle, CheckCircle2, Clock3, LoaderCircle } from "lucide-react";
 import { useAutoSyncStatus } from "./auto-sync-coordinator";
 import { publicationTimestamp } from "./auto-sync-policy";
-import { qontoFreshness } from "./qonto-freshness";
+import { QONTO_FRESHNESS_MS, qontoFreshness } from "./qonto-freshness";
 
 export type QontoBadgeProps = {
   lastSuccessAt: string | null;
@@ -27,7 +27,7 @@ export function QontoBadge({ lastSuccessAt, timezone, lastAttemptFailed, syncInP
     function updateClock() {
       const now = Date.now();
       startTransition(() => setNowMs(now));
-      const untilStale = Date.parse(lastSuccessAt ?? "") + 86_400_000 - now;
+      const untilStale = Date.parse(lastSuccessAt ?? "") + QONTO_FRESHNESS_MS - now;
       timer = setTimeout(updateClock, untilStale > 0 ? Math.min(untilStale, 60_000) : 60_000);
     }
     updateClock();
@@ -42,7 +42,7 @@ export function QontoBadge({ lastSuccessAt, timezone, lastAttemptFailed, syncInP
     : automatic.phase === "checking" ? "checking" : freshness;
   const label = state === "syncing" ? "Synchronisation en cours"
     : state === "checking" ? "Vérification en cours"
-    : state === "fresh" ? "Synchronisé il y a moins de 24 h"
+    : state === "fresh" ? "Synchronisé il y a moins de 5 min"
     : state === "error" ? "Échec de synchronisation"
     : state === "unconfigured" ? "Aucune synchronisation publiée"
     : "Actualisation nécessaire";

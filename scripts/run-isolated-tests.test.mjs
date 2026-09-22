@@ -54,3 +54,9 @@ test('dashboard workflows run through both isolated acceptance suites', async ()
   assert.ok(harness.browserSpecs.includes('dashboard-workflows.spec.ts'));
   assert.ok((await readFile(new URL('../apps/web/e2e/integration.config.ts', import.meta.url), 'utf8')).includes('e2e/dashboard-workflows.integration.ts'));
 });
+
+test('direct provider credentials cannot leak from installation environment into acceptance runs', () => {
+  const names = ['PENNYLANE_API_TOKEN','REVOLUT_CLIENT_ID','REVOLUT_REFRESH_TOKEN','REVOLUT_PRIVATE_KEY','REVOLUT_ISSUER','BUNQ_API_KEY','BUNQ_CONTEXT_PATH'];
+  const env = testEnvironment(Object.fromEntries(names.map(name => [name, 'inherited-private-value'])));
+  for (const name of names) assert.equal(env[name], '');
+});

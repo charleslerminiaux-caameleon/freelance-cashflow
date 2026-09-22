@@ -13,10 +13,14 @@ export function BankingView({ banking, history, currency, searchParameters = {} 
   searchParameters?: Record<string, string | string[] | undefined>;
 }) {
   const { integration, accounts } = banking;
+  const integrations = banking.integrations ?? (integration ? [{ ...integration, provider: "qonto" }] : []);
   const accountsById = new Map(accounts.map((account) => [account.id, account]));
   function canCreateRecurring(transaction: TransactionHistory["items"][number]): boolean {
     const account = accountsById.get(transaction.bank_account_id);
-    return transaction.status === "completed" && transaction.direction === "outflow"
+    // History-to-recurring RPCs currently lock the owner's Qonto integration.
+    const qonto = integrations.find(row => row.provider === "qonto");
+    return !!qonto && account?.integration_id === qonto.id
+      && transaction.status === "completed" && transaction.direction === "outflow"
       && transaction.amount_cents > 0 && transaction.currency === currency
       && account?.is_current === true && account.status === "active"
       && account.currency === currency;
@@ -30,9 +34,9 @@ export function BankingView({ banking, history, currency, searchParameters = {} 
     return `/cashflow?${parameters}`;
   }
   return <section className="dashboard-panel banking-panel" aria-labelledby="banking-title">
-    <header className="dashboard-panel-heading"><div><p className="eyebrow">Données bancaires publiées</p><h2 id="banking-title">Comptes Qonto</h2></div><a href="/integrations">Gérer Qonto</a></header>
-    {integration?.last_success_at && <p>Dernière publication : <time dateTime={integration.last_success_at}>{integration.last_success_at}</time></p>}
-    {integration?.last_error_code && <p role="status">Dernière synchronisation en échec. Les données précédemment publiées sont conservées.</p>}
+    <header className="dashboard-panel-heading"><div><p className="eyebrow">Données bancaires publiées</p><h2 id="banking-title">Comptes bancaires</h2></div><a href="/integrations">Gérer les banques</a></header>
+    {integrations.filter(row => row.last_success_at).map(row => <p key={row.id}>{row.provider === "bunq" ? "bunq" : row.provider === "revolut" ? "Revolut" : "Qonto"} · Dernière publication : <time dateTime={row.last_success_at!}>{row.last_success_at}</time></p>)}
+    {integrations.some(row => row.last_error_code) && <p role="status">Dernière synchronisation en échec. Les données précédemment publiées sont conservées.</p>}
     {accounts.length === 0 ? <p>Aucun compte bancaire publié. La projection utilise le solde manuel.</p> : <div className="bank-account-grid">
       {accounts.map(account => <article className="bank-account" key={account.id}>
         <h3>{account.name}</h3><p>{account.status === "active" ? "Actif" : "Clôturé"} · {account.currency}</p>

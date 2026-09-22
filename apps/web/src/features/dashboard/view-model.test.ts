@@ -322,6 +322,21 @@ describe("buildDashboardViewModel", () => {
 });
 
 describe("resolveDashboardOptions", () => {
+  it.each(["certain", "committed", "probable"] as const)(
+    "keeps cumulative chart amounts when selecting %s through a legacy filtered URL",
+    (scenario) => {
+      const model = buildDashboardViewModel(sourceData(), resolveDashboardOptions(
+        { scenario, filters: "1", invoices: "0", expenses: "0" },
+        { horizonDays: 90, scenario: "certain" },
+        referenceOptions.today,
+      ));
+      const point = model.chart.points.find(({ date }) => date === "2026-11-01");
+      expect(point?.certainBalanceCents).toBe(4_145_000);
+      expect(point?.committedBalanceCents).toBe(4_445_000);
+      expect(point?.probableBalanceCents).toBe(4_645_000);
+    },
+  );
+
   it("accepts only linkable supported horizons and scenarios", () => {
     expect(resolveDashboardOptions(
       { horizon: "180", scenario: "probable", filters: "1", invoices: "1" },
@@ -333,9 +348,9 @@ describe("resolveDashboardOptions", () => {
       scenario: "probable",
       inclusions: {
         invoices: true,
-        expenses: false,
-        signedOrders: false,
-        weightedOpportunities: false,
+        expenses: true,
+        signedOrders: true,
+        weightedOpportunities: true,
       },
     });
   });
@@ -352,8 +367,8 @@ describe("resolveDashboardOptions", () => {
       inclusions: {
         invoices: true,
         expenses: true,
-        signedOrders: false,
-        weightedOpportunities: false,
+        signedOrders: true,
+        weightedOpportunities: true,
       },
     });
   });
@@ -423,4 +438,16 @@ it("distinguishes an in-progress server sync from a failed publication", () => {
  expect(model.lastBankSyncSucceeded).toBeNull();
  expect(model.timezone).toBe("Europe/Paris");
  expect(model.openingBalanceSource).toBe("qonto");
+});
+
+it("uses all banks and their oldest publication without labeling them Qonto", () => {
+ const data=bankingData();
+ data.banking!.integrations=[
+  {...data.banking!.integration!,provider:"qonto"},
+  {...data.banking!.integration!,id:"33333333-3333-4333-8333-333333333333",provider:"bunq",last_success_at:"2026-09-09T10:00:00Z",status:"error",last_error_code:"PROVIDER_UNAVAILABLE"},
+ ];
+ const model=bankModel(data);
+ expect(model.openingBalanceSource).toBe("banking");
+ expect(model.openingBalanceAsOf).toBe("2026-09-09T10:00:00Z");
+ expect(model.lastBankSyncSucceeded).toBe(false);
 });

@@ -276,3 +276,15 @@ it("accepts a NULL automatic admission without weakening the manual contract", a
   expect(rpc).toHaveBeenCalledWith("acquire_automatic_banking_sync", { p_owner_user_id: ownerUserId, p_run_id: runId });
   await expect(createBankingSyncStore(client).acquire(ownerUserId, runId)).rejects.toEqual(new SyncStoreError("DATABASE_ERROR", false));
 });
+
+it("acquires the selected direct bank without reusing the Qonto lease", async () => {
+  const { client, rpc } = clientWithRpc({ data: {
+    integration_id: "33333333-3333-4333-8333-333333333333", run_id: runId,
+    initial_created_from: "2026-03-10", initial_created_from_instant: "2026-03-10T00:00:00Z",
+    updated_from: "2026-03-10T00:00:00Z", updated_to: "2026-09-18T00:00:00Z",
+  }, error: null });
+  await createBankingSyncStore(client, { provider: "revolut" }).acquire(ownerUserId, runId);
+  expect(rpc).toHaveBeenCalledWith("acquire_direct_banking_sync", {
+    p_owner_user_id: ownerUserId, p_run_id: runId, p_provider: "revolut",
+  });
+});

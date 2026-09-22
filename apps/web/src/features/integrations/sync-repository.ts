@@ -91,7 +91,7 @@ function transactionPayload(transaction: NormalizedBankTransaction) {
   };
 }
 
-export function createBankingSyncStore(client: SupabaseClient, options?: { mode?: "manual" | "automatic" }): BankingSyncStore {
+export function createBankingSyncStore(client: SupabaseClient, options?: { mode?: "manual" | "automatic"; provider?: "revolut" | "bunq" | "pennylane" }): BankingSyncStore {
   async function call(name: string, parameters: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
     try {
       const request = client.rpc(name, parameters);
@@ -106,9 +106,10 @@ export function createBankingSyncStore(client: SupabaseClient, options?: { mode?
 
   return {
     async acquire(ownerUserId, runId, signal) {
-      const data = await call(options?.mode === "automatic" ? "acquire_automatic_banking_sync" : "acquire_banking_sync", {
+      const data = await call(options?.provider ? "acquire_direct_banking_sync" : options?.mode === "automatic" ? "acquire_automatic_banking_sync" : "acquire_banking_sync", {
         p_owner_user_id: ownerUserId,
         p_run_id: runId,
+        ...(options?.provider ? { p_provider: options.provider } : {}),
       }, signal);
       if (options?.mode === "automatic" && data === null) return null;
       const parsed = acquireSchema.safeParse(data);

@@ -8,7 +8,6 @@ import type { DashboardViewModel } from "./view-model";
 export function ScenarioControls({
   horizonDays,
   scenario,
-  inclusions,
 }: Pick<DashboardViewModel, "horizonDays" | "scenario" | "inclusions">) {
   const [hoveredScenario, setHoveredScenario] = useState<string | null>(null);
   const [focusedScenario, setFocusedScenario] = useState<string | null>(null);
@@ -22,7 +21,6 @@ export function ScenarioControls({
       onChange={(event) => event.currentTarget.requestSubmit()}
     >
       <input type="hidden" name="horizon" value={horizonDays} />
-      <input type="hidden" name="filters" value="1" />
       <fieldset className="scenario-choices">
         <legend>Scénario</legend>
         {Object.entries(scenarioCopy).map(([value, copy]) => (
@@ -67,30 +65,9 @@ export function ScenarioControls({
           </span>
         ))}
       </fieldset>
-      <fieldset>
-        <legend>Inclure</legend>
-        <label>
-          <input type="checkbox" name="invoices" value="1" defaultChecked={inclusions.invoices} />
-          Factures émises
-        </label>
-        <label>
-          <input type="checkbox" name="expenses" value="1" defaultChecked={inclusions.expenses} />
-          Charges
-        </label>
-        <label>
-          <input type="checkbox" name="signedOrders" value="1" defaultChecked={inclusions.signedOrders} />
-          Commandes signées
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            name="weightedOpportunities"
-            value="1"
-            defaultChecked={inclusions.weightedOpportunities}
-          />
-          Opportunités pondérées
-        </label>
-      </fieldset>
+      <p className="form-hint" aria-live="polite">
+        {scenarioCopy[scenario].description} Les charges sont incluses dans tous les scénarios.
+      </p>
     </form>
   );
 }

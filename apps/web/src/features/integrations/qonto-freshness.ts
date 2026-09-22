@@ -1,3 +1,5 @@
+export const QONTO_FRESHNESS_MS = 300_000;
+
 export type QontoFreshness = "fresh" | "stale" | "error" | "unconfigured";
 
 export function qontoFreshness({ lastSuccessAt, lastAttemptFailed, nowMs }: {
@@ -8,5 +10,5 @@ export function qontoFreshness({ lastSuccessAt, lastAttemptFailed, nowMs }: {
   if (lastAttemptFailed) return "error";
   if (lastSuccessAt === null) return "unconfigured";
   const age = nowMs - Date.parse(lastSuccessAt);
-  return Number.isFinite(age) && age >= 0 && age < 86_400_000 ? "fresh" : "stale";
+  return Number.isFinite(age) && age >= 0 && age < QONTO_FRESHNESS_MS ? "fresh" : "stale";
 }

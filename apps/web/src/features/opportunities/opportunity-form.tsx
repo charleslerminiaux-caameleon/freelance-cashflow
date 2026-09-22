@@ -105,13 +105,17 @@ export function OpportunityForm({
           />
         </div>
         <div>
-          <label htmlFor={`${fieldId}-close`}>Date de clôture prévue</label>
+          <label htmlFor={`${fieldId}-close`}>Date de signature prévue</label>
           <input
             id={`${fieldId}-close`}
+            aria-describedby={`${fieldId}-close-hint`}
             name="expectedCloseDate"
             type="date"
             defaultValue={value?.expectedCloseDate}
           />
+          <p className="form-hint" id={`${fieldId}-close-hint`}>
+            Date estimée de validation commerciale de l’opportunité.
+          </p>
         </div>
         <div>
           <label htmlFor={`${fieldId}-start`}>Début prévu</label>

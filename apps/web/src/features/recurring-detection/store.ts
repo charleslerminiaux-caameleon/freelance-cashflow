@@ -23,7 +23,7 @@ export function createAnalysisStore(client: SupabaseClient): AnalysisStore {
       return { integrationId: lease.integration_id, sourcePublication: lease.source_publication };
     },
     settings: (owner, signal) => getOwnerSettings(client, owner, signal),
-    snapshot: (owner, today, signal) => getBankingSnapshot(client, owner, { fullHistory: recurringHistoryWindow(today), signal }),
+    snapshot: (owner, today, signal) => getBankingSnapshot(client, owner, { provider: "qonto", fullHistory: recurringHistoryWindow(today), signal }),
     async publish(owner, runId, marker, candidates, signal) {
       await rpc(client, "publish_recurring_analysis", { p_owner_user_id: owner, p_run_id: runId, p_source_publication: marker,
         p_candidates: candidates.map(item => ({ account_id: item.accountId, currency: item.currency, normalized_label: item.normalizedLabel,

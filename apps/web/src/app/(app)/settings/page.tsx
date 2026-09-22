@@ -30,6 +30,8 @@ export default async function SettingsPage() {
         </div>
       </header>
 
+      <p><a href="/settings/installation">Installation et diagnostic</a></p>
+
       <section className="panel settings-panel" aria-labelledby="forecast-settings-title">
         <div className="section-heading">
           <div>

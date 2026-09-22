@@ -4,9 +4,9 @@ import { qontoFreshness } from "./qonto-freshness";
 describe("Qonto publication freshness", () => {
   const nowMs = Date.parse("2026-09-13T12:00:00Z");
   it.each([
-    ["2026-09-12T12:00:00.001Z", false, "fresh"],
-    ["2026-09-12T12:00:00Z", false, "stale"],
-    ["2026-09-12T11:59:59Z", false, "stale"],
+    ["2026-09-13T11:55:00.001Z", false, "fresh"],
+    ["2026-09-13T11:55:00Z", false, "stale"],
+    ["2026-09-13T11:54:59Z", false, "stale"],
     ["2026-09-13T12:00:00Z", false, "fresh"],
     ["2026-09-13T12:00:01Z", false, "stale"],
     ["invalid", false, "stale"],

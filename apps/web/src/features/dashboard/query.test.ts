@@ -265,3 +265,19 @@ it("derives paid months from the supplied full coherent history independently of
   expect(result.banking).toBe(bank);
   expect(result.paidMonthsByRecurringId).toEqual({ [recurringId]: ["2026-09"] });
 });
+
+it("loads confirmed recurring payments for every published real integration", async () => {
+ const adapter=repositoryAdapter();
+ const state={status:"connected" as const,last_success_at:"2026-09-10T10:00:00Z",last_connection_succeeded:true,last_error_code:null};
+ const bank={integration:null,integrations:[
+  {...state,id:ownerUserId,provider:"revolut" as const},
+  {...state,id:"33333333-3333-4333-8333-333333333333",provider:"bunq" as const},
+  {...state,id:"44444444-4444-4444-8444-444444444444",provider:"qonto" as const,last_success_at:null},
+ ],accounts:[],fullTransactions:[]};
+ const ids:string[]=[];
+ adapter.listConfirmedRecurringSuggestions=async (_client,_owner,id)=>{ids.push(id);return [];};
+ adapter.getBankingSnapshot=async()=>{throw new Error("must reuse complete multi-bank snapshot");};
+ const result=await loadDashboardSourceData({} as SupabaseClient,ownerUserId,expectedRange,adapter,undefined,bank);
+ expect(result.banking).toBe(bank);
+ expect(ids).toEqual([ownerUserId,"33333333-3333-4333-8333-333333333333"]);
+});

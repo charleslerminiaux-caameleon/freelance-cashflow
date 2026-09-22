@@ -3,8 +3,8 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-export const databaseProbes = ['scripts/test-banking-concurrency.mjs', 'scripts/test-automatic-banking-concurrency.mjs', 'scripts/test-recurring-concurrency.mjs'];
-export const browserSpecs = ['manual-cashflow.spec.ts', 'qonto-sync.spec.ts', 'recurring-detection.spec.ts', 'dashboard-workflows.spec.ts'];
+export const databaseProbes = ['scripts/test-banking-concurrency.mjs', 'scripts/test-automatic-banking-concurrency.mjs', 'scripts/test-recurring-concurrency.mjs', 'scripts/test-backup-restore.mjs'];
+export const browserSpecs = ['installation.spec.ts', 'manual-cashflow.spec.ts', 'qonto-sync.spec.ts', 'recurring-detection.spec.ts', 'dashboard-workflows.spec.ts'];
 export const project = 'jalon-2-qonto-tests';
 export const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 export const stack = join(root, '.isolated-tests');
@@ -47,8 +47,9 @@ export function parseStatus(status) {
     SUPABASE_SERVICE_ROLE_KEY: values.SERVICE_ROLE_KEY, E2E_STACK_PROJECT: project };
 }
 export function testEnvironment(inherited = process.env) {
-  const env = { ...inherited, QONTO_LOGIN: 'FAKE_QONTO_LOGIN_ACCEPTANCE_ONLY', QONTO_SECRET_KEY: 'FAKE_QONTO_SECRET_ACCEPTANCE_ONLY', NEXT_TELEMETRY_DISABLED: '1' };
+  const env = { ...inherited, QONTO_LOGIN: 'FAKE_QONTO_LOGIN_ACCEPTANCE_ONLY', QONTO_SECRET_KEY: 'FAKE_QONTO_SECRET_ACCEPTANCE_ONLY', NEXT_TELEMETRY_DISABLED: '1', E2E_STACK_PROJECT: project };
   for (const key of ['NODE_OPTIONS', 'FORCE_COLOR', 'NO_COLOR', 'E2E_BASE_URL', 'E2E_QONTO_SCENARIO', 'E2E_RECURRING_ANCHOR']) delete env[key];
+  for (const name of ['PENNYLANE_API_TOKEN', 'REVOLUT_CLIENT_ID', 'REVOLUT_REFRESH_TOKEN', 'REVOLUT_PRIVATE_KEY', 'REVOLUT_ISSUER', 'BUNQ_API_KEY', 'BUNQ_CONTEXT_PATH']) env[name] = '';
   return env;
 }
 // Child output is captured: neither status credentials nor arbitrary process errors are printed.

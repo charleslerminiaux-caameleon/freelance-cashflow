@@ -54,6 +54,8 @@ test('owner reviews, confirms, edits, deletes, reexamines, associates and handle
   await page.getByLabel('Solde d’ouverture').fill('1000,00');
   await page.getByLabel('Seuil de sécurité').fill('100,00');
   await page.getByRole('button', { name: 'Terminer la configuration' }).click();
+  await expect(page).toHaveURL(/\/settings\/installation/);
+  await page.getByRole('link', { name: 'Ouvrir le dashboard' }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   // The preload shares this run anchor. Align SQL's owner business calendar
   // before any recurring import or projection, keeping the live DB clock intact.

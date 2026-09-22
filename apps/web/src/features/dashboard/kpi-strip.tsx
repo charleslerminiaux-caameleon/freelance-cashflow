@@ -31,8 +31,8 @@ export function KpiStrip({
         {openingBalanceSource === "qonto" ? (
           <QontoBadge lastSuccessAt={openingBalanceAsOf ?? null} timezone={timezone}
             lastAttemptFailed={lastBankSyncSucceeded === false} syncInProgress={bankSyncInProgress} />
-        ) : <small>Solde manuel{manualDate ? ` au ${manualDate}` : " actuel"}</small>}
-        {openingBalanceSource === "qonto" && lastBankSyncSucceeded === false && <small>Actualisation nécessaire · données conservées</small>}
+        ) : openingBalanceSource === "banking" ? <small>Solde bancaire · publication la plus ancienne : {openingBalanceAsOf}{bankSyncInProgress ? " · synchronisation en cours" : ""}</small> : <small>Solde manuel{manualDate ? ` au ${manualDate}` : " actuel"}</small>}
+        {openingBalanceSource !== "manual" && lastBankSyncSucceeded === false && <small>Actualisation nécessaire · données conservées</small>}
         {excludedBankCurrencies.length > 0 && <small>Devises exclues : {excludedBankCurrencies.join(", ")}</small>}
       </article>
       <article className="dashboard-kpi dashboard-kpi-available">

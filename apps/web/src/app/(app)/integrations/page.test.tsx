@@ -1,12 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ requireOwner: vi.fn(), createClient: vi.fn(), getQontoIntegration: vi.fn(), isQontoConfigured: vi.fn(), syncQontoAction: vi.fn() }));
+const mocks = vi.hoisted(() => ({ requireOwner: vi.fn(), createClient: vi.fn(), getQontoIntegration: vi.fn(), getDirectIntegrations: vi.fn(), isQontoConfigured: vi.fn(), syncQontoAction: vi.fn() }));
 vi.mock("@/lib/auth/require-owner", () => ({ requireOwner:mocks.requireOwner }));
 vi.mock("@/lib/supabase/server", () => ({ createClient:mocks.createClient }));
-vi.mock("@/features/integrations/repository", () => ({ getQontoIntegration:mocks.getQontoIntegration }));
+vi.mock("@/features/integrations/repository", () => ({ getQontoIntegration:mocks.getQontoIntegration, getDirectIntegrations:mocks.getDirectIntegrations }));
 vi.mock("@/features/integrations/qonto-config", () => ({ isQontoConfigured:mocks.isQontoConfigured }));
 vi.mock("@/features/integrations/actions", () => ({ syncQontoAction:mocks.syncQontoAction }));
+vi.mock("@/features/integrations/direct-actions", () => ({ syncPennylaneAction: vi.fn(), syncRevolutAction: vi.fn(), syncBunqAction: vi.fn() }));
 import Page from "./page";
-beforeEach(() => {vi.clearAllMocks(); mocks.requireOwner.mockResolvedValue({userId:"owner"}); mocks.createClient.mockResolvedValue({}); mocks.getQontoIntegration.mockResolvedValue(null); mocks.isQontoConfigured.mockReturnValue(false);});
+beforeEach(() => {vi.clearAllMocks(); mocks.requireOwner.mockResolvedValue({userId:"owner"}); mocks.createClient.mockResolvedValue({}); mocks.getQontoIntegration.mockResolvedValue(null); mocks.getDirectIntegrations.mockResolvedValue([]); mocks.isQontoConfigured.mockReturnValue(false);});
 it("renders owner-only Qonto and Tiime state", async () => {render(await Page()); expect(screen.getByRole("heading", {name:"Intégrations"})).toBeInTheDocument(); expect(mocks.getQontoIntegration).toHaveBeenCalledWith({},"owner"); expect(screen.getByText("Accès API à obtenir")).toBeInTheDocument();});
 it("guards owner before reading integration data", async () => {mocks.requireOwner.mockRejectedValue(new Error("redirect")); await expect(Page()).rejects.toThrow("redirect"); expect(mocks.createClient).not.toHaveBeenCalled();});

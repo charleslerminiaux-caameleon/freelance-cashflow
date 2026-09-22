@@ -5,12 +5,12 @@ const local = vi.hoisted(() => ({ state: { phase: "idle" } as AutoSyncState }));
 vi.mock("./auto-sync-coordinator", () => ({ useAutoSyncStatus: () => local.state }));
 import { QontoBadge } from "./qonto-badge";
 const props = {lastSuccessAt: "2026-09-12T23:30:00Z", timezone: "Europe/Paris", lastAttemptFailed: false};
-beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-09-13T00:30:00Z")); local.state = {phase: "idle"}; });
+beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date("2026-09-12T23:32:00Z")); local.state = {phase: "idle"}; });
 afterEach(() => { vi.useRealTimers(); });
 
 it("offers a local logo and keyboard/touch details in the owner's timezone", () => {
   const {container} = render(<QontoBadge {...props} />);
-  const button = screen.getByRole("button", {name: /Synchronisé il y a moins de 24 h/});
+  const button = screen.getByRole("button", {name: /Synchronisé il y a moins de 5 min/});
   expect(screen.getByRole("img", {name: "Qonto"})).toHaveAttribute("src", "/qonto-logo.svg");
   expect(container).not.toHaveTextContent("2026-09-12T23:30:00Z");
   fireEvent.focus(button);
@@ -33,10 +33,10 @@ it("does not call a recent publication from yesterday today", () => {
   expect(screen.getByRole("tooltip")).not.toHaveTextContent(/aujourd’hui|aujourd'hui/);
 });
 
-it("loses its fresh status at the 24-hour boundary while mounted and cleans up its clock", () => {
-  vi.setSystemTime(new Date("2026-09-13T23:29:59Z"));
+it("loses its fresh status at the five-minute boundary while mounted and cleans up its clock", () => {
+  vi.setSystemTime(new Date("2026-09-12T23:34:59Z"));
   const {unmount} = render(<QontoBadge {...props} />);
-  expect(screen.getByRole("button", {name: /Synchronisé il y a moins de 24 h/})).toBeInTheDocument();
+  expect(screen.getByRole("button", {name: /Synchronisé il y a moins de 5 min/})).toBeInTheDocument();
   act(() => vi.advanceTimersByTime(1000));
   expect(screen.getByRole("button", {name: /Actualisation nécessaire/})).toBeInTheDocument();
   unmount(); expect(vi.getTimerCount()).toBe(0);
@@ -44,7 +44,7 @@ it("loses its fresh status at the 24-hour boundary while mounted and cleans up i
 
 it.each(["invalid", "2026-09-14T00:00:00Z"])("never displays green for %s", (lastSuccessAt) => {
   render(<QontoBadge {...props} lastSuccessAt={lastSuccessAt} />);
-  expect(screen.queryByRole("button", {name: /Synchronisé il y a moins de 24 h/})).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", {name: /Synchronisé il y a moins de 5 min/})).not.toBeInTheDocument();
   fireEvent.focus(screen.getByRole("button"));
   expect(screen.getByRole("tooltip")).toHaveTextContent("Date de dernière synchronisation indisponible");
 });
@@ -53,7 +53,7 @@ it.each(["checking", "syncing"] as const)("shows distinct %s progress without cl
   local.state = {phase};
   render(<QontoBadge {...props} />);
   expect(screen.getByRole("button", {name: phase === "checking" ? /Vérification en cours/ : /Synchronisation en cours/})).toBeInTheDocument();
-  expect(screen.queryByRole("button", {name: /Synchronisé il y a moins de 24 h/})).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", {name: /Synchronisé il y a moins de 5 min/})).not.toBeInTheDocument();
 });
 
 it("uses persisted server syncing when another tab owns the refresh", () => {

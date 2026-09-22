@@ -33,7 +33,9 @@ async function completeOnboarding(
   await page.getByLabel("Solde d’ouverture").fill(values.openingBalance);
   await page.getByLabel("Seuil de sécurité").fill(values.safetyThreshold);
   await page.getByRole("button", { name: "Terminer la configuration" }).click();
-  await expect(page).toHaveURL(/\/dashboard(?:\?|$)/u, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/settings\/installation(?:\?|$)/u, { timeout: 30_000 });
+  await page.getByRole("link", { name: "Ouvrir le dashboard" }).click();
+  await expect(page).toHaveURL(/\/dashboard(?:\?|$)/u);
 }
 
 async function createCustomer(page: Page, name: string) {
@@ -53,7 +55,7 @@ async function createOpportunity(
   await form.getByLabel("Nom", { exact: true }).fill(values.name);
   await form.getByLabel("Montant HT").fill(values.amountHt);
   await form.getByLabel("Probabilité (%)").fill(values.probability);
-  await form.getByLabel("Date de clôture prévue").fill(isoDateFromToday(7));
+  await form.getByLabel("Date de signature prévue").fill(isoDateFromToday(7));
   await form.getByRole("button", { name: "Créer l’opportunité" }).click();
   await expect(page.getByRole("article").filter({ has: page.getByRole("heading", { name: values.name }) })).toBeVisible();
 }
@@ -127,6 +129,7 @@ async function createRecurringExpense(
 }
 
 test("owner completes the manual cashflow journey", async ({ page }) => {
+  test.setTimeout(120000);
   await loginAsOwner(page);
   await completeOnboarding(page, {
     openingBalance: "42380,00",

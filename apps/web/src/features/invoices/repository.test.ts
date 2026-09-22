@@ -438,3 +438,12 @@ it("deletes one owned invoice payment through the recalculation RPC", async () =
     p_payment_id: paymentId,
   });
 });
+
+it('reads Pennylane invoices without dropping their outstanding balance', async () => {
+ const {client}=clientWith({invoices:{error:null,data:[{
+  id:invoiceId,owner_user_id:ownerUserId,customer_id:customerId,billing_schedule_item_id:null,provider:'pennylane',external_id:'pl-1',
+  invoice_number:'PL-001',issued_at:'2026-09-01',due_at:'2026-09-30',expected_payment_date:'2026-09-30',amount_ht_cents:10000,vat_cents:2000,amount_ttc_cents:12000,paid_amount_cents:6000,
+  status:'partially_paid',paid_at:null,raw_payload_hash:null,created_at:'2026-09-01T00:00:00Z',updated_at:'2026-09-01T00:00:00Z',customer:{name:'API Client'},
+ }]}});
+ const rows=await listInvoices(client,ownerUserId);expect(rows[0]).toMatchObject({provider:'pennylane',paid_amount_cents:6000});
+});

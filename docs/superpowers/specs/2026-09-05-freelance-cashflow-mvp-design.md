@@ -1,5 +1,11 @@
 # Freelance Cashflow MVP — Design
 
+> Révision du 15 septembre 2026 : le propriétaire a retiré Scaleway et le worker
+> autonome. La synchronisation a lieu uniquement pendant l’utilisation de Libra,
+> avec un seuil de cinq minutes. Next.js reste local avec Supabase hébergé.
+> Le [cadrage du jalon 3](2026-09-15-milestone-three-design.md) remplace les
+> dispositions historiques contraires ci-dessous.
+
 **Date:** 5 septembre 2026  
 **Statut:** validé en conversation  
 **Document source:** `cahier_des_charges_freelance_cashflow_v0.2_open_source.md`

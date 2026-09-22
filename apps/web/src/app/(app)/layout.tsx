@@ -11,7 +11,19 @@ import { requireOwner } from "@/lib/auth/require-owner";
 export default async function ProtectedAppLayout({ children }: { children: ReactNode }) {
   const { userId } = await requireOwner();
   const client = await createClient();
-  const integration = await getQontoIntegration(client, userId);
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let integration: Awaited<ReturnType<typeof getQontoIntegration>> = null;
+  let integrationUnavailable = false;
+  try {
+    integration = await Promise.race([
+      getQontoIntegration(client, userId, controller.signal),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => {
+        controller.abort(); reject(new Error("DATABASE_ERROR"));
+      }, 5_000); }),
+    ]);
+  } catch { integrationUnavailable = true; }
+  finally { clearTimeout(timer); controller.abort(); }
 
-  return <AutoSyncCoordinator lastSuccessAt={integration?.last_success_at}><AppShell syncStatus={integrationSummary(integration, isQontoConfigured())}>{children}</AppShell></AutoSyncCoordinator>;
+  return <AutoSyncCoordinator lastSuccessAt={integration?.last_success_at}><AppShell syncStatus={integrationUnavailable ? "Qonto : état indisponible" : integrationSummary(integration, isQontoConfigured())}>{children}</AppShell></AutoSyncCoordinator>;
 }

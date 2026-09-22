@@ -70,9 +70,9 @@ export default async function CashflowPage({
           <strong>{formatMoney(model.openingBalanceCents)}</strong>
         </div>
         <p>
-          {model.openingBalanceSource === "qonto" ? "Situation Qonto" : "Situation manuelle"} au {model.openingBalanceAsOf} · seuil de sécurité {formatMoney(model.safetyThresholdCents)}
+          {model.openingBalanceSource === "qonto" ? "Situation Qonto" : model.openingBalanceSource === "banking" ? "Situation bancaire" : "Situation manuelle"} au {model.openingBalanceAsOf} · seuil de sécurité {formatMoney(model.safetyThresholdCents)}
         </p>
-        {model.openingBalanceSource === "qonto" && model.lastBankSyncSucceeded === false && <p>Actualisation nécessaire · dernier solde publié conservé.</p>}
+        {model.openingBalanceSource !== "manual" && model.lastBankSyncSucceeded === false && <p>Actualisation nécessaire · dernier solde publié conservé.</p>}
         {model.excludedBankCurrencies.length > 0 && <p>Devises exclues : {model.excludedBankCurrencies.join(", ")}.</p>}
       </section>
 

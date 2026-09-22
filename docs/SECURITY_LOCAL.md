@@ -50,3 +50,17 @@ Pour une compromission locale, détruisez les données de la stack concernée si
 ## Acceptation Qonto
 
 `corepack pnpm test:isolated` utilise uniquement `.isolated-tests/` et les ports 563xx/3200. Les fichiers d’environnement ne sont jamais copiés ; les clés de statut restent en mémoire. Le preload HTTP appartient exclusivement aux tests, bloque les sorties non simulées et ne doit jamais servir à une installation réelle. `corepack pnpm test:client-boundary` plante de faux identifiants lors du build et vérifie leur absence dans les assets clients. Voir [QONTO.md](QONTO.md) pour la procédure de validation réelle séparée et la rotation.
+
+## Jalon 3
+
+La page Installation et diagnostic est réservée au propriétaire. Les lectures
+optionnelles sont bornées et les erreurs affichées proviennent d'une liste fixe.
+Les compilations de recette utilisent `.next-isolated` et ne remplacent pas les
+fichiers `.next` du serveur utilisateur. La recette d'installation autorise
+uniquement les captures fictives `/private/tmp/libra-installation-1440.png` et
+`/private/tmp/libra-installation-390.png` sur le serveur3200.
+
+La recette de restauration utilise une base distincte `libra_restore_probe`
+dans `supabase_db_jalon-2-qonto-tests` et un conteneur Auth temporaire sur un port
+aléatoire lié à `127.0.0.1`. Elle refuse toute destination préexistante et nettoie
+uniquement les ressources qu'elle a créées. Aucun secret réel n'est nécessaire.

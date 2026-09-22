@@ -1,5 +1,15 @@
 # Installation
 
+## Évolution du jalon 3
+
+L’onboarding ouvre désormais **Installation et diagnostic**, également accessible
+depuis les paramètres. Chaque étape facultative peut être complétée plus tard.
+La synchronisation pendant l’utilisation remplace le worker Scaleway initialement
+prévu ; voir [exploitation](DEPLOYMENT.md). Les migrations et leur statut sont
+décrits dans [UPDATES.md](UPDATES.md). Les historiques datés ci-dessous concernent
+les opérations précédentes, pas une preuve de l’état actuel de la base.
+
+
 ## Installation choisie : Next.js local et Supabase hébergé
 
 L’application utilisée par le propriétaire tourne localement et se connecte à son projet Supabase hébergé. Docker n’est pas nécessaire pour ce fonctionnement ; il sert aux tests isolés ou à l’alternative de développement décrite plus bas. Ne remplacez pas la configuration hébergée par les clés de la stack de test.
@@ -141,3 +151,5 @@ Pour les tests, utilisez `corepack pnpm test:isolated` : ce harness dérive une 
 Pour Qonto réel, utilisez l’installation Next.js locale reliée au Supabase hébergé décrite en tête de ce guide, puis renseignez vous-même son fichier ignoré `apps/web/.env.local` : [procédure Qonto](QONTO.md). Ne lancez jamais les tests contre cette installation. La préparation Tiime et la demande d’accès sont détaillées dans [TIIME.md](TIIME.md). Aucun accès fournisseur réel n’est requis pour les tests.
 
 La recette dashboard/historique vérifie aussi les confirmations simultanées depuis deux opérations, le mois déjà payé, les corrections et suppressions, la recréation/association explicite, les contrôles propriétaire, les compteurs HTTP d’actualisation automatique et la conservation du solde après échec d’analyse. Chromium couvre création de catégorie avec conservation du brouillon, actualisation réelle RSC, paramètres de scénario, navigation active, tooltips clavier/toucher et absence de débordement aux largeurs 1440/1024/390. Les captures explicites sont limitées à ce propriétaire synthétique, dans `/private/tmp/libra-dashboard-*.png` ; vidéos, traces et captures automatiques restent désactivées. N’utilisez jamais de données financières réelles pour ces captures.
+
+Les connexions directes **Pennylane, Revolut Business et bunq** sont documentées dans [DIRECT_INTEGRATIONS.md](DIRECT_INTEGRATIONS.md). Appliquez la migration `202609180001_direct_integrations.sql`, configurez les variables serveur du fournisseur et redémarrez Libra. Les clés restent dans le fichier ignoré `.env.local` ; bunq conserve aussi son contexte privé dans `.libra/`.

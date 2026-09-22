@@ -7,7 +7,7 @@ const banking: BankingSnapshot = {integration:{id:"qonto",status:"error",last_su
 const history: TransactionHistory = {items:[{id:"t",bank_account_id:"a",currency:"USD",amount_cents:1000,direction:"outflow",status:"pending",label:"<script>example</script>",counterparty:null,transaction_date:localDate("2026-09-09"),value_date:null,updated_at:"2026-09-10T10:00:00Z"}],page:2,hasNext:true};
 it("shows currencies, closed/noncurrent accounts, available balance and stale publication separately from history", () => {
  const {container} = render(<BankingView banking={banking} history={history} currency="EUR" searchParameters={{horizon:"180",scenario:"probable",expenses:"0"}} />);
- expect(screen.getByRole("heading",{name:"Comptes Qonto"})).toBeInTheDocument(); expect(screen.getByText(/Clôturé/)).toBeInTheDocument(); expect(screen.getByText(/Hors inventaire actuel/)).toBeInTheDocument(); expect(screen.getByText(/100,00 USD/)).toBeInTheDocument(); expect(screen.getByText(/Dernière synchronisation en échec/)).toBeInTheDocument();
+ expect(screen.getByRole("heading",{name:"Comptes bancaires"})).toBeInTheDocument(); expect(screen.getByText(/Clôturé/)).toBeInTheDocument(); expect(screen.getByText(/Hors inventaire actuel/)).toBeInTheDocument(); expect(screen.getByText(/100,00 USD/)).toBeInTheDocument(); expect(screen.getByText(/Dernière synchronisation en échec/)).toBeInTheDocument();
  const table = screen.getByRole("table",{name:"Historique bancaire"}); expect(within(table).getByText("En attente")).toBeInTheDocument(); expect(within(table).getByText("<script>example</script>")).toBeInTheDocument(); expect(container.querySelector("script")).toBeNull();
  const next = new URL(screen.getByRole("link",{name:"Transactions suivantes"}).getAttribute("href")!,"http://localhost"); expect(next.searchParams.get("bankPage")).toBe("3"); expect(next.searchParams.get("horizon")).toBe("180");
  expect(screen.getByRole("link",{name:"Transactions précédentes"})).toBeInTheDocument();
@@ -16,6 +16,7 @@ it("provides an empty state without inventing bank data", () => {render(<Banking
 
 it("offers history creation only for eligible published outflows with an internal-id URL", () => {
   const eligibleAccount = {
+    integration_id: "qonto",
     id: "11111111-1111-4111-8111-111111111111",
     name: "Compte principal",
     iban_masked: null,
@@ -42,7 +43,7 @@ it("offers history creation only for eligible published outflows with an interna
 
   render(
     <BankingView
-      banking={{ integration: null, accounts: [eligibleAccount] }}
+      banking={{ integration: banking.integration, accounts: [eligibleAccount] }}
       history={{
         items: [
           eligibleTransaction,
@@ -107,4 +108,21 @@ it.each([
     />,
   );
   expect(screen.queryByRole("link", { name: /Créer une charge récurrente/i })).toBeNull();
+});
+
+it.each(["revolut", "bunq"] as const)("hides Qonto-only recurring creation for %s transactions in a mixed snapshot", provider => {
+ const qonto = {...banking.integration!, provider:"qonto" as const};
+ const other = {...qonto,id:"other",provider};
+ const account = {...banking.accounts[0]!,integration_id:other.id,currency:"EUR",status:"active" as const,is_current:true};
+ render(<BankingView banking={{integration:qonto,integrations:[qonto,other],accounts:[account]}}
+  history={{items:[{...history.items[0]!,currency:"EUR",status:"completed"}],page:1,hasNext:false}} currency="EUR"/>);
+ expect(screen.queryByRole("link",{name:/Créer une charge récurrente/i})).toBeNull();
+});
+
+
+it("hides recurring creation when an account has no verified integration association", () => {
+ const account={...banking.accounts[0]!,currency:"EUR",status:"active" as const,is_current:true};
+ render(<BankingView banking={{...banking,accounts:[account]}}
+  history={{items:[{...history.items[0]!,currency:"EUR",status:"completed"}],page:1,hasNext:false}} currency="EUR"/>);
+ expect(screen.queryByRole("link",{name:/Créer une charge récurrente/i})).toBeNull();
 });

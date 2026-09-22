@@ -26,7 +26,7 @@ function transportFixture(publishDuringHistory = false) {
     networkTables.push(table);
     let rows: unknown;
     if (table === "integrations") {
-      rows = [{ id: integrationId, status: "connected", last_success_at: `2026-09-10T10:00:00.00000${generation}Z`, last_connection_succeeded: true, last_error_code: null }];
+      rows = [{ id: integrationId, provider: "qonto", status: "connected", last_success_at: `2026-09-10T10:00:00.00000${generation}Z`, last_connection_succeeded: true, last_error_code: null }];
     } else if (table === "bank_accounts") {
       const length = url.searchParams.get("offset") === "0" ? 1000 : 1;
       rows = Array.from({ length }, () => ({ id: owner, name: "Compte exemple", iban_masked: null, currency: "EUR", current_balance_cents: generation * 100, available_balance_cents: null, status: "active", is_current: true, updated_at: "2026-09-10T10:00:00Z" }));
@@ -75,7 +75,7 @@ it("reads complete history beyond 1000 within the balance publication bracket", 
     expect(init?.signal).toBeInstanceOf(AbortSignal);
     expect(url.searchParams.get("owner_user_id")).toBe(`eq.${owner}`);
     let rows: unknown[];
-    if (table === "integrations") rows = [{ id: integrationId, status: "connected", last_success_at: `2026-09-10T10:00:00.00000${generation}Z`, last_connection_succeeded: true, last_error_code: null }];
+    if (table === "integrations") rows = [{ id: integrationId, provider: "qonto", status: "connected", last_success_at: `2026-09-10T10:00:00.00000${generation}Z`, last_connection_succeeded: true, last_error_code: null }];
     else if (table === "bank_accounts") rows = [{ id: owner, name: "Synthetic", iban_masked: null, currency: "EUR", current_balance_cents: generation * 100, available_balance_cents: null, status: "active", is_current: true, updated_at: "2026-09-10T10:00:00Z" }];
     else {
       expect(url.searchParams.get("integration_id")).toBe(`eq.${integrationId}`);

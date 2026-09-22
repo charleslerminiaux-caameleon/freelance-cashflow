@@ -24,3 +24,11 @@ export async function getQontoIntegration(client: SupabaseClient, ownerUserId: s
     return data === null ? null : integrationSchema.parse(data);
   } catch { throw new Error("DATABASE_ERROR"); }
 }
+
+export async function getDirectIntegrations(client: SupabaseClient, ownerUserId: string) {
+  const { data, error } = await client.from("integrations")
+    .select("provider, id, status, last_connection_succeeded, last_success_at, last_error_code")
+    .eq("owner_user_id", z.string().uuid().parse(ownerUserId)).in("provider", ["pennylane", "revolut", "bunq"]);
+  if (error) throw new Error("DATABASE_ERROR");
+  return z.array(integrationSchema.extend({ provider: z.enum(["pennylane", "revolut", "bunq"]) })).parse(data);
+}

@@ -33,15 +33,15 @@ const inclusions: DashboardInclusions = {
 const scenarioHelp = [
   {
     label: "Facturé",
-    description: "Factures émises restant à encaisser; les sorties certaines continuent d’être prises en compte dans la trésorerie.",
+    description: "Factures émises restant à encaisser.",
   },
   {
-    label: "Commandes signées",
-    description: "Facturé plus les facturations planifiées des commandes signées; les opportunités sont exclues.",
+    label: "Facturé + commandes signées",
+    description: "Factures émises et échéances non encore facturées des commandes signées.",
   },
   {
-    label: "Pipeline pondéré",
-    description: "Commandes signées plus les opportunités ouvertes pondérées par leur probabilité (exemple : 10 000 € à 60 % compte pour 6 000 €).",
+    label: "Facturé + signé + opportunités",
+    description: "Factures émises, échéances non encore facturées des commandes signées et opportunités ouvertes pondérées par leur probabilité (10 000 € à 60 % comptent pour 6 000 €).",
   },
 ] as const;
 
@@ -91,7 +91,7 @@ describe("dashboard controls", () => {
     expect(within(strip).getByText("Facturé")).toBeInTheDocument();
   });
 
-  it("keeps scenario and inclusions in linkable horizon URLs", () => {
+  it("keeps scenario and horizon in URLs without redundant source filters", () => {
     render(
       <HorizonSelector
         basePath="/cashflow"
@@ -103,7 +103,7 @@ describe("dashboard controls", () => {
 
     expect(screen.getByRole("link", { name: "6 mois" })).toHaveAttribute(
       "href",
-      "/cashflow?horizon=180&scenario=committed&filters=1&invoices=1&expenses=1",
+      "/cashflow?horizon=180&scenario=committed",
     );
     expect(screen.getByRole("link", { name: "90 j" })).toHaveAttribute("aria-current", "page");
   });
@@ -117,21 +117,20 @@ describe("dashboard controls", () => {
       />,
     );
 
-    expect(document.querySelector('input[name="filters"]')).toHaveValue("1");
-    expect(screen.getByRole("checkbox", { name: "Factures émises" })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "Commandes signées" })).not.toBeChecked();
+    expect(document.querySelector('input[name="filters"]')).toBeNull();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Facturé" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Facturé" }).closest("form")).toHaveFormValues({
       scenario: "certain",
     });
     expect(screen.getByRole("radio", { name: "Facturé" })).toHaveAccessibleDescription(
-      "Factures émises restant à encaisser; les sorties certaines continuent d’être prises en compte dans la trésorerie.",
+      "Factures émises restant à encaisser.",
     );
-    expect(screen.getByRole("radio", { name: "Commandes signées" })).toHaveAccessibleDescription(
-      "Facturé plus les facturations planifiées des commandes signées; les opportunités sont exclues.",
+    expect(screen.getByRole("radio", { name: "Facturé + commandes signées" })).toHaveAccessibleDescription(
+      "Factures émises et échéances non encore facturées des commandes signées.",
     );
-    expect(screen.getByRole("radio", { name: "Pipeline pondéré" })).toHaveAccessibleDescription(
-      "Commandes signées plus les opportunités ouvertes pondérées par leur probabilité (exemple : 10 000 € à 60 % compte pour 6 000 €).",
+    expect(screen.getByRole("radio", { name: "Facturé + signé + opportunités" })).toHaveAccessibleDescription(
+      "Factures émises, échéances non encore facturées des commandes signées et opportunités ouvertes pondérées par leur probabilité (10 000 € à 60 % comptent pour 6 000 €).",
     );
     expect(screen.queryByRole("button", { name: "Mettre à jour" })).not.toBeInTheDocument();
   });
@@ -242,43 +241,16 @@ describe("dashboard controls", () => {
       submittedScenarios.push(String(new FormData(form).get("scenario")));
     });
 
-    fireEvent.click(screen.getByRole("radio", { name: "Commandes signées" }));
-    fireEvent.click(screen.getByRole("radio", { name: "Pipeline pondéré" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Facturé + commandes signées" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Facturé + signé + opportunités" }));
     fireEvent.click(screen.getByRole("radio", { name: "Facturé" }));
 
     expect(submittedScenarios).toEqual(["committed", "probable", "certain"]);
     expect(new FormData(form).get("horizon")).toBe("90");
-    expect(new FormData(form).get("filters")).toBe("1");
+    expect(new FormData(form).get("filters")).toBeNull();
   });
 
-  it("submits unchecked and restored inclusions in the GET payload", () => {
-    render(
-      <ScenarioControls
-        horizonDays={90}
-        scenario="certain"
-        inclusions={inclusions}
-      />,
-    );
 
-    const form = screen.getByRole("radio", { name: "Facturé" }).closest("form")!;
-    const payloads: FormData[] = [];
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      payloads.push(new FormData(form));
-    });
-
-    const invoices = screen.getByRole("checkbox", { name: "Factures émises" });
-    fireEvent.click(invoices);
-    fireEvent.click(invoices);
-
-    expect(payloads[0]?.get("invoices")).toBeNull();
-    expect(payloads[1]?.get("invoices")).toBe("1");
-    for (const payload of payloads) {
-      expect(payload.get("scenario")).toBe("certain");
-      expect(payload.get("horizon")).toBe("90");
-      expect(payload.get("filters")).toBe("1");
-    }
-  });
 });
 
 describe("dashboard detail panels", () => {
@@ -320,8 +292,8 @@ describe("dashboard detail panels", () => {
     });
     const legend = screen.getByRole("list", { name: "Légende du graphique" });
     expect(within(legend).getByText("Facturé")).toBeInTheDocument();
-    expect(within(legend).getByText("Commandes signées")).toBeInTheDocument();
-    expect(within(legend).getByText("Pipeline pondéré")).toBeInTheDocument();
+    expect(within(legend).getByText("Facturé + commandes signées")).toBeInTheDocument();
+    expect(within(legend).getByText("Facturé + signé + opportunités")).toBeInTheDocument();
     expect(screen.getByText("Seuil de sécurité")).toBeInTheDocument();
   });
 
@@ -346,7 +318,7 @@ describe("dashboard detail panels", () => {
     );
 
     expect(screen.getByRole("img", { name: "Projection de trésorerie" })).toHaveAccessibleDescription(
-      "Pipeline pondéré · reste au-dessus du seuil sur 180 jours.",
+      "Facturé + signé + opportunités · reste au-dessus du seuil sur 180 jours.",
     );
   });
 
@@ -429,7 +401,7 @@ describe("dashboard detail panels", () => {
     for (const link of screen.getAllByRole("link", { name: "Voir toute la trésorerie →" })) {
       expect(link).toHaveAttribute(
         "href",
-        "/cashflow?horizon=90&scenario=probable&filters=1&expenses=1&weightedOpportunities=1",
+        "/cashflow?horizon=90&scenario=probable",
       );
     }
   });

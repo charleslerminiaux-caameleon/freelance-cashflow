@@ -95,7 +95,7 @@ export type DashboardViewModel = {
   inclusions: DashboardInclusions;
   openingBalanceCents: MoneyCents;
   openingBalanceAsOf: string;
-  openingBalanceSource: "manual" | "qonto";
+  openingBalanceSource: "manual" | "qonto" | "banking";
   excludedBankCurrencies: string[];
   lastBankSyncSucceeded: boolean | null;
   safetyThresholdCents: MoneyCents;
@@ -159,25 +159,19 @@ export function resolveDashboardOptions(
   const requestedHorizon = Number(firstValue(searchParameters.horizon));
   const defaultHorizon = isHorizon(defaults.horizonDays) ? defaults.horizonDays : 90;
   const requestedScenario = firstValue(searchParameters.scenario);
-  const usesExplicitFilters = firstValue(searchParameters.filters) === "1";
 
   return {
     today,
     horizonDays: isHorizon(requestedHorizon) ? requestedHorizon : defaultHorizon,
     scenario: isScenario(requestedScenario) ? requestedScenario : defaults.scenario,
-    inclusions: usesExplicitFilters
-      ? {
-          invoices: firstValue(searchParameters.invoices) === "1",
-          expenses: firstValue(searchParameters.expenses) === "1",
-          signedOrders: firstValue(searchParameters.signedOrders) === "1",
-          weightedOpportunities: firstValue(searchParameters.weightedOpportunities) === "1",
-        }
-      : {
-          invoices: true,
-          expenses: true,
-          signedOrders: false,
-          weightedOpportunities: false,
-        },
+    // Each chart series applies its own cumulative scenario rules.
+    // Legacy source filters must not hide sources from those scenarios.
+    inclusions: {
+      invoices: true,
+      expenses: true,
+      signedOrders: true,
+      weightedOpportunities: true,
+    },
   };
 }
 
@@ -222,13 +216,15 @@ function compareMoneyDescending(left: MoneyCents, right: MoneyCents): number {
 }
 
 export function selectOpeningBalance(data: Pick<DashboardSourceData, "settings" | "banking">): {
-  source: "manual" | "qonto";
+  source: "manual" | "qonto" | "banking";
   balanceCents: MoneyCents;
   asOf: string;
   excludedCurrencies: string[];
   lastSyncSucceeded: boolean | null;
 } {
-  const integration = data.banking?.integration;
+  const integrations = data.banking?.integrations ?? (data.banking?.integration ? [{ ...data.banking.integration, provider: "qonto" }] : []);
+  const published = integrations.filter(row => row.last_success_at);
+  const oldestPublication = published.map(row => row.last_success_at!).sort((a,b) => Date.parse(a) - Date.parse(b))[0];
   const currentAccounts = (data.banking?.accounts ?? []).filter(
     account => account.is_current && account.status === "active",
   );
@@ -238,11 +234,11 @@ export function selectOpeningBalance(data: Pick<DashboardSourceData, "settings" 
       .map(account => account.currency),
   )].sort();
   const accounts = currentAccounts.filter(account => account.currency === data.settings.currency);
-  const lastSyncSucceeded = integration?.status === "syncing" ? null
-    : integration?.last_error_code || integration?.status === "error" ? false
-    : integration?.last_success_at ? integration.status === "connected" : null;
+  const lastSyncSucceeded = integrations.some(row => row.last_error_code || row.status === "error") ? false
+    : integrations.some(row => row.status === "syncing") ? null
+    : published.length ? published.every(row => row.status === "connected") : null;
 
-  if (!integration?.last_success_at || accounts.length === 0) {
+  if (!oldestPublication || accounts.length === 0) {
     return {
       source: "manual",
       balanceCents: moneyCents(data.settings.manualCurrentBalanceCents),
@@ -257,9 +253,9 @@ export function selectOpeningBalance(data: Pick<DashboardSourceData, "settings" 
     0n,
   );
   return {
-    source: "qonto",
+    source: published.every(row => row.provider === "qonto") ? "qonto" : "banking",
     balanceCents: moneyCents(Number(total)),
-    asOf: integration.last_success_at,
+    asOf: oldestPublication,
     excludedCurrencies,
     lastSyncSucceeded,
   };
@@ -279,7 +275,7 @@ export function buildDashboardViewModel(
     recurringCashflows: data.recurringCashflows,
     plannedCashflows: data.plannedCashflows,
   };
-  const allEvents = buildCashflowEvents(snapshot, { startDate: options.today, endDate }, opening.source === "qonto" ? data.paidMonthsByRecurringId : undefined);
+  const allEvents = buildCashflowEvents(snapshot, { startDate: options.today, endDate }, opening.source !== "manual" ? data.paidMonthsByRecurringId : undefined);
   const events = allEvents.filter((event) => includesEvent(event, options.inclusions));
   const forecasts = {
     certain: calculateForecast({
@@ -370,7 +366,7 @@ export function buildDashboardViewModel(
   return {
     currency: data.settings.currency,
     timezone: data.settings.timezone,
-    bankSyncInProgress: data.banking?.integration?.status === "syncing",
+    bankSyncInProgress: data.banking?.integrations?.some(row => row.status === "syncing") ?? data.banking?.integration?.status === "syncing",
     today: options.today,
     horizonDays: options.horizonDays,
     scenario: options.scenario,
