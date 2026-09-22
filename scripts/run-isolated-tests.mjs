@@ -74,7 +74,7 @@ export async function main(mode = 'all') {
   if (mode === 'build') {
     const env = { ...testEnvironment(), NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:56321', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'fake-build-anon', SUPABASE_SERVICE_ROLE_KEY: 'fake-build-service' };
     env.NODE_OPTIONS = `--require ${JSON.stringify(join(root, 'apps/web/e2e/qonto-preload.cjs'))}`;
-    run('corepack', ['pnpm', 'build'], { env, show: true });
+    run('pnpm', ['build'], { env, show: true });
     run('node', ['scripts/check-client-boundary.mjs'], { env, show: true });
     return;
   }
