@@ -17,3 +17,8 @@ test('bounds network failures and never follows credential-bearing redirects',as
   assert.equal(options.redirect,'error');throw Error('private');
  }}),e=>e.code==='SUPABASE_UNAVAILABLE'&&!e.message.includes('private'));
 });
+test('rejects future objects and changed structural contracts at the applied prefix',()=>{
+ const entries=[{...manifest[0],contractHash:'expected'},{version:'002',tables:['future_table'],functions:[],contractHash:'future'}];
+ assert.equal(classifyDatabase({tables:['app_settings','future_table'],functions:[],versions:['001'],manifest:entries,structuralHash:'expected'}).kind,'incompatible');
+ assert.equal(classifyDatabase({tables:['app_settings'],functions:[],versions:['001'],manifest:entries,structuralHash:'changed'}).kind,'incompatible');
+});

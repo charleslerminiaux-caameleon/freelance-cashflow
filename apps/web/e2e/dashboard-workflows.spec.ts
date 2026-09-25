@@ -111,7 +111,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
   await form.getByRole('button', { name: 'Créer la charge récurrente', exact: true }).click();
   await expect(page.getByRole('link', { name: /^Ouvrir la charge(?: existante)?$/ })).toBeVisible();
   await page.getByRole('link', { name: /^Ouvrir la charge(?: existante)?$/ }).click();
-  await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true })).toContainText('Créée depuis Qonto');
+  await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true })).toContainText('Créée depuis la banque');
   await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true })).toContainText('Synthetic services');
   await remove(page, 'Synthetic reviewed history');
   await page.goto(historyUrl);

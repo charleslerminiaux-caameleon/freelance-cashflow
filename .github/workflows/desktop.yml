@@ -1,5 +1,7 @@
 name: Desktop installers (test builds)
 on:
+  push:
+    branches: [codex/desktop-installer]
   workflow_dispatch:
 permissions:
   contents: read

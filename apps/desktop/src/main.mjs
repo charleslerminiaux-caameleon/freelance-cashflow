@@ -53,16 +53,16 @@ else {
    decryptString:bytes=>safeStorage.decryptString(bytes)});
   const cliPath=join(resources,'runtimes',process.platform==='win32'?'supabase.exe':'supabase');
   const session=createMigrationSession({
-   inspect:input=>inspectDatabase({config:input.config,accessToken:input.credentials.accessToken,manifest}),
+   inspect:input=>inspectDatabase({config:input.config,accessToken:input.credentials.accessToken,manifest,signal:input.signal}),
    prepare:()=>prepareMigrationDirectory({migrationsDirectory:join(resources,'migrations'),manifest}),
-   run:(args,dir,input)=>runCli({cliPath,args,cwd:dir.cwd,credentials:input.credentials})});
-  controller=createSetupController({schemaHash,store,verifyKeys:verifyProjectKeys,session,
-   launch:config=>startServer({nodePath:join(resources,'runtimes',process.platform==='win32'?'node.exe':'node'),
+   run:(args,dir,input)=>runCli({cliPath,args,cwd:dir.cwd,credentials:input.credentials,signal:input.signal})});
+  controller=createSetupController({schemaHash,store,verifyKeys:(config,options)=>verifyProjectKeys(config,fetch,options),session,
+   launch:(config,{signal})=>startServer({signal,nodePath:join(resources,'runtimes',process.platform==='win32'?'node.exe':'node'),
     serverPath:join(resources,'web','apps','web','server.js'),config,dataDirectory:app.getPath('userData')}),
    open:url=>shell.openExternal(url)});
   const links={dashboard:'https://supabase.com/dashboard',tokens:'https://supabase.com/dashboard/account/tokens',backup:'https://supabase.com/docs/guides/platform/backups'};
   ipcMain.handle('cashflow:setup',createDispatcher({getWindow:()=>window,expectedUrl,handlers:{
-   getState:async()=>({...controller.getState(),notice}),
+   getState:async()=>({...controller.getState(),notice:notice??controller.getState().notice}),
    retryStart:async()=>{const saved=await store.read();if(!saved||!assessUpgrade({savedSchemaHash:saved.schemaHash,packagedSchemaHash:schemaHash}).canStart)throw failure('SCHEMA_CHECK_REQUIRED');return controller.startSaved(saved);},
    inspect:input=>controller.inspect(input),apply:input=>controller.apply(input),saveAndStart:input=>controller.saveAndStart(input),
    open:()=>controller.open(),quit:async()=>{app.quit();},
@@ -82,10 +82,11 @@ else {
   tray=new Tray(nativeImage.createFromPath(join(source,'ui','tray.png')));
   tray.setToolTip('Freelance Cashflow');tray.setContextMenu(menu);tray.on('double-click',()=>void openApp());
   try {
+   if(quitting)return;
    const saved=await store.read();
    if(saved&&assessUpgrade({savedSchemaHash:saved.schemaHash,packagedSchemaHash:schemaHash}).canStart)await controller.startSaved(saved);
    else {if(saved)notice='SCHEMA_CHECK_REQUIRED';await showWindow();}
-  } catch(error){notice=publicFailure(error).code;await showWindow();}
+  } catch(error){if(!quitting){notice=publicFailure(error).code;await showWindow();}}
  }catch{
   await dialog.showMessageBox({type:'error',message:'Installation incomplète',detail:'Réinstallez Freelance Cashflow avec le fichier téléchargé. Les données Supabase sont conservées.'});
   app.quit();

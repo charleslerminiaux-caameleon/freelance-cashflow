@@ -91,7 +91,7 @@ test('owner reviews, confirms, edits, deletes, reexamines, associates and handle
   await panel.getByLabel(`Montant pour ${label}`, { exact: true }).fill('15,00');
   await panel.getByRole('button', { name: `Confirmer ${label}`, exact: true }).click();
   const expense = page.getByRole('region', { name: 'Sorties récurrentes', exact: true }).getByRole('article').filter({ has: page.getByRole('heading', { name: 'Synthetic reviewed expense', exact: true }) });
-  await expect(expense).toContainText('Détectée depuis Qonto');
+  await expect(expense).toContainText('Détectée depuis la banque');
   await page.goto('/cashflow?scenario=committed');
   await expect(events).toContainText('Synthetic reviewed expense');
   await expect(events).toContainText('15,00');
@@ -120,7 +120,7 @@ test('owner reviews, confirms, edits, deletes, reexamines, associates and handle
   await panel.getByLabel(`Charge mensuelle existante pour ${label}`, { exact: true }).selectOption({ label: 'Synthetic existing charge · 10,00 €' });
   await panel.getByRole('button', { name: `Associer ${label}`, exact: true }).click();
   await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true }).getByRole('article')).toHaveCount(1);
-  await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true })).toContainText('Détectée depuis Qonto');
+  await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true })).toContainText('Détectée depuis la banque');
   await remove(page, 'Synthetic existing charge');
   await reexamine(page);
   await createManual(page, label, nextDate);

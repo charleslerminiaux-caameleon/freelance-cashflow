@@ -15,7 +15,7 @@ export function createConfigStore({directory,encryptString,decryptString}) {
      serviceRoleKey:decryptString(Buffer.from(saved.encryptedServiceRoleKey,'base64'))};
    } catch {throw failure('CONFIGURATION_UNREADABLE');}
   },
-  async write(config) {
+  async write(config,{signal}={}) {
    let temp;
    try {
     const encryptedServiceRoleKey=encryptString(config.serviceRoleKey).toString('base64');
@@ -24,6 +24,7 @@ export function createConfigStore({directory,encryptString,decryptString}) {
     temp=join(directory,randomUUID()+'.tmp');
     const file=await open(temp,'wx',0o600);
     try {await file.writeFile(JSON.stringify(saved));await file.sync();} finally {await file.close();}
+    if(signal?.aborted)throw failure('OPERATION_CANCELLED');
     await rename(temp,destination);
    } catch {throw failure('CONFIGURATION_SAVE_FAILED');}
    finally {if(temp)await rm(temp,{force:true}).catch(()=>{});}
