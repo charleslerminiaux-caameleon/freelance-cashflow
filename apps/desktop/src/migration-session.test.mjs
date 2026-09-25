@@ -20,3 +20,16 @@ test('requires a backup for existing data and re-inspects after interruption',as
  await assert.rejects(session.apply({...input,confirmedFingerprint:fingerprint,backupVerified:true}),e=>e.code==='PREVIEW_REQUIRED');
  assert.equal(mutations,1);
 });
+for(const phase of ['--dry-run','--yes'])test('cancellation during '+phase+' waits for cleanup and invalidates preview',async()=>{
+ const abort=new AbortController();let started,disposed=0,mutations=0;
+ const active=new Promise(resolve=>{started=resolve;});
+ const current={kind:'empty',fingerprint:'f',pending:[{filename:'001.sql'}]};
+ const session=createMigrationSession({inspect:async()=>current,prepare:async()=>({cwd:'/unused',dispose:async()=>{disposed++;}}),
+ run:async(args,_dir,{signal})=>{if(args.includes('--yes'))mutations++;if(args.includes(phase)){started();await new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(Error('cancelled')),{once:true}));}}});
+ const input={config:{projectRef:'ref'},credentials:{},signal:abort.signal};
+ if(phase==='--yes')await session.preview(input);
+ const task=phase==='--yes'?session.apply({...input,confirmedFingerprint:'f'}):session.preview(input);
+ const rejected=assert.rejects(task);await active;abort.abort();await rejected;
+ assert.equal(disposed,phase==='--yes'?2:1);assert.equal(mutations,phase==='--yes'?1:0);
+ await assert.rejects(session.apply({...input,signal:undefined,confirmedFingerprint:'f'}),e=>e.code==='PREVIEW_REQUIRED');
+});

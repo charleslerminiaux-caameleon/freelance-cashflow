@@ -27,7 +27,7 @@ try{
  for(const change of [
   'alter table public.app_settings drop column country cascade',
   'alter table public.app_settings disable row level security',
-  'create function public.installer_unexpected_function(integer) returns integer language sql as $$select $1$$'
+  'drop function public.installation_diagnostic(); create function public.installation_diagnostic(integer) returns integer language sql as $$select $1$$'
  ]){
   const changed=JSON.parse(sql('begin;'+change+';'+contractQuery+';rollback;'));
   if(contractHash(changed)===expected)throw Error('Schema drift not detected: '+change);

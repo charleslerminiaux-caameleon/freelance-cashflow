@@ -4,7 +4,7 @@
 
 Utiliser un checkout propre, sans fichiers `.env` locaux, Node.js 24.20.0 et pnpm 10.17.1. Le lockfile épingle Electron 44.4.5 et electron-builder 26.15.3. Les sources de la version Next.js installée dans `apps/web/node_modules/next/dist/docs` restent la référence locale.
 
-Construire nativement sur chaque cible : macOS arm64, macOS x64 et Windows x64. La workflow manuelle `.github/workflows/desktop.yml` vérifie l’architecture effective avant de fabriquer un artefact non signé. Elle ne publie aucune release.
+Construire nativement sur chaque cible : macOS arm64, macOS x64 et Windows x64. La workflow (manuelle ou déclenchée sur la branche de test `codex/desktop-installer`) `.github/workflows/desktop.yml` vérifie l’architecture effective avant de fabriquer un artefact non signé. Elle ne publie aucune release.
 
 ## Commandes
 
@@ -26,6 +26,17 @@ corepack pnpm desktop:package
 Les fichiers sortent dans `apps/desktop/dist`, avec `SHA256SUMS.txt`. Ne pas committer les runtimes, caches, paquets ou fichiers de données. L’application fonctionne ensuite sans outil de développement sur la machine cible.
 
 Le smoke démarre le même serveur compilé avec deux configurations fictives, en retirant les outils du PATH enfant. Il vérifie configuration runtime, fichiers statiques, preuve d’identité du serveur et arrêt. Les tests Electron utilisent un profil temporaire et aucune clé réelle.
+
+## Contrats de schéma Supabase
+
+Les empreintes de chaque préfixe de migrations sont conservées dans `apps/desktop/schema-contracts.json`. Elles couvrent les colonnes, fonctions/signatures/corps, RLS, politiques, contraintes et déclencheurs. Si une migration change, le staging refuse un contrat périmé. Pour les régénérer avec la stack PostgreSQL jetable de test déjà démarrée :
+
+```sh
+node apps/desktop/scripts/generate-schema-contracts.mjs
+node apps/desktop/scripts/inspect-database.integration.mjs
+```
+
+Le générateur crée sa propre base temporaire, applique les migrations dans l’ordre, teste les altérations et supprime uniquement cette base. L’inspection suivante reste en lecture seule sur la stack existante. Aucune de ces commandes n’utilise un projet hébergé.
 
 ## Signature avant publication
 

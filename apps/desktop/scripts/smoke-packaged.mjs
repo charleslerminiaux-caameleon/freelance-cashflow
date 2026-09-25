@@ -25,6 +25,8 @@ try {
    const response=await fetch(origin+'/api/runtime-config');
    assert.deepEqual(await response.json(),{url:config.url,anonKey:config.anonKey});
    assert.equal(response.headers.get('cache-control'),'no-store');
+   assert.deepEqual(await (await fetch('http://[::1]:'+port+'/api/runtime-config')).json(),{url:config.url,anonKey:config.anonKey});
+   await running.check();
    assert.equal((await fetch(origin+'/api/desktop-health')).status,404);
    const chunks=await readdir(join(web,dist,'static','chunks'));
    const asset=chunks.find(name=>name.endsWith('.js'));assert.ok(asset);

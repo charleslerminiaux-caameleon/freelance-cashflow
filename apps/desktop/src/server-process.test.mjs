@@ -33,3 +33,17 @@ test('bounds unreachable health and cleans up its child',async()=>{
  const f=fixture();await assert.rejects(startServer({...f.input,fetchHealth:async()=>{throw Error('secret');}}),e=>e.code==='SERVER_TIMEOUT');
  assert.equal(f.kills,1);
 });
+test('cancels a launch during health wait and releases both loopback ports',async()=>{
+ const f=fixture(),abort=new AbortController();let checking;
+ const waiting=new Promise(resolve=>{checking=resolve;});
+ const launch=startServer({...f.input,timeoutMs:2000,signal:abort.signal,fetchHealth:async(_url,{signal})=>{
+  checking();return new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(Error('cancelled')),{once:true}));
+ }});
+ const rejected=assert.rejects(launch,e=>e.code==='OPERATION_CANCELLED');await waiting;abort.abort();await rejected;
+ assert.equal(f.kills,1);
+});
+test('a handle refuses identity checks after its owned child exits',async()=>{
+ const f=fixture();const running=await startServer(f.input);
+ f.child.exitCode=1;f.child.emit('exit',1);
+ assert.equal(running.isAlive(),false);await assert.rejects(running.check(),e=>e.code==='SERVER_EXITED');await running.stop();
+});
