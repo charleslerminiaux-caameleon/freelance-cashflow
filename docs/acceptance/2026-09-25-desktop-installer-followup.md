@@ -56,3 +56,13 @@ Preuves :
 Le diagnostic initial par CLI n’était pas suffisant pour reproduire le contexte exact de connexion de l’assistant. La vérification finale utilise maintenant ce contexte exact.
 
 Artefact corrigé : `apps/desktop/dist/Freelance Cashflow-0.1.2-mac-arm64.dmg`, SHA-256 `7ab9d61c3bd50fcb9d3ed3635e024612ad6fbae201d69146844eb72a4de18a30`. Paquet monté en lecture seule : manifeste corrigé identique, smoke avec Node embarqué et deux configurations réussi, volume démonté.
+
+## Version courante intégrée en 0.1.3 et envoi de l’application sur GitHub
+
+Le paquet précédent utilisait le dernier état commité, alors que les évolutions d’interface récentes étaient encore dans le checkout utilisateur. Les 22 fichiers concernés ont été copiés sans modifier ce checkout : nouveau tableau de bord Solde projeté, historique et commandes de projection, échantillonnage du graphique, navigation et pages d’intégration. Les tests restés sur les anciens libellés ou éléments supprimés ont été actualisés dans les copies de livraison.
+
+La demande utilisateur autorise explicitement l’envoi de la dernière application sur GitHub, à l’exclusion de l’installateur. Une branche de travail propre, issue de `origin/main`, a reçu toutes les évolutions applicatives, y compris les intégrations et la migration multi-fournisseur précédemment commitées localement. Aucun fichier desktop, DMG, clé, configuration `.env.local`, plan ou spécification d’installateur n’a été inclus. Le commit `a89501fb166ef7cc02c73aef02428ce521fc0211` a été poussé par avance rapide sur `main` ; le SHA distant a été vérifié. Aucun push de la branche d’installateur.
+
+Validation de l’application seule : 628 tests web, 61 domaine, 196 intégrations, 11 partagés et 28 outillage, soit 924 tests réussis ; lint, types, compilation et analyse de 28 assets client réussis. Validation du paquet : 633 tests web avec ses ajouts runtime, cinq parcours navigateur réussis sur la stack jetable, tableau de bord et intégrations identiques octet par octet à la copie GitHub, smoke du DMG monté en lecture seule réussi.
+
+Artefact local : `apps/desktop/dist/Freelance Cashflow-0.1.3-mac-arm64.dmg`, SHA-256 `dcfd1dca871a0eb4d7d3a59c0ceacfc8c42814d40491f34e430bc9891c746764`. Le correctif Supabase, le logo FC et les réglages utilisateur sont conservés. Le schéma embarqué n’a pas changé depuis 0.1.2. Le paquet reste non signé et n’a pas été publié sur GitHub.

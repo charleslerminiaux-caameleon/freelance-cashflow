@@ -11,7 +11,7 @@ export default async function LoginPage() {
     <main className="auth-page">
       <section className="auth-card" aria-labelledby="login-title">
         <div className="auth-brand">
-          <img src="/logo.jpeg" alt="" width="48" height="48" />
+          <img src="/logo-green.png" alt="" width="48" height="48" />
           <div>
             <p className="eyebrow">Freelance Cashflow</p>
             <h1 id="login-title">Accéder à votre trésorerie</h1>

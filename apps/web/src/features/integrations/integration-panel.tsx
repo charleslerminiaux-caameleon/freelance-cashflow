@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Image from "next/image";
-import { CircleHelp, RefreshCw, Settings2 } from "lucide-react";
+import { RefreshCw, Settings2 } from "lucide-react";
 import { integrationMessages, type IntegrationState } from "./status";
 
 export type SyncActionState = {
@@ -52,13 +52,16 @@ export function IntegrationPanel({ configured, integration, action }: {
     <section className="dashboard-panel integration-card" aria-labelledby="tiime-title">
       <header className="integration-card-header">
         <h2 id="tiime-title"><Image src="/tiime-logo.svg" alt="Tiime" width={100} height={35} /></h2>
-        <span className="integration-badge">Demande API en attente</span>
+        <span className="integration-badge">À configurer</span>
       </header>
       <p>Centralisez vos factures Tiime pour suivre vos encaissements et anticiper votre trésorerie.</p>
-      <p className="integration-note">Votre demande d’accès à l’API directe Tiime est en attente. La synchronisation pourra être préparée après réception de l’accès et de la documentation officielle.</p>
+      <details className="integration-details">
+        <summary>Détails de la connexion</summary>
+        <p>Connexion non configurée</p>
+        <p>Aucune synchronisation publiée</p>
+      </details>
       <div className="integration-card-actions">
-        <a className="integration-action" href="https://support.tiime.fr/fr/articles/26240-proposez-vous-une-api" aria-label="Consulter le guide Tiime d’accès API"><CircleHelp size={16} aria-hidden="true" />Documentation Tiime</a>
-        <a className="primary-link integration-action" href="/integrations/setup#tiime"><CircleHelp size={16} aria-hidden="true" />Comprendre l’accès API</a>
+        <a className="integration-action" href="/integrations/setup#tiime"><Settings2 size={16} aria-hidden="true" />Configurer Tiime</a>
       </div>
     </section>
   </>;

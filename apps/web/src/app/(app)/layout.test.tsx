@@ -10,13 +10,13 @@ vi.mock("@/features/integrations/auto-sync-action",()=>({autoSyncQontoAction:asy
 vi.mock("@/features/integrations/direct-config",()=>({loadDirectConfig:m.loadDirectConfig}));
 import Layout from "./layout";
 beforeEach(()=>{vi.clearAllMocks();m.loadDirectConfig.mockReturnValue(null);m.requireOwner.mockResolvedValue({userId:"owner"});m.createClient.mockResolvedValue({});m.isQontoConfigured.mockReturnValue(true);m.getQontoIntegration.mockResolvedValue({status:"connected",last_success_at:"2026-09-10T10:00:00Z"});});
-it("loads owner integration state into both shell variants",async()=>{const layout=await Layout({children:"Contenu"});await act(async()=>{render(layout);});expect(m.getQontoIntegration).toHaveBeenCalledWith({},"owner",expect.any(AbortSignal));expect(screen.getAllByText("Qonto : données synchronisées")).toHaveLength(2);});
+it("loads owner integration state into the mobile shell",async()=>{const layout=await Layout({children:"Contenu"});await act(async()=>{render(layout);});expect(m.getQontoIntegration).toHaveBeenCalledWith({},"owner",expect.any(AbortSignal));expect(screen.getAllByText("Qonto : données synchronisées")).toHaveLength(1);});
 it("guards reads before shell loading",async()=>{m.requireOwner.mockRejectedValue(new Error("redirect"));await expect(Layout({children:null})).rejects.toThrow("redirect");expect(m.createClient).not.toHaveBeenCalled();});
 it("keeps diagnostic children accessible when integration metadata is unavailable", async () => {
   m.getQontoIntegration.mockRejectedValueOnce(new Error("DATABASE_ERROR private payload"));
   await act(async () => { render(await Layout({ children: <h1>Installation et diagnostic</h1> })); });
   expect(screen.getByRole("heading", { name: "Installation et diagnostic" })).toBeVisible();
-  expect(screen.getAllByText("Qonto : état indisponible")).toHaveLength(2);
+  expect(screen.getAllByText("Qonto : état indisponible")).toHaveLength(1);
   expect(screen.queryByText(/private payload/)).not.toBeInTheDocument();
 });
 it("bounds a stalled integration read and aborts its request", async () => {

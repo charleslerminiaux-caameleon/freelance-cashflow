@@ -54,10 +54,19 @@ export default async function IntegrationSetupPage() {
       </div>
     </section>
     <section id="tiime" className={`dashboard-panel ${styles.card}`} aria-labelledby="tiime-setup-title">
-      <header><h2 id="tiime-setup-title"><Image src="/tiime-logo.svg" alt="Tiime" width={100} height={32} /></h2><span className="integration-badge">Demande API en attente</span></header>
-      <div className={styles.pending}>L’accès à l’API directe a été demandé à Tiime. La synchronisation pourra être finalisée après réception des identifiants, de la documentation et des permissions accordées par Tiime. Aucune connexion Tiime n’est active pour le moment.</div>
-      <p>Freelance Cashflow conserve le choix d’une intégration API directe.</p>
-      <a href="https://support.tiime.fr/fr/articles/26240-proposez-vous-une-api" target="_blank" rel="noreferrer">Conditions officielles d’accès à l’API Tiime ↗</a>
+      <header><h2 id="tiime-setup-title"><Image src="/tiime-logo.svg" alt="Tiime" width={100} height={32} /></h2><span className="integration-badge">À configurer</span></header>
+      <div className={styles.guide}>
+        <h3>Configurer la connexion directe Tiime</h3>
+        <p>La connexion utilise l’API Tiime pour accéder aux données de facturation autorisées pour votre entreprise.</p>
+        <h3>Préparer votre accès</h3>
+        <ol>
+          <li>Obtenez un accès API auprès de Tiime et la documentation technique associée à votre contrat.</li>
+          <li>Préparez les identifiants fournis par Tiime, la méthode d’authentification et l’identifiant de votre entreprise demandé par cette documentation.</li>
+          <li>Faites préciser les permissions de lecture des clients, factures et règlements, ainsi que les données disponibles et les limites d’utilisation.</li>
+        </ol>
+        <p>Le raccordement du connecteur nécessite les spécifications d’authentification et les endpoints transmis par Tiime. Les champs de connexion et la synchronisation dépendent de ces spécifications.</p>
+        <a href="https://support.tiime.fr/fr/articles/26240-proposez-vous-une-api" target="_blank" rel="noreferrer">Guide officiel d’accès à l’API Tiime ↗</a>
+      </div>
     </section>
   </div>;
 }

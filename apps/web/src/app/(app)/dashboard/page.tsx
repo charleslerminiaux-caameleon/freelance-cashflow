@@ -6,7 +6,6 @@ import {
   getDashboardViewModel,
   type DashboardSearchParameters,
 } from "@/features/dashboard/query";
-import { ScenarioControls } from "@/features/dashboard/scenario-controls";
 import { UpcomingLists } from "@/features/dashboard/upcoming-lists";
 import { requireOwner } from "@/lib/auth/require-owner";
 
@@ -26,22 +25,13 @@ export default async function DashboardPage({
   searchParams: Promise<DashboardSearchParameters>;
 }) {
   const [{ userId }, parameters] = await Promise.all([requireOwner(), searchParams]);
-  const model = await getDashboardViewModel(userId, { searchParameters: parameters });
+  const model = await getDashboardViewModel(userId, { searchParameters: { ...parameters, scenario: "certain" } });
 
   return (
     <div className="dashboard-page">
       <header className="dashboard-heading">
-        <div>
-          <p className="eyebrow">{displayBusinessDate(model.today)}</p>
-          <h1>Bonjour</h1>
-          <p>Voici la trajectoire de votre trésorerie à partir de vos données actuelles.</p>
-        </div>
-        <HorizonSelector
-          basePath="/dashboard"
-          horizonDays={model.horizonDays}
-          scenario={model.scenario}
-          inclusions={model.inclusions}
-        />
+        <h1 className="sr-only">Dashboard</h1>
+        <p className="eyebrow">{displayBusinessDate(model.today)}</p>
       </header>
 
       <KpiStrip
@@ -58,12 +48,15 @@ export default async function DashboardPage({
 
       <div className="dashboard-layout">
         <div className="dashboard-primary">
-          <ScenarioControls
-            horizonDays={model.horizonDays}
-            scenario={model.scenario}
-            inclusions={model.inclusions}
-          />
           <CashflowChart
+            projectionControls={
+              <HorizonSelector
+                basePath="/dashboard"
+                horizonDays={model.horizonDays}
+                scenario={model.scenario}
+                inclusions={model.inclusions}
+              />
+            }
             chart={model.chart}
             currency={model.currency}
             horizonDays={model.horizonDays}

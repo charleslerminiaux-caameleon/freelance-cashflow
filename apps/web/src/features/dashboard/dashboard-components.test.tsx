@@ -39,7 +39,7 @@ const scenarioHelp = [
     description: "Factures émises restant à encaisser.",
   },
   {
-    label: "Facturé + commandes signées",
+    label: "Facturé + signé",
     description: "Factures émises et échéances non encore facturées des commandes signées.",
   },
   {
@@ -129,7 +129,7 @@ describe("dashboard controls", () => {
     expect(screen.getByRole("radio", { name: "Facturé" })).toHaveAccessibleDescription(
       "Factures émises restant à encaisser.",
     );
-    expect(screen.getByRole("radio", { name: "Facturé + commandes signées" })).toHaveAccessibleDescription(
+    expect(screen.getByRole("radio", { name: "Facturé + signé" })).toHaveAccessibleDescription(
       "Factures émises et échéances non encore facturées des commandes signées.",
     );
     expect(screen.getByRole("radio", { name: "Facturé + signé + opportunités" })).toHaveAccessibleDescription(
@@ -244,7 +244,7 @@ describe("dashboard controls", () => {
       submittedScenarios.push(String(new FormData(form).get("scenario")));
     });
 
-    fireEvent.click(screen.getByRole("radio", { name: "Facturé + commandes signées" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Facturé + signé" }));
     fireEvent.click(screen.getByRole("radio", { name: "Facturé + signé + opportunités" }));
     fireEvent.click(screen.getByRole("radio", { name: "Facturé" }));
 
@@ -271,11 +271,11 @@ describe("dashboard detail panels", () => {
       ] },
     }} />);
     expect(screen.getByRole("button", { name: "30 jours" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText(/Historique affiché du 25\/08 au 24\/09/)).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Légende du graphique" })).getByText("Historique")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "90 jours" }));
-    expect(screen.getByText(/Historique affiché du 26\/06 au 24\/09/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "90 jours" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Masqué" }));
-    expect(screen.queryByText(/Historique affiché du/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Légende du graphique" })).queryByText("Historique")).not.toBeInTheDocument();
   });
 
   it("formats cashflow chart tooltip labels as French short dates", () => {
@@ -312,7 +312,7 @@ describe("dashboard detail panels", () => {
     });
     const legend = screen.getByRole("list", { name: "Légende du graphique" });
     expect(within(legend).getByText("Facturé")).toBeInTheDocument();
-    expect(within(legend).getByText("Facturé + commandes signées")).toBeInTheDocument();
+    expect(within(legend).getByText("Facturé + signé")).toBeInTheDocument();
     expect(within(legend).getByText("Facturé + signé + opportunités")).toBeInTheDocument();
     expect(screen.getByText("Seuil de sécurité")).toBeInTheDocument();
   });
