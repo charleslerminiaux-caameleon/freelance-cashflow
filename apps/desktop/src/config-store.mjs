@@ -11,7 +11,7 @@ export function createConfigStore({directory,encryptString,decryptString}) {
    try {
     const saved=JSON.parse(raw);
     if(saved.version!==1||!['url','anonKey','projectRef','encryptedServiceRoleKey'].every(k=>typeof saved[k]==='string'))throw Error();
-    return {url:saved.url,anonKey:saved.anonKey,projectRef:saved.projectRef,
+    return {url:saved.url,anonKey:saved.anonKey,projectRef:saved.projectRef,schemaHash:saved.schemaHash,
      serviceRoleKey:decryptString(Buffer.from(saved.encryptedServiceRoleKey,'base64'))};
    } catch {throw failure('CONFIGURATION_UNREADABLE');}
   },
@@ -19,7 +19,7 @@ export function createConfigStore({directory,encryptString,decryptString}) {
    let temp;
    try {
     const encryptedServiceRoleKey=encryptString(config.serviceRoleKey).toString('base64');
-    const saved={version:1,url:config.url,anonKey:config.anonKey,projectRef:config.projectRef,encryptedServiceRoleKey};
+    const saved={version:1,url:config.url,anonKey:config.anonKey,projectRef:config.projectRef,schemaHash:config.schemaHash,encryptedServiceRoleKey};
     await mkdir(directory,{recursive:true,mode:0o700});
     temp=join(directory,randomUUID()+'.tmp');
     const file=await open(temp,'wx',0o600);

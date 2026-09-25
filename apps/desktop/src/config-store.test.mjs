@@ -8,7 +8,8 @@ const config={url:'https://abcdefghijklmnopqrst.supabase.co',anonKey:'public',se
 test('persists only ciphertext and keeps the last config after an unsuccessful replacement',async t=>{
  const directory=await mkdtemp(join(tmpdir(),'Équipe Cashflow ')); t.after(()=>rm(directory,{recursive:true,force:true}));
  const store=createConfigStore({directory,encryptString:()=>Buffer.from('protected'),decryptString:()=>config.serviceRoleKey});
- assert.equal(await store.read(),null); await store.write(config);
+ assert.equal(await store.read(),null); await store.write({...config,schemaHash:'schema-1'});
+ assert.equal((await store.read()).schemaHash,'schema-1');
  assert.equal((await store.read()).serviceRoleKey,'secret-canary');
  const path=join(directory,'config.json'); const before=await readFile(path,'utf8');
  assert.equal(before.includes('secret-canary'),false);
