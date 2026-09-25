@@ -1,0 +1,66 @@
+{
+  "nodeVersion": "24.20.0",
+  "supabaseVersion": "2.116.0",
+  "targets": {
+    "darwin-arm64": {
+      "node": {
+        "url": "https://nodejs.org/dist/v24.20.0/node-v24.20.0-darwin-arm64.tar.gz",
+        "sha256": "40e5607e5ecb3db9192723776da2d75d966260fc74a7a9e731c1bd67dda96bc8",
+        "binary": "node-v24.20.0-darwin-arm64/bin/node",
+        "license": "node-v24.20.0-darwin-arm64/LICENSE",
+        "output": "node"
+      },
+      "supabase": {
+        "url": "https://github.com/supabase/cli/releases/download/v2.116.0/supabase_2.116.0_darwin_arm64.tar.gz",
+        "sha256": "8b750455d7b02c989cec0c6c26599d28b0aefcbeedf20a315bb1d5215a185a83",
+        "binary": "supabase",
+        "output": "supabase",
+        "companions": [
+          "supabase-go"
+        ],
+        "licenseUrl": "https://raw.githubusercontent.com/supabase/cli/v2.116.0/apps/cli-go/LICENSE",
+        "licenseSha256": "81f7d60afa4316010b1c0df8eb8f0c80b27586a86b72f1bde85e129bfd10d52a"
+      }
+    },
+    "darwin-x64": {
+      "node": {
+        "url": "https://nodejs.org/dist/v24.20.0/node-v24.20.0-darwin-x64.tar.gz",
+        "sha256": "9e5b2644cf107befb6aefca676b96d3296bc10138096f022ed378d6233ed81f4",
+        "binary": "node-v24.20.0-darwin-x64/bin/node",
+        "license": "node-v24.20.0-darwin-x64/LICENSE",
+        "output": "node"
+      },
+      "supabase": {
+        "url": "https://github.com/supabase/cli/releases/download/v2.116.0/supabase_2.116.0_darwin_amd64.tar.gz",
+        "sha256": "1e1dce66222fba539211624617960887e445fd7f27830d6f54bdb4eaf1d7c498",
+        "binary": "supabase",
+        "output": "supabase",
+        "companions": [
+          "supabase-go"
+        ],
+        "licenseUrl": "https://raw.githubusercontent.com/supabase/cli/v2.116.0/apps/cli-go/LICENSE",
+        "licenseSha256": "81f7d60afa4316010b1c0df8eb8f0c80b27586a86b72f1bde85e129bfd10d52a"
+      }
+    },
+    "win32-x64": {
+      "node": {
+        "url": "https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip",
+        "sha256": "6cac9ffbca8f6a47091e4b5c772e0606049c3871cb67d900c0cedde630e545ba",
+        "binary": "node-v24.20.0-win-x64/node.exe",
+        "license": "node-v24.20.0-win-x64/LICENSE",
+        "output": "node.exe"
+      },
+      "supabase": {
+        "url": "https://github.com/supabase/cli/releases/download/v2.116.0/supabase_2.116.0_windows_amd64.zip",
+        "sha256": "d88832770615c915e1782af99ba6475afcfdc026f939214940f7eea9aaa2341e",
+        "binary": "supabase.exe",
+        "output": "supabase.exe",
+        "companions": [
+          "supabase-go.exe"
+        ],
+        "licenseUrl": "https://raw.githubusercontent.com/supabase/cli/v2.116.0/apps/cli-go/LICENSE",
+        "licenseSha256": "81f7d60afa4316010b1c0df8eb8f0c80b27586a86b72f1bde85e129bfd10d52a"
+      }
+    }
+  }
+}

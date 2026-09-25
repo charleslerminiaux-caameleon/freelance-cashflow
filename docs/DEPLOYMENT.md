@@ -1,5 +1,7 @@
 # Exploitation et déploiement web facultatif
 
+> Installateur de bureau : voir [le guide Mac et Windows](DESKTOP_INSTALLATION.md) et [la fabrication des paquets](DESKTOP_RELEASE.md).
+
 ## Cible retenue
 
 L'installation utilisée reste **Next.js local + Supabase hébergé**. Scaleway et

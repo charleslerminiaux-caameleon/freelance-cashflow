@@ -4,6 +4,10 @@ Freelance Cashflow relie le pipeline commercial, la facturation, les paiements, 
 
 ![Référence visuelle du dashboard](docs/assets/dashboard-reference.png)
 
+## Installateur Mac et Windows
+
+Un assistant de bureau est disponible dans le code du projet. Consultez le [guide utilisateur](docs/DESKTOP_INSTALLATION.md), la [fabrication des paquets](docs/DESKTOP_RELEASE.md) et les [résultats de recette](docs/acceptance/2026-09-25-desktop-installer.md). Les paquets de recette non signés ne sont pas encore une livraison publique.
+
 ## Périmètre actuel
 
 Le Jalon 1 couvre le parcours manuel complet :

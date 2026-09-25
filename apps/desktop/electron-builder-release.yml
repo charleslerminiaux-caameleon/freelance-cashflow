@@ -1,0 +1,12 @@
+extends: electron-builder.yml
+forceCodeSigning: true
+mac:
+  identity: ${env.MAC_SIGNING_IDENTITY}
+  hardenedRuntime: true
+  notarize: true
+  binaries:
+    - Contents/Resources/runtimes/node
+    - Contents/Resources/runtimes/supabase
+    - Contents/Resources/runtimes/supabase-go
+win:
+  signAndEditExecutable: true

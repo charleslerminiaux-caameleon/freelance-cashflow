@@ -1,5 +1,7 @@
 # Installation
 
+> Installateur de bureau : voir [le guide Mac et Windows](DESKTOP_INSTALLATION.md) et [la fabrication des paquets](DESKTOP_RELEASE.md).
+
 ## Évolution du jalon 3
 
 L’onboarding ouvre désormais **Installation et diagnostic**, également accessible

@@ -1,0 +1,27 @@
+appId: com.freelancecashflow.desktop
+productName: Freelance Cashflow
+directories:
+  output: dist
+files:
+  - src/**/*
+  - "!src/**/*.test.mjs"
+  - package.json
+extraResources:
+  - from: resources
+    to: .
+asar: true
+npmRebuild: false
+mac:
+  target: dmg
+  category: public.app-category.finance
+  identity: null
+  minimumSystemVersion: "13.0.0"
+win:
+  target: nsis
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: always
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"

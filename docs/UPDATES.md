@@ -1,5 +1,7 @@
 # Mettre à jour Libra
 
+> Installateur de bureau : voir [le guide Mac et Windows](DESKTOP_INSTALLATION.md) et [la fabrication des paquets](DESKTOP_RELEASE.md).
+
 1. Sauvegardez et vérifiez la procédure de [restauration](BACKUP_RESTORE.md).
 2. Notez le commit utilisé et préservez les modifications locales. Installez les
    dépendances du commit cible avec `corepack pnpm install --frozen-lockfile`.

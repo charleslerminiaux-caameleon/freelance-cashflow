@@ -1,0 +1,56 @@
+name: Desktop installers (test builds)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: darwin
+            arch: arm64
+          - runner: macos-15-intel
+            platform: darwin
+            arch: x64
+          - runner: windows-2022
+            platform: win32
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+          cache: pnpm
+      - name: Verify native platform
+        run: node -e "if(process.platform!=='${{ matrix.platform }}'||process.arch!=='${{ matrix.arch }}')process.exit(1)"
+      - run: pnpm install --frozen-lockfile
+      - name: Install pinned Electron runtime
+        run: node apps/desktop/node_modules/electron/install.js
+      - run: pnpm --filter @fc/desktop test:run
+      - run: pnpm --filter @fc/web exec vitest run --maxWorkers=2
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm desktop:stage
+      - run: pnpm desktop:smoke
+      - name: Native setup window
+        run: pnpm --filter @fc/desktop exec playwright test
+      - run: pnpm desktop:package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: freelance-cashflow-${{ matrix.platform }}-${{ matrix.arch }}-unsigned
+          path: |
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

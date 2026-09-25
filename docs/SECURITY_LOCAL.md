@@ -1,5 +1,7 @@
 # Sécurité de l’environnement local
 
+> Installateur de bureau : voir [le guide Mac et Windows](DESKTOP_INSTALLATION.md) et [la fabrication des paquets](DESKTOP_RELEASE.md).
+
 ## Clés et fichiers d’environnement
 
 Tous les fichiers `.env*` sont ignorés par Git, sauf `.env.example`, qui ne contient que des noms de variables et des valeurs vides.

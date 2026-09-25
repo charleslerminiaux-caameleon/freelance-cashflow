@@ -13,7 +13,10 @@
     "test:tooling": "node --test scripts/*.test.mjs",
     "e2e": "pnpm --filter @fc/web e2e",
     "test:isolated": "node scripts/run-isolated-tests.mjs all",
-    "test:client-boundary": "node scripts/run-isolated-tests.mjs build"
+    "test:client-boundary": "node scripts/run-isolated-tests.mjs build",
+    "desktop:stage": "node apps/desktop/scripts/prepare.mjs",
+    "desktop:package": "node apps/desktop/scripts/package.mjs",
+    "desktop:smoke": "node apps/desktop/scripts/smoke-packaged.mjs"
   },
   "devDependencies": {
     "yaml": "2.9.0"
