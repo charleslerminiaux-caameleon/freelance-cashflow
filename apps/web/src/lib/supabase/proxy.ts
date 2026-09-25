@@ -2,16 +2,17 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-import { publicEnv } from "@/lib/env/public";
+import { readPublicConfig } from "@/lib/env/public";
 
 const userIdSchema = z.string().uuid();
 
 export async function refreshAuth(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  const publicEnv = readPublicConfig();
   const supabase = createServerClient(
-    publicEnv.NEXT_PUBLIC_SUPABASE_URL,
-    publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    publicEnv.url,
+    publicEnv.anonKey,
     {
       cookies: {
         getAll() {

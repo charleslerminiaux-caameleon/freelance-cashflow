@@ -1,9 +1,11 @@
 import "server-only";
-
+import { readPublicConfig } from "./public";
 import { parseServerEnv } from "./server-schema";
-
-export const serverEnv = parseServerEnv({
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-});
+export function readServerConfig() {
+  const { url, anonKey } = readPublicConfig();
+  return parseServerEnv({
+    NEXT_PUBLIC_SUPABASE_URL: url,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
+}

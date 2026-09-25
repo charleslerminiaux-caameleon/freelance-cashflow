@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 export async function checkClientBoundary(directory, canaries) {
-  const forbidden = [...canaries, 'QONTO_SECRET_KEY', 'QONTO_LOGIN', 'thirdparty.qonto.com', 'acquire_banking_sync', 'stage_banking_page', 'acquire_recurring_analysis', 'publish_recurring_analysis', 'fail_recurring_analysis', 'acquire_direct_banking_sync', 'publish_pennylane_sync', 'b2b.revolut.com/api', 'api.bunq.com/v1', 'createPennylaneProvider', 'createRevolutProvider', 'createBunqProvider'];
+  const forbidden = [...canaries, 'SUPABASE_SERVICE_ROLE_KEY', 'FC_DESKTOP_HEALTH_TOKEN', 'QONTO_SECRET_KEY', 'QONTO_LOGIN', 'thirdparty.qonto.com', 'acquire_banking_sync', 'stage_banking_page', 'acquire_recurring_analysis', 'publish_recurring_analysis', 'fail_recurring_analysis', 'acquire_direct_banking_sync', 'publish_pennylane_sync', 'b2b.revolut.com/api', 'api.bunq.com/v1', 'createPennylaneProvider', 'createRevolutProvider', 'createBunqProvider'];
   let count = 0;
   async function visit(path) {
     for (const entry of await readdir(path, { withFileTypes: true })) {
