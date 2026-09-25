@@ -1,0 +1,11 @@
+.chartControls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .65rem 1rem; margin: 1rem 0; }
+.historyControls, .projectionControls { display: flex; align-items: center; gap: .35rem; font-size: .75rem; }
+.historyControls > span, .projectionControls > span { margin-right: .25rem; color: var(--fc-muted); }
+.historyControls button, .projectionControls :global(.horizon-selector a) { border: 1px solid var(--fc-border); border-radius: .4rem; background: transparent; color: var(--fc-muted); padding: .35rem .55rem; cursor: pointer; font: inherit; white-space: nowrap; }
+.historyControls button[aria-pressed="true"], .projectionControls :global(.horizon-selector a[aria-current="page"]) { background: #e8f2ef; border-color: #b9d2ce; color: var(--fc-petrol); box-shadow: none; }
+.historyControls button:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; }
+.projectionControls { margin-left: auto; }
+.projectionControls :global(.horizon-selector) { background: transparent; border-radius: 0; margin: 0; padding: 0; gap: .35rem; }
+.historyCaption { color: var(--fc-muted); font-size: .75rem; line-height: 1.5; margin: .4rem 0 .75rem; }
+.actualLegend { border-color: #475569 !important; background: #475569; }
+@media (max-width: 560px) { .projectionControls { margin-left: 0; } }

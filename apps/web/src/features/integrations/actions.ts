@@ -15,7 +15,7 @@ export async function syncQontoAction(
   // This action accepts no client-controlled command or owner identifier.
   void _previousState;
   void _formData;
-  if (!isQontoConfigured()) return { success: false, message: "Qonto est à configurer sur le serveur avant de synchroniser." };
+  if (!isQontoConfigured()) return { success: false, message: "Configurez la connexion Qonto dans Intégrations avant de synchroniser." };
   let state: SyncActionState;
   try {
     const result = await synchronizeQontoForOwner(userId);

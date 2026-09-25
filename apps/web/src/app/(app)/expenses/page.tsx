@@ -73,6 +73,7 @@ function basisPointsToInput(value: number): string {
 function reviewSuggestion(suggestion: RecurringSuggestion): SuggestionReview {
   return {
     id: suggestion.id,
+    provider: suggestion.provider,
     eligible: suggestion.eligible,
     label: suggestion.label,
     amountCents: suggestion.amountCents,
@@ -235,8 +236,8 @@ export default async function ExpensesPage() {
                         {linkedExpenseOrigins[expense.id] ? (
                           <span className="status-pill">
                             {linkedExpenseOrigins[expense.id] === "history"
-                              ? "Créée depuis Qonto"
-                              : "Détectée depuis Qonto"}
+                              ? "Créée depuis la banque"
+                              : "Détectée depuis la banque"}
                           </span>
                         ) : null}
                         <h3>{expense.label}</h3>

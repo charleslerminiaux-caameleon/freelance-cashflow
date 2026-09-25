@@ -38,27 +38,27 @@ export function KpiStrip({
       <article className="dashboard-kpi dashboard-kpi-available">
         <span>Disponible</span>
         <KpiValue>{formatMoney(kpis.availableBalanceCents)}</KpiValue>
-        <small>− {formatMoney(reservedCents)} réservés</small>
+        <small className="kpi-caption">{formatMoney(reservedCents)} réservés</small>
       </article>
       <article className="dashboard-kpi">
         <span>Entrées 30 j</span>
         <KpiValue className="positive">{`+${formatMoney(kpis.inflows30DaysCents)}`}</KpiValue>
-        <small>flux inclus dans la projection</small>
+        <small className="kpi-caption">À encaisser</small>
       </article>
       <article className="dashboard-kpi">
         <span>Sorties 30 j</span>
         <KpiValue className="negative">{`−${formatMoney(kpis.outflows30DaysCents)}`}</KpiValue>
-        <small>charges et réserves incluses</small>
+        <small className="kpi-caption">Charges et réserves</small>
       </article>
       <article className="dashboard-kpi">
         <span>Projeté 30 j</span>
         <KpiValue>{formatMoney(kpis.projected30DaysCents)}</KpiValue>
-        <small>{scenarioCopy[scenario].label}</small>
+        <small className="kpi-caption">{scenarioCopy[scenario].label}</small>
       </article>
       <article className="dashboard-kpi dashboard-kpi-runway">
         <span>Runway</span>
         <KpiValue>{kpis.runwayDays === null ? `>${horizonDays} jours` : `${kpis.runwayDays} jours`}</KpiValue>
-        <small>avant passage sous le seuil</small>
+        <small className="kpi-caption">Avant le seuil</small>
       </article>
     </section>
   );

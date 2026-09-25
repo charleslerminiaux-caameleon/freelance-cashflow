@@ -2,7 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, it } from "vitest";
 
-import { getBankingSnapshot } from "./repository";
+import { getBankingSnapshot, listAllBankTransactions } from "./repository";
 
 const owner = "11111111-1111-4111-8111-111111111111";
 const integrationId = "22222222-2222-4222-8222-222222222222";
@@ -70,6 +70,7 @@ it("observes publication changes and refetches account pages and history despite
 it("reads complete history beyond 1000 within the balance publication bracket", async () => {
   let generation = 1; let flipped = false;
   const offsets: number[] = [];
+  const historyQueries: URLSearchParams[] = [];
   const client = createClient("https://example.invalid", "synthetic-key", { auth: { persistSession: false }, global: { fetch: async (input, init) => {
     const url = new URL(String(input)); const table = url.pathname.split("/").at(-1);
     expect(init?.signal).toBeInstanceOf(AbortSignal);
@@ -79,7 +80,7 @@ it("reads complete history beyond 1000 within the balance publication bracket", 
     else if (table === "bank_accounts") rows = [{ id: owner, name: "Synthetic", iban_masked: null, currency: "EUR", current_balance_cents: generation * 100, available_balance_cents: null, status: "active", is_current: true, updated_at: "2026-09-10T10:00:00Z" }];
     else {
       expect(url.searchParams.get("integration_id")).toBe(`eq.${integrationId}`);
-      expect(url.searchParams.get("transaction_date")).toBe("gte.2026-03-11");
+      historyQueries.push(url.searchParams);
       const offset = Number(url.searchParams.get("offset")); offsets.push(offset);
       rows = Array.from({ length: offset === 0 ? 1000 : 1 }, () => ({ id: owner, bank_account_id: owner, currency: "EUR", amount_cents: generation * 10, direction: "outflow", status: "completed", label: "Synthetic", counterparty: null, transaction_date: "2026-09-10", value_date: null, updated_at: "2026-09-10T10:00:00Z" }));
       if (offset === 1000 && !flipped) { generation++; flipped = true; }
@@ -88,9 +89,14 @@ it("reads complete history beyond 1000 within the balance publication bracket", 
   } } });
   const snapshot = await getBankingSnapshot(client, owner, { fullHistory: { since: "2026-03-11", until: "2026-09-11" } });
   expect(snapshot.fullTransactions).toHaveLength(1001);
+  expect(snapshot.fullHistoryWindow).toEqual({ since: "2026-03-11", until: "2026-09-11" });
   expect(snapshot.fullTransactions?.every(row => row.amount_cents === 20)).toBe(true);
   expect(snapshot.accounts[0]?.current_balance_cents).toBe(200);
   expect(offsets).toEqual([0, 1000, 0, 1000]);
+  for (const parameters of historyQueries) {
+    expect(parameters.get("or")).toBe("(and(transaction_date.gte.2026-03-11,transaction_date.lte.2026-09-11),and(value_date.gte.2026-03-11,value_date.lte.2026-09-11))");
+    expect(parameters.has("transaction_date")).toBe(false);
+  }
 });
 
 it("rejects a transaction page cap overflow rather than returning partial history", async () => {
@@ -100,4 +106,33 @@ it("rejects a transaction page cap overflow rather than returning partial histor
   const client = createClient("https://example.invalid", "synthetic-key", { auth: { persistSession: false }, global: { fetch: async () => { requests++; return new Response(JSON.stringify(rows), { headers: { "Content-Type": "application/json" } }); } } });
   await expect(listAllBankTransactions(client, owner, integrationId, { since: "2026-03-11", until: "2026-09-11" }, new AbortController().signal)).rejects.toThrow(/^DATABASE_ERROR$/);
   expect(requests).toBe(101);
+});
+
+
+it("requests recently settled movements even when created before the history window", async () => {
+  let requests = 0;
+  const requestUrls: URL[] = [];
+  const delayed = { id: owner, bank_account_id: owner, currency: "EUR", amount_cents: 2000, direction: "inflow", status: "completed", label: "Delayed settlement", counterparty: null, transaction_date: "2025-12-01", value_date: "2026-09-10", updated_at: "2026-09-10T10:00:00Z" };
+  const client = createClient("https://example.invalid", "synthetic-key", { auth: { persistSession: false }, global: { fetch: async input => {
+    requests++;
+    const url = new URL(String(input));
+    requestUrls.push(url);
+    return new Response(JSON.stringify([delayed]), { headers: { "Content-Type": "application/json" } });
+  } } });
+  const result = await listAllBankTransactions(client, owner, integrationId, { since: "2026-03-11", until: "2026-09-11" }, new AbortController().signal);
+  expect(requests).toBe(1);
+  const parameters = requestUrls[0]!.searchParams;
+  expect(parameters.get("owner_user_id")).toBe(`eq.${owner}`);
+  expect(parameters.get("integration_id")).toBe(`eq.${integrationId}`);
+  expect(parameters.get("or")).toBe("(and(transaction_date.gte.2026-03-11,transaction_date.lte.2026-09-11),and(value_date.gte.2026-03-11,value_date.lte.2026-09-11))");
+  // A separate top-level creation-date constraint would AND away this row.
+  expect(parameters.has("transaction_date")).toBe(false);
+  expect(result).toEqual([delayed]);
+});
+
+it("rejects filter syntax in history dates before making a request", async () => {
+  let requests = 0;
+  const client = createClient("https://example.invalid", "synthetic-key", { auth: { persistSession: false }, global: { fetch: async () => { requests++; return new Response("[]"); } } });
+  await expect(listAllBankTransactions(client, owner, integrationId, { since: "2026-03-11,id.neq.0", until: "2026-09-11" }, new AbortController().signal)).rejects.toThrow(/^DATABASE_ERROR$/);
+  expect(requests).toBe(0);
 });

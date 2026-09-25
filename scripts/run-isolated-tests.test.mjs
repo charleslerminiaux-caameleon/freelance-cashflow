@@ -60,3 +60,9 @@ test('direct provider credentials cannot leak from installation environment into
   const env = testEnvironment(Object.fromEntries(names.map(name => [name, 'inherited-private-value'])));
   for (const name of names) assert.equal(env[name], '');
 });
+
+test('isolates the credential vault from the owner server', () => {
+  const env = testEnvironment({ INTEGRATION_CREDENTIALS_DIR: '/private/owner/vault' });
+  assert.notEqual(env.INTEGRATION_CREDENTIALS_DIR, '/private/owner/vault');
+  assert.match(env.INTEGRATION_CREDENTIALS_DIR, /\.isolated-tests\/credentials$/);
+});

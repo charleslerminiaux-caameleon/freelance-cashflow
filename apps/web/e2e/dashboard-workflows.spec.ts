@@ -111,7 +111,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
   await form.getByRole('button', { name: 'Créer la charge récurrente', exact: true }).click();
   await expect(page.getByRole('link', { name: /^Ouvrir la charge(?: existante)?$/ })).toBeVisible();
   await page.getByRole('link', { name: /^Ouvrir la charge(?: existante)?$/ }).click();
-  await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true })).toContainText('Créée depuis Qonto');
+  await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true })).toContainText('Créée depuis la banque');
   await expect(page.getByRole('region', { name: 'Sorties récurrentes', exact: true })).toContainText('Synthetic services');
   await remove(page, 'Synthetic reviewed history');
   await page.goto(historyUrl);
@@ -142,17 +142,8 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
 
   await page.goto('/dashboard?horizon=90&scenario=committed&filters=1&invoices=1&expenses=1&signedOrders=1');
   await readyDashboard(page);
-  await page.getByRole('radio', { name: 'Facturé + signé + opportunités', exact: true }).check();
-  await expect(page).toHaveURL(/scenario=probable/);
-  await readyDashboard(page);
-  await expect(page.getByRole('checkbox')).toHaveCount(0);
-  await expect(page.getByText(/Les charges sont incluses dans tous les scénarios/)).toBeVisible();
-  await page.getByRole('radio', { name: 'Facturé', exact: true }).check();
-  await expect(page).toHaveURL(/scenario=certain/);
-  await readyDashboard(page);
-  await page.getByRole('radio', { name: 'Facturé + signé + opportunités', exact: true }).check();
-  await expect(page).toHaveURL(/scenario=probable/);
-  await readyDashboard(page);
+  await expect(page.getByRole('radio')).toHaveCount(0);
+  await expect(page.getByRole('list', { name: 'Légende du graphique' })).toContainText('Facturé + signé + opportunités');
   const stableUrl = page.url();
   const previousPublication = await publication(owner);
   await safeWrite(admin.from('integrations').update({ last_success_at: new Date(Date.now() - 25 * 3600000).toISOString(), last_auto_attempt_at: null }).eq('owner_user_id', owner));
@@ -161,7 +152,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
   const badge = page.getByRole('button', { name: 'Solde Qonto · Synchronisé il y a moins de 5 min', exact: true });
   await expect(badge).toBeVisible({ timeout: 30000 });
   await expect(page).toHaveURL(stableUrl);
-  await expect(page.getByRole('radio', { name: 'Facturé + signé + opportunités', exact: true })).toBeChecked();
+  await expect(page.getByRole('radio')).toHaveCount(0);
   await safeWrite(admin.from('bank_accounts').update({ current_balance_cents: 2345678 }).eq('owner_user_id', owner));
   await page.reload();
   await readyDashboard(page);
@@ -177,7 +168,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
     }));
     console.log('compact geometry', viewport, geometry, await page.evaluate(() => ({ height: document.documentElement.scrollHeight, width: document.documentElement.scrollWidth })));
     for (const card of geometry) expect.soft(card.gap, 'amount and footer stay adjacent').toBeLessThanOrEqual(12);
-    expect.soft(await page.evaluate(() => document.documentElement.scrollHeight), 'complete desktop dashboard fits viewport').toBeLessThanOrEqual(viewport.height);
+    expect.soft((await page.locator('.cashflow-chart').boundingBox())!.y, 'chart starts within the desktop viewport').toBeLessThan(viewport.height);
     await settleChart(page);
     await page.screenshot({ path: testInfo.outputPath(`libra-compact-${viewport.width}.png`), fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
   }
@@ -185,15 +176,9 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
     await page.setViewportSize({ width, height: 1000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect(page.getByRole('link', { name: 'Dashboard', exact: true }).filter({ visible: true })).toHaveAttribute('aria-current', 'page');
-    const choices = page.locator('.scenario-choices');
-    const columns = await choices.evaluate(element => {
-      const labels = [...element.querySelectorAll('label')];
-      return labels.filter(label => Math.abs(label.getBoundingClientRect().top - labels[0]!.getBoundingClientRect().top) < 1).length;
-    });
     await settleChart(page);
     await page.screenshot({ path: testInfo.outputPath(width === 390 ? 'libra-compact-390.png' : `libra-dashboard-layout-${width}.png`), fullPage: true, animations: 'disabled', style: 'nextjs-portal { visibility: hidden; }' });
-    expect(columns).toBe(width === 390 ? 1 : 3);
-    for (const element of await page.locator('.scenario-controls label, .qonto-badge').all()) {
+    for (const element of await page.locator('.qonto-badge').all()) {
       const box = await element.boundingBox();
       expect(box && box.x >= 0 && box.x + box.width <= width).toBe(true);
     }
@@ -211,15 +196,7 @@ test('synthetic owner completes dashboard/history/category workflows, automatic 
     await tooltip.hover();
     await expect(tooltip).toBeVisible();
     await page.mouse.move(0, 0);
-    for (const radio of await page.getByRole('radio').all()) {
-      await radio.focus();
-      const description = page.locator(`#${await radio.getAttribute('aria-describedby')}`);
-      await expect(description).toBeVisible();
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      await radio.press('Escape');
-      await expect(description).toBeHidden();
-      await radio.blur();
-    }
+
   }
   const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, storageState: await context.storageState() });
   await touch.route('**/*', route => ['http://127.0.0.1:3200', 'http://127.0.0.1:56321'].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort());

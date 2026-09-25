@@ -143,7 +143,7 @@ it("forwards duplicate consent only when creating a new charge", async () => {
 it.each([
   ["DETECTION_STALE", /opération bancaire n’est plus à jour/i],
   ["DETECTION_NOT_FOUND", /opération bancaire n’est plus à jour/i],
-  ["DETECTION_SOURCE_UNAVAILABLE", /synchronisez Qonto/i],
+  ["DETECTION_SOURCE_UNAVAILABLE", /synchronisez votre banque/i],
   ["DETECTION_DUPLICATE", /charge mensuelle similaire/i],
   ["private SQL payload", /impossible de créer cette charge récurrente/i],
 ])("returns a safe recoverable failure for %s", async (failure, expected) => {

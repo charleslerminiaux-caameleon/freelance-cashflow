@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { localDate, moneyCents } from "@fc/shared";
 import { afterAll, beforeEach, expect, it, vi } from "vitest";
 
@@ -11,6 +11,9 @@ const { getDashboardViewModel, requireOwner } = vi.hoisted(() => ({
 
 vi.mock("@/features/dashboard/query", () => ({ getDashboardViewModel }));
 vi.mock("@/lib/auth/require-owner", () => ({ requireOwner }));
+
+// Keep UI tests outside the server-action/Supabase environment boundary.
+vi.mock("@/features/integrations/auto-sync-action", () => ({ autoSyncQontoAction: vi.fn() }));
 
 class ResizeObserverStub implements ResizeObserver {
   disconnect() {}
@@ -77,12 +80,16 @@ it("renders the real-data dashboard hierarchy and linkable controls", async () =
     searchParams: Promise.resolve({ horizon: "90", scenario: "certain" }),
   }));
 
-  expect(screen.getByRole("heading", { name: "Bonjour" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+  expect(screen.queryByText(/^Bonjour/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Votre trésorerie, aujourd’hui/)).not.toBeInTheDocument();
+  const chartPanel = within(screen.getByRole("region", { name: "Solde projeté" }));
+  expect(chartPanel.getByRole("navigation", { name: "Horizon de prévision" })).toBeInTheDocument();
+  expect(chartPanel.getByText("Projection", { exact: true })).toBeInTheDocument();
   expect(screen.getByText("samedi 5 septembre 2026")).toBeInTheDocument();
   expect(screen.getByRole("region", { name: "Indicateurs de trésorerie" })).toBeInTheDocument();
-  const scenarioControls = screen.getByRole("radio", { name: "Facturé" }).closest("form")!;
-  const chart = screen.getByRole("img", { name: "Projection de trésorerie" });
-  expect(scenarioControls.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "Légende du graphique" })).toHaveTextContent("Facturé + signé + opportunités");
   expect(screen.getByRole("heading", { name: "À traiter" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "90 j" })).toHaveAttribute("aria-current", "page");
 });
@@ -101,4 +108,12 @@ it("renders the published Qonto balance with owner timezone and another tab's sy
   fireEvent.focus(badge);
   expect(screen.getByRole("tooltip")).toHaveTextContent("31/08/2026 à 17:30 (America/Los_Angeles)");
   expect(screen.queryByText(/Actualisation nécessaire · données conservées/)).not.toBeInTheDocument();
+});
+
+it("keeps the greeting hidden and uses invoiced KPIs even with an old scenario URL", async () => {
+  requireOwner.mockResolvedValue({ userId: "owner", firstName: "Camille" });
+  const { default: DashboardPage } = await import("./page");
+  render(await DashboardPage({ searchParams: Promise.resolve({ scenario: "probable" }) }));
+  expect(screen.queryByText(/Bonjour Camille/)).not.toBeInTheDocument();
+  expect(getDashboardViewModel).toHaveBeenCalledWith("owner", { searchParameters: { scenario: "certain" } });
 });

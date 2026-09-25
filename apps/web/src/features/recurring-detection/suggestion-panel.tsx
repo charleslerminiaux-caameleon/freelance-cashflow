@@ -15,6 +15,7 @@ import {
 } from "./suggestion-form";
 
 export type SuggestionReview = {
+  provider?: "qonto" | "revolut" | "bunq";
   id: string;
   eligible: boolean;
   label: string;
@@ -102,7 +103,7 @@ export function SuggestionPanel(props: SuggestionPanelProps) {
             <article key={suggestion.id} className="expense-record">
               <header>
                 <div>
-                  <span className="status-pill">Suggestion</span>
+                  <span className="status-pill">Suggestion{suggestion.provider ? ` · ${suggestion.provider === "qonto" ? "Qonto" : suggestion.provider === "revolut" ? "Revolut" : "bunq"}` : ""}</span>
                   <h3>{suggestion.label}</h3>
                   <p>Prochaine échéance estimée : {suggestion.nextDate}</p>
                 </div>

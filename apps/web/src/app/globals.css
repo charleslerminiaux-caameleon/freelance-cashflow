@@ -1,13 +1,18 @@
 :root {
-  --fc-petrol: #0e6259;
+  --fc-petrol: #287f79;
   --fc-coral: #df6c5a;
-  --fc-ink: #16312d;
-  --fc-muted: #6d7d79;
+  --fc-ink: #202928;
+  --fc-muted: #707977;
   --fc-surface: #ffffff;
-  --fc-border: #dce7e3;
-  background: #f4f8f6;
+  --fc-border: #e1e6e4;
+  --fc-text-body: 0.875rem;
+  --fc-text-page-title: clamp(1.5rem, 2.2vw, 2rem);
+  --fc-text-section-title: 1.05rem;
+  background: #fafbfa;
   color: var(--fc-ink);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.45;
   font-variant-numeric: tabular-nums;
 }
 
@@ -43,7 +48,7 @@ a {
 .brand {
   align-items: center;
   display: inline-flex;
-  font-weight: 700;
+  font-weight: 500;
   gap: 0.75rem;
   letter-spacing: -0.02em;
 }
@@ -79,7 +84,7 @@ nav a:focus-visible {
   color: var(--fc-petrol);
 }
 
-nav a[aria-current="page"] { font-weight: 700; }
+nav a[aria-current="page"] { font-weight: 500; }
 nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; }
 
 .sync-status {
@@ -88,12 +93,26 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
 }
 
 .sidebar > .sync-status {
-  border-top: 1px solid var(--fc-border);
+  border: 1px solid var(--fc-border);
+  border-radius: 0.65rem;
+  background: #fafbfa;
+  display: grid;
+  gap: 0.6rem;
   margin-top: auto;
-  padding: 1rem 0.75rem 0;
+  padding: 1rem;
 }
+.sidebar-qonto-logo { display: block; object-fit: contain; }
+.mobile-header .sync-status { display: flex; align-items: center; gap: 0.6rem; }
+.sidebar .navigation-management { border-top: 1px solid var(--fc-border); margin-top: 1.4rem; padding-top: 1.3rem; }
+.mobile-navigation .navigation-management { border-left: 1px solid var(--fc-border); padding-left: 0.5rem; }
+h1, h2, h3, strong, b { font-weight: 600; }
+.brand { font-weight: 600; font-size: 0.95rem; }
+.sidebar { padding-top: 2rem; }
+.sidebar nav a { padding: 0.8rem 0.9rem; }
+
 
 .app-content {
+  font-size: var(--fc-text-body);
   margin-left: 16rem;
   min-height: 100vh;
   padding: 2rem;
@@ -102,14 +121,14 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
 .empty-state {
   background: var(--fc-surface);
   border: 1px solid var(--fc-border);
-  border-radius: 1rem;
+  border-radius: 0.7rem;
   margin: 0 auto;
   max-width: 42rem;
   padding: 3rem;
 }
 
 .empty-state h1 {
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-size: var(--fc-text-page-title);
   letter-spacing: -0.035em;
   margin: 0.5rem 0;
 }
@@ -122,7 +141,7 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
 .eyebrow {
   color: var(--fc-petrol);
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.08em;
   margin: 0;
   text-transform: uppercase;
@@ -147,7 +166,7 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
 .auth-card {
   background: var(--fc-surface);
   border: 1px solid var(--fc-border);
-  border-radius: 1rem;
+  border-radius: 0.7rem;
   box-shadow: 0 1.5rem 4rem rgb(14 98 89 / 8%);
   max-width: 34rem;
   padding: 2rem;
@@ -210,7 +229,7 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
 .onboarding-form label {
   display: block;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 0.35rem;
 }
 
@@ -234,7 +253,7 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
   color: white;
   cursor: pointer;
   font: inherit;
-  font-weight: 700;
+  font-weight: 500;
   margin-top: 0.35rem;
   padding: 0.75rem 1rem;
 }
@@ -270,11 +289,11 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
   display: flex;
   gap: 2rem;
   justify-content: space-between;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .page-heading h1 {
-  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-size: var(--fc-text-page-title);
   letter-spacing: -0.045em;
   line-height: 1;
   margin: 0.45rem 0 0.65rem;
@@ -292,7 +311,7 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
   border-radius: 999px;
   color: var(--fc-petrol);
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.5rem 0.75rem;
   white-space: nowrap;
 }
@@ -316,7 +335,7 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
 .metric-card {
   background: var(--fc-surface);
   border: 1px solid var(--fc-border);
-  border-radius: 1rem;
+  border-radius: 0.7rem;
 }
 
 .panel {
@@ -326,7 +345,7 @@ nav a:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 2px; 
 details.panel > summary,
 .inline-details > summary {
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 details.panel > summary {
@@ -396,7 +415,7 @@ details.panel[open] > summary {
 .conversion-form label {
   display: block;
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 0.35rem;
 }
 
@@ -429,7 +448,7 @@ details.panel[open] > summary {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-weight: 700;
+  font-weight: 500;
   justify-content: center;
   padding: 0.7rem 1rem;
 }
@@ -474,7 +493,7 @@ details.panel[open] > summary {
   color: #8a382c;
   cursor: pointer;
   font: inherit;
-  font-weight: 700;
+  font-weight: 500;
   justify-self: start;
   padding: 0.6rem 0.85rem;
 }
@@ -558,7 +577,7 @@ details.panel[open] > summary {
   color: var(--fc-muted);
   display: inline-block;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.3rem 0.55rem;
 }
 
@@ -608,7 +627,7 @@ details.panel[open] > summary {
 
 .record-metrics dd {
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0;
 }
 
@@ -666,7 +685,7 @@ details.panel[open] > summary {
   color: var(--fc-petrol);
   display: inline-block;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-top: 1rem;
 }
 
@@ -675,7 +694,7 @@ details.panel[open] > summary {
 }
 
 .hero-amount {
-  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
 }
 
 .contract-grid {
@@ -960,7 +979,7 @@ details.panel[open] > summary {
 
 .expense-metrics dd {
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 500;
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -984,7 +1003,7 @@ details.panel[open] > summary {
 .category-management-link {
   align-self: center;
   color: var(--fc-petrol);
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .category-picker {
@@ -1000,7 +1019,7 @@ details.panel[open] > summary {
   background: transparent;
   color: var(--fc-petrol);
   font: inherit;
-  font-weight: 700;
+  font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
@@ -1024,7 +1043,7 @@ details.panel[open] > summary {
 .category-create-dialog {
   width: min(100%, 30rem);
   padding: 1.25rem;
-  border-radius: 1rem;
+  border-radius: 0.7rem;
   background: #fff;
   box-shadow: 0 1rem 3rem rgb(15 23 42 / 25%);
 }
@@ -1126,7 +1145,7 @@ details.panel[open] > summary {
 }
 
 .app-content:has(.dashboard-page) {
-  padding: 1rem;
+  padding: 2rem clamp(1.25rem, 2.5vw, 3rem);
 }
 
 .dashboard-page {
@@ -1139,19 +1158,7 @@ details.panel[open] > summary {
   display: flex;
   gap: 2rem;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
-}
-
-.dashboard-heading h1 {
-  font-size: clamp(2rem, 3vw, 2.5rem);
-  letter-spacing: -0.055em;
-  line-height: 1;
-  margin: 0.35rem 0 0.5rem;
-}
-
-.dashboard-heading > div > p:last-child {
-  color: var(--fc-muted);
-  margin: 0;
+  margin-bottom: 1.25rem;
 }
 
 .horizon-selector {
@@ -1169,7 +1176,7 @@ details.panel[open] > summary {
   border-radius: 0.6rem;
   color: #485652;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.65rem 0.9rem;
 }
 
@@ -1183,24 +1190,25 @@ details.panel[open] > summary {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .dashboard-kpi {
   background: var(--fc-surface);
   border: 1px solid var(--fc-border);
-  border-radius: 1rem;
+  border-radius: 0.7rem;
   display: flex;
   flex-direction: column;
   flex: 1 1 calc((100% - 3.75rem) / 6);
   min-width: min-content;
-  padding: 0.75rem;
+  padding: 1.15rem;
+  min-height: 9.5rem;
 }
 
 .dashboard-kpi > span {
   color: var(--fc-muted);
   font-size: 0.76rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -1210,7 +1218,7 @@ details.panel[open] > summary {
   font-size: 2rem;
   letter-spacing: -0.045em;
   line-height: 1;
-  margin: 0.5rem 0 0;
+  margin: 0.85rem 0 0;
   white-space: nowrap;
 }
 
@@ -1258,25 +1266,25 @@ details.panel[open] > summary {
 .dashboard-layout {
   align-items: start;
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.36fr);
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.38fr);
 }
 
 .dashboard-primary,
 .dashboard-secondary {
   display: grid;
-  gap: 0.75rem;
+  gap: 1rem;
   min-width: 0;
 }
 
 .dashboard-panel {
   background: var(--fc-surface);
   border: 1px solid var(--fc-border);
-  border-radius: 1rem;
+  border-radius: 0.7rem;
   padding: 1.35rem;
 }
 
-.dashboard-page .dashboard-panel { padding: 0.75rem; }
+.dashboard-page .dashboard-panel { padding: 1.25rem; }
 .dashboard-page .dashboard-empty-copy { margin: 0.5rem 0; }
 
 .dashboard-panel-heading,
@@ -1300,7 +1308,7 @@ details.panel[open] > summary {
   border-radius: 0.45rem;
   color: var(--fc-coral);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.3rem 0.55rem;
 }
 
@@ -1325,21 +1333,22 @@ details.panel[open] > summary {
   color: white;
   cursor: pointer;
   font: inherit;
-  font-weight: 700;
+  font-weight: 500;
   margin-top: 0.65rem;
   padding: 0.7rem 1rem;
 }
 
 .chart-heading {
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  flex-direction: column;
+  margin-bottom: 1rem;
 }
 
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem 1rem;
-  justify-content: flex-end;
+  gap: 0.5rem 0.75rem;
+  justify-content: flex-start;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1349,8 +1358,9 @@ details.panel[open] > summary {
   align-items: center;
   color: var(--fc-muted);
   display: inline-flex;
-  font-size: 0.78rem;
-  gap: 0.4rem;
+  font-size: 0.72rem;
+  gap: 0.35rem;
+  white-space: nowrap;
 }
 
 .legend-line {
@@ -1382,7 +1392,7 @@ details.panel[open] > summary {
 }
 
 .cashflow-chart {
-  height: clamp(200px, calc(100vh - 580px), 280px);
+  height: clamp(320px, 39vh, 460px);
   min-width: 0;
   width: 100%;
 }
@@ -1414,7 +1424,7 @@ details.panel[open] > summary {
   align-items: start;
   background: var(--fc-surface);
   border: 1px solid var(--fc-border);
-  border-radius: 1rem;
+  border-radius: 0.7rem;
   display: grid;
   gap: 0.5rem 1rem;
   container-type: inline-size;
@@ -1429,7 +1439,7 @@ details.panel[open] > summary {
 .scenario-controls legend {
   color: var(--fc-muted);
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1460,7 +1470,7 @@ details.panel[open] > summary {
   cursor: pointer;
   display: inline-block;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   position: relative;
 }
 
@@ -1489,7 +1499,7 @@ details.panel[open] > summary {
   cursor: pointer;
   display: inline-flex;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   gap: 0.45rem;
   min-height: 2.7rem;
   padding: 0.55rem 0.7rem;
@@ -1536,11 +1546,11 @@ details.panel[open] > summary {
 .qonto-status { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.75rem; }
 .qonto-badge-anchor { display: inline-flex; position: relative; }
 .qonto-badge {
-  display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.75rem;
-  padding: 0.35rem 0.55rem; border: 1px solid #c9b780; border-radius: 0.55rem;
+  display: inline-flex; align-items: center; gap: 0.4rem; min-height: 1.875rem;
+  padding: 0.3rem 0.45rem; border: 1px solid #c9b780; border-radius: 0.4rem;
   background: #fff8e8; color: #785717; cursor: pointer;
 }
-.qonto-badge img { display: block; }
+.qonto-badge img { display: block; width: 50px; height: 14px; object-fit: contain; }
 .qonto-badge-fresh { background: #e8f2ef; color: #17624f; border-color: #a5cbbb; }
 .qonto-badge-error { background: #fff0ed; color: #a13528; border-color: #dcafa7; }
 .qonto-badge-checking, .qonto-badge-syncing, .qonto-badge-unconfigured {
@@ -1562,7 +1572,7 @@ details.panel[open] > summary {
 @media (prefers-reduced-motion: reduce) { .qonto-spinner { animation: none; } }
 
 .dashboard-actions {
-  border-top: 4px solid var(--fc-coral);
+  border-top: 3px solid var(--fc-coral);
 }
 
 .dashboard-detail-list {
@@ -1624,7 +1634,7 @@ details.panel[open] > summary {
   color: var(--fc-petrol);
   display: inline-block;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-top: 0.7rem;
 }
 
@@ -1640,7 +1650,7 @@ details.panel[open] > summary {
   align-items: center;
   background: #edf3f2;
   border: 1px solid #b9d2ce;
-  border-radius: 1rem;
+  border-radius: 0.7rem;
   display: flex;
   gap: 1.5rem;
   justify-content: space-between;
@@ -1656,7 +1666,7 @@ details.panel[open] > summary {
 .cashflow-opening span {
   color: var(--fc-muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1721,7 +1731,7 @@ details.panel[open] > summary {
 
 .treasury-table td.positive,
 .treasury-table td.negative {
-  font-weight: 700;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -1739,7 +1749,7 @@ details.panel[open] > summary {
   color: var(--fc-petrol);
   display: inline-flex;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.3rem 0.55rem;
   white-space: nowrap;
 }
@@ -1911,7 +1921,8 @@ details.panel[open] > summary {
 }
 
 @media (max-width: 560px) {
-  .app-content {
+  .app-content,
+  .app-content:has(.dashboard-page) {
     padding: 1rem;
   }
 
@@ -1936,10 +1947,12 @@ details.panel[open] > summary {
 /* Banking and integration cards share the commercial dashboard surface. */
 .integration-grid, .bank-account-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
 .integration-card, .banking-panel { padding: 1.5rem; min-width: 0; }
-.integration-card { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; min-height: 260px; border-radius: .6rem; box-shadow: 0 2px 5px rgb(24 54 48 / 5%); }
+.integration-card { display: flex; flex-direction: column; align-items: flex-start; gap: .75rem; border-radius: .6rem; box-shadow: 0 2px 5px rgb(24 54 48 / 5%); }
 .integration-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; width: 100%; min-height: 40px; }
-.integration-card-header h2 { display: flex; align-items: center; }
-.integration-card-header img { display: block; object-fit: contain; width: auto; height: 32px; }
+.integration-card-header h2 { display: flex; align-items: center; gap: .5rem; }
+.integration-card-header img { display: block; object-fit: contain; width: auto; height: 28px; max-width: 160px; }
+.integration-card-header .integration-logo-bunq { height: 42px; }
+.integration-card-header .integration-logo-caption { font-size: .75rem; font-weight: 500; color: var(--fc-muted); }
 .integration-card .integration-badge { color: var(--fc-muted); font-size: .75rem; }
 .integration-card > p { font-size: .9rem; line-height: 1.6; }
 .integration-note { color: var(--fc-muted); }
@@ -1948,9 +1961,9 @@ details.panel[open] > summary {
 .integration-details[open] summary { margin-bottom: .75rem; }
 .integration-details p + p, .integration-details a { margin-top: .5rem; }
 .integration-details a { display: inline-block; }
-.integration-card-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; width: 100%; margin-top: auto; padding-top: .5rem; }
-.integration-card-actions form { margin: 0; }
-.integration-card .integration-action { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 36px; padding: .5rem .75rem; border: 1px solid var(--fc-border); border-radius: .4rem; font-size: .8rem; font-weight: 600; line-height: 1.3; text-decoration: none; }
+.integration-card-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; width: 100%; margin-top: 0; padding-top: 0; }
+.integration-card-actions form { display: flex; margin: 0; }
+.integration-card .integration-action { margin: 0; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 36px; padding: .5rem .75rem; border: 1px solid var(--fc-border); border-radius: .4rem; font-size: .8rem; font-weight: 600; line-height: 1.3; text-decoration: none; }
 .integration-action:not(.primary-link) { color: var(--fc-petrol); background: white; }
 .integration-action:not(.primary-link):hover { background: var(--fc-background, #f4f7f6); }
 .integration-action:focus-visible, .integration-details summary:focus-visible { outline: 2px solid var(--fc-petrol); outline-offset: 3px; }
@@ -1983,3 +1996,37 @@ details.panel[open] > summary {
   .installation-list > li, .installation-list > div { flex-direction: column; gap: 10px; }
   .installation-list dd { max-width: 100%; }
 }
+
+.dashboard-basis, .chart-reading-note { color: var(--fc-muted); font-size: 0.75rem; line-height: 1.5; }
+.dashboard-basis { margin: -0.35rem 0 1.25rem; }
+.chart-reading-note { margin: 0.75rem 0 0; }
+.dashboard-heading .eyebrow, .dashboard-kpi > span { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 400; }
+.dashboard-heading .eyebrow { font-size: 0.75rem; }
+.dashboard-detail-list a { padding: 0.8rem 0; }
+.dashboard-panel h2 { font-weight: 600; }
+@media (max-width: 560px) {
+  .dashboard-page .dashboard-panel { padding: 1rem 0.75rem; }
+  .cashflow-chart { height: 320px; }
+  .dashboard-heading { gap: 1rem; }
+}
+
+.brand-mark { display: block; width: 2.75rem; height: 2.75rem; flex-shrink: 0; overflow: hidden; border-radius: 0.35rem; }
+.brand-mark img { width: 100%; height: 100%; transform: scale(2); border-radius: 0; }
+.mobile-header .sync-status { max-width: 14rem; font-size: 0.75rem; }
+
+@media (max-width: 900px) {
+  /* Detailed amounts remain available in the tooltip on narrow charts. */
+  .cashflow-chart .recharts-label-list { display: none; }
+}
+
+/* One text scale across dashboard, records, forms, settings and integrations. */
+.app-content h1 { font-size: var(--fc-text-page-title); font-weight: 600; line-height: 1.2; }
+.app-content h2 { font-size: var(--fc-text-section-title); font-weight: 600; line-height: 1.4; }
+.app-content h3 { font-size: .95rem; font-weight: 500; line-height: 1.4; }
+.app-content .record-card h2 { font-size: 1rem; }
+.app-content .eyebrow { font-size: .72rem; font-weight: 400; }
+.app-content details.panel > summary { font-size: 1rem; }
+.page-heading p:not(.eyebrow), .record-card header p, .muted-copy { font-size: var(--fc-text-body); }
+.auth-page { font-size: var(--fc-text-body); }
+.dashboard-kpi small.kpi-caption { font-size: .7rem; white-space: nowrap; line-height: 1.4; }
+.dashboard-kpi small { font-size: .7rem; }

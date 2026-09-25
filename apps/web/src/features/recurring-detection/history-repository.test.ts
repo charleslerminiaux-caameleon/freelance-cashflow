@@ -17,7 +17,7 @@ function clientFor(transport: (url: URL, init?: RequestInit) => unknown) {
 }
 function rows(url: URL): unknown {
   switch (url.pathname.split("/").at(-1)) {
-    case "integrations": return { id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
+    case "integrations": return { provider: "qonto", id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
     case "app_settings": return { owner_user_id: owner, currency: "EUR", timezone: "Europe/Paris" };
     case "bank_transactions": return tx;
     case "bank_accounts": return { id: owner, owner_user_id: owner, integration_id: integration, status: "active", is_current: true, currency: "EUR" };
@@ -72,7 +72,7 @@ it("retries all reads after a microsecond publication change", async () => {
     return rows(url);
   });
   expect((await getHistoryRecurringWorkspace(client, owner, transaction)).sourcePublication).toBe(changed);
-  expect(txReads).toBe(2);
+  expect(txReads).toBe(3);
 });
 it("preserves full series identity and truncates display without splitting astral characters", async () => {
   const label = "😀".repeat(79) + "ab😀";
@@ -114,4 +114,30 @@ it("reads choices beyond the first PostgREST page", async () => {
   const workspace = await getHistoryRecurringWorkspace(client, owner, transaction);
   expect(reads).toBe(2); expect(workspace.existingExpenses).toHaveLength(1001);
   expect(workspace.possibleDuplicates).toEqual([{ id: expense, label: "CLOUD", amountCents: 1050 }]);
+});
+
+it.each(["revolut", "bunq"])("loads history from the selected transaction's %s integration", async provider => {
+  const client = clientFor(url => {
+    if (url.pathname.endsWith("integrations")) {
+      expect(url.searchParams.get("id")).toBe(`eq.${integration}`);
+      expect(url.searchParams.get("provider")).toBe("in.(qonto,revolut,bunq)");
+      return {...rows(url) as object, provider};
+    }
+    return rows(url);
+  });
+  expect((await getHistoryRecurringWorkspace(client, owner, transaction)).transactionId).toBe(transaction);
+});
+
+it("excludes expenses linked to another bank without borrowing its series decision", async () => {
+  const client = clientFor(url => {
+    if (url.pathname.endsWith("integrations")) return { ...rows(url) as object, provider: "revolut" };
+    if (url.pathname.endsWith("recurring_suggestions")) {
+      if (url.searchParams.has("integration_id")) return [];
+      return [{ owner_user_id: owner, recurring_cashflow_id: expense }];
+    }
+    return rows(url);
+  });
+  expect(await getHistoryRecurringWorkspace(client, owner, transaction)).toMatchObject({
+    seriesState: null, linkedExpenseId: null, existingExpenses: [], possibleDuplicates: [],
+  });
 });

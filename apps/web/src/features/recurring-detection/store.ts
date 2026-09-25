@@ -5,6 +5,7 @@ import { getBankingSnapshot } from "@/features/banking/repository";
 import { getOwnerSettings } from "@/features/settings/repository";
 import { detectionErrorCode, publicationSchema, uuid } from "./schema";
 import { recurringHistoryWindow } from "./history-window";
+import type { RecurringBankProvider } from "./schema";
 import type { AnalysisStore } from "./service";
 
 async function rpc(client: SupabaseClient, name: string, args: Record<string, unknown>, signal: AbortSignal) {
@@ -15,17 +16,19 @@ async function rpc(client: SupabaseClient, name: string, args: Record<string, un
     return data;
   } catch (error) { throw new Error(detectionErrorCode(error)); }
 }
-export function createAnalysisStore(client: SupabaseClient): AnalysisStore {
+export function createAnalysisStore(client: SupabaseClient, provider: RecurringBankProvider = "qonto"): AnalysisStore {
+  const providerArgs = provider === "qonto" ? {} : { p_provider: provider };
+  const rpcName = (action: string) => `${action}_${provider === "qonto" ? "" : "direct_"}recurring_analysis`;
   return {
     async acquire(owner, runId, signal) {
-      const data = await rpc(client, "acquire_recurring_analysis", { p_owner_user_id: owner, p_run_id: runId }, signal);
+      const data = await rpc(client, rpcName("acquire"), { ...providerArgs, p_owner_user_id: owner, p_run_id: runId }, signal);
       const lease = z.object({ integration_id: uuid, source_publication: publicationSchema, lease_expires_at: publicationSchema }).parse(data);
       return { integrationId: lease.integration_id, sourcePublication: lease.source_publication };
     },
     settings: (owner, signal) => getOwnerSettings(client, owner, signal),
-    snapshot: (owner, today, signal) => getBankingSnapshot(client, owner, { provider: "qonto", fullHistory: recurringHistoryWindow(today), signal }),
+    snapshot: (owner, today, signal) => getBankingSnapshot(client, owner, { provider, fullHistory: recurringHistoryWindow(today), signal }),
     async publish(owner, runId, marker, candidates, signal) {
-      await rpc(client, "publish_recurring_analysis", { p_owner_user_id: owner, p_run_id: runId, p_source_publication: marker,
+      await rpc(client, rpcName("publish"), { ...providerArgs, p_owner_user_id: owner, p_run_id: runId, p_source_publication: marker,
         p_candidates: candidates.map(item => ({ account_id: item.accountId, currency: item.currency, normalized_label: item.normalizedLabel,
           label: item.label, amount_cents: item.amountCents, day_of_month: item.dayOfMonth, last_payment_date: item.lastPaymentDate,
           next_date: item.nextDate, transaction_ids: item.transactionIds })),
@@ -40,7 +43,7 @@ export function createAnalysisStore(client: SupabaseClient): AnalysisStore {
       return { leaseRunId: row.lease_run_id, leaseExpiresAt: row.lease_expires_at };
     },
     async fail(owner, runId, code, signal) {
-      await rpc(client, "fail_recurring_analysis", { p_owner_user_id: owner, p_run_id: runId, p_error_code: code }, signal);
+      await rpc(client, rpcName("fail"), { ...providerArgs, p_owner_user_id: owner, p_run_id: runId, p_error_code: code }, signal);
     },
   };
 }

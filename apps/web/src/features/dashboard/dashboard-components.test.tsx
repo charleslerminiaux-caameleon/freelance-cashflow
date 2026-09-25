@@ -14,6 +14,9 @@ import { ScenarioControls } from "./scenario-controls";
 import { UpcomingLists } from "./upcoming-lists";
 import type { DashboardInclusions, DashboardTreasuryEvent } from "./view-model";
 
+// Keep UI tests outside the server-action/Supabase environment boundary.
+vi.mock("@/features/integrations/auto-sync-action", () => ({ autoSyncQontoAction: vi.fn() }));
+
 class ResizeObserverStub implements ResizeObserver {
   disconnect() {}
   observe() {}
@@ -36,7 +39,7 @@ const scenarioHelp = [
     description: "Factures émises restant à encaisser.",
   },
   {
-    label: "Facturé + commandes signées",
+    label: "Facturé + signé",
     description: "Factures émises et échéances non encore facturées des commandes signées.",
   },
   {
@@ -126,7 +129,7 @@ describe("dashboard controls", () => {
     expect(screen.getByRole("radio", { name: "Facturé" })).toHaveAccessibleDescription(
       "Factures émises restant à encaisser.",
     );
-    expect(screen.getByRole("radio", { name: "Facturé + commandes signées" })).toHaveAccessibleDescription(
+    expect(screen.getByRole("radio", { name: "Facturé + signé" })).toHaveAccessibleDescription(
       "Factures émises et échéances non encore facturées des commandes signées.",
     );
     expect(screen.getByRole("radio", { name: "Facturé + signé + opportunités" })).toHaveAccessibleDescription(
@@ -241,7 +244,7 @@ describe("dashboard controls", () => {
       submittedScenarios.push(String(new FormData(form).get("scenario")));
     });
 
-    fireEvent.click(screen.getByRole("radio", { name: "Facturé + commandes signées" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Facturé + signé" }));
     fireEvent.click(screen.getByRole("radio", { name: "Facturé + signé + opportunités" }));
     fireEvent.click(screen.getByRole("radio", { name: "Facturé" }));
 
@@ -256,6 +259,23 @@ describe("dashboard controls", () => {
 describe("dashboard detail panels", () => {
   it("formats cashflow chart ticks as French short dates", () => {
     expect(formatCashflowChartTick(localDate("2026-12-31"))).toBe("31/12");
+  });
+
+  it("defaults to 30 history days and lets users extend or hide the reconstructed period", () => {
+    render(<CashflowChart currency="EUR" horizonDays={90} scenario="certain" chart={{
+      points: [{ date: localDate("2026-09-24"), certainBalanceCents: moneyCents(10000), committedBalanceCents: moneyCents(10000), probableBalanceCents: moneyCents(10000), safetyThresholdCents: moneyCents(0) }],
+      riskDate: null, summary: "", history: { points: [
+        { date: localDate("2026-06-26"), actualBalanceCents: moneyCents(8000) },
+        { date: localDate("2026-08-25"), actualBalanceCents: moneyCents(9000) },
+        { date: localDate("2026-09-24"), actualBalanceCents: moneyCents(10000) },
+      ] },
+    }} />);
+    expect(screen.getByRole("button", { name: "30 jours" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(screen.getByRole("list", { name: "Légende du graphique" })).getByText("Historique")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "90 jours" }));
+    expect(screen.getByRole("button", { name: "90 jours" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Masqué" }));
+    expect(within(screen.getByRole("list", { name: "Légende du graphique" })).queryByText("Historique")).not.toBeInTheDocument();
   });
 
   it("formats cashflow chart tooltip labels as French short dates", () => {
@@ -292,7 +312,7 @@ describe("dashboard detail panels", () => {
     });
     const legend = screen.getByRole("list", { name: "Légende du graphique" });
     expect(within(legend).getByText("Facturé")).toBeInTheDocument();
-    expect(within(legend).getByText("Facturé + commandes signées")).toBeInTheDocument();
+    expect(within(legend).getByText("Facturé + signé")).toBeInTheDocument();
     expect(within(legend).getByText("Facturé + signé + opportunités")).toBeInTheDocument();
     expect(screen.getByText("Seuil de sécurité")).toBeInTheDocument();
   });

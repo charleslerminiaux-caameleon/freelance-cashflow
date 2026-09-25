@@ -13,12 +13,17 @@ async function synchronize(provider: DirectProvider): Promise<SyncActionState> {
   let state: SyncActionState;
   try {
     const result = await synchronizeDirectForOwner(userId, provider);
+    if (result.success && result.skipped) return { success: false, message: "Une synchronisation est déjà en cours." };
     state = result.success ? { success: true,
       message: `Synchronisation ${name} terminée : ${result.created} ajout(s), ${result.updated} mise(s) à jour.`
         + (provider === "pennylane" ? ` ${result.skippedDrafts ?? 0} brouillon(s) et ${result.skippedCreditNotes ?? 0} avoir(s) non importés.` : ""),
+      analysisSuccess: result.analysisResult?.success,
+      analysisMessage: result.analysisResult ? result.analysisResult.success
+        ? `Analyse des récurrences terminée : ${result.analysisResult.count} détectée(s).`
+        : "Données bancaires actualisées, analyse des récurrences à relancer depuis Charges." : undefined,
     } : { success: false, message: integrationMessages[result.code].replaceAll("Qonto", name) };
   } catch { state = { success: false, message: integrationMessages.DATABASE_ERROR }; }
-  for (const path of ["/integrations", "/cashflow", "/dashboard", "/invoices", "/customers"]) revalidatePath(path);
+  for (const path of ["/integrations", "/cashflow", "/dashboard", "/invoices", "/customers", "/expenses"]) revalidatePath(path);
   revalidatePath("/", "layout");
   return state;
 }

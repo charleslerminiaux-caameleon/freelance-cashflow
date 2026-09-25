@@ -51,7 +51,7 @@ function confirmationMessage(code: DetectionCode): string {
     case "DETECTION_LOCKED":
       return "Une analyse est en cours. Patientez puis réessayez.";
     case "DETECTION_SOURCE_UNAVAILABLE":
-      return "Aucune transaction Qonto publiée n’est disponible. Synchronisez Qonto puis relancez l’analyse.";
+      return "Aucune transaction bancaire publiée n’est disponible. Synchronisez votre banque puis relancez l’analyse.";
     case "DETECTION_INVALID":
       return "Impossible de confirmer cette récurrence. Vérifiez les informations saisies.";
     case "DATABASE_ERROR":
@@ -64,9 +64,9 @@ function analysisMessage(code: DetectionCode): string {
     case "DETECTION_LOCKED":
       return "Une analyse est déjà en cours. Patientez puis réessayez.";
     case "DETECTION_SOURCE_UNAVAILABLE":
-      return "Aucune transaction importée n’est disponible. Synchronisez Qonto avant d’analyser.";
+      return "Aucune transaction importée n’est disponible. Synchronisez votre banque avant d’analyser.";
     case "DETECTION_STALE":
-      return "Les données Qonto ont changé pendant l’analyse. Relancez l’analyse.";
+      return "Les données bancaires ont changé pendant l’analyse. Relancez l’analyse.";
     default:
       return "L’analyse des récurrences a échoué. Réessayez.";
   }
@@ -168,12 +168,16 @@ export async function analyzeRecurringAction(
   void _formData;
 
   try {
-    const result = await analyzeRecurringForOwner(userId);
-    if (!result.success) return { success: false, message: analysisMessage(result.code) };
-    revalidateRecurringViews();
+    const results = await Promise.all((["qonto", "revolut", "bunq"] as const).map(provider => analyzeRecurringForOwner(userId, provider)));
+    const successes = results.filter(result => result.success);
+    const failure = results.find(result => !result.success && result.code !== "DETECTION_SOURCE_UNAVAILABLE");
+    if (successes.length) revalidateRecurringViews();
+    if (failure && !failure.success) return { success: false, message: analysisMessage(failure.code) };
+    if (!successes.length) return { success: false, message: analysisMessage("DETECTION_SOURCE_UNAVAILABLE") };
+    const count = successes.reduce((total, result) => total + result.count, 0);
     return {
       success: true,
-      message: `Analyse terminée : ${result.count} récurrence${result.count === 1 ? "" : "s"} détectée${result.count === 1 ? "" : "s"}.`,
+      message: `Analyse terminée : ${count} récurrence${count === 1 ? "" : "s"} détectée${count === 1 ? "" : "s"}.`,
     };
   } catch {
     return { success: false, message: analysisMessage("DATABASE_ERROR") };

@@ -6,7 +6,7 @@ export const scenarioCopy: Record<ForecastScenario, { label: string; description
     description: "Factures émises restant à encaisser.",
   },
   committed: {
-    label: "Facturé + commandes signées",
+    label: "Facturé + signé",
     description: "Factures émises et échéances non encore facturées des commandes signées.",
   },
   probable: {

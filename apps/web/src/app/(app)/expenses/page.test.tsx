@@ -118,8 +118,8 @@ it("distinguishes charges created from history from automatically detected charg
 
   render(await ExpensesPage());
 
-  expect(screen.getByText("Créée depuis Qonto")).toBeInTheDocument();
-  expect(screen.queryByText("Détectée depuis Qonto")).toBeNull();
+  expect(screen.getByText("Créée depuis la banque")).toBeInTheDocument();
+  expect(screen.queryByText("Détectée depuis la banque")).toBeNull();
   expect(screen.getByRole("heading", { name: "Hébergement" }).closest("article")).toHaveAttribute(
     "id",
     "recurring-expense-33333333-3333-4333-8333-333333333333",
@@ -143,7 +143,7 @@ it("renders persisted recurring and planned outflows with owner-scoped CRUD cont
     "expense-categories",
   );
   expect(screen.getByRole("heading", { name: "Hébergement" })).toBeInTheDocument();
-  expect(screen.getByText("Détectée depuis Qonto")).toBeInTheDocument();
+  expect(screen.getByText("Détectée depuis la banque")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Réserve Urssaf" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Créer la sortie récurrente" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Créer la sortie ponctuelle" })).toBeInTheDocument();

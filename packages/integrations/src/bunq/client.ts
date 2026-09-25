@@ -113,7 +113,7 @@ export function createBunqProvider(
     const body = payload === undefined ? undefined : JSON.stringify(payload);
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "User-Agent": "Libra personal finance",
+      "User-Agent": "Freelance Cashflow",
       "X-Bunq-Language": "en_US",
       "X-Bunq-Region": "nl_NL",
       "X-Bunq-Geolocation": "0 0 0 0 000",
@@ -215,7 +215,7 @@ export function createBunqProvider(
       const device = await call(
         "/v1/device-server",
         "POST",
-        { description: "Libra read-only synchronization", secret: apiKey },
+        { description: "Freelance Cashflow read-only synchronization", secret: apiKey },
         context.installationToken,
         signal,
       );

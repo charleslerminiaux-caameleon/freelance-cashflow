@@ -1,3 +1,4 @@
+import { buildBalanceHistory, type BalanceHistory } from "./balance-history";
 import type { BankingSnapshot } from "@/features/banking/repository";
 import {
   buildCashflowEvents,
@@ -108,6 +109,7 @@ export type DashboardViewModel = {
     runwayDays: number | null;
   };
   chart: {
+    history?: BalanceHistory;
     points: DashboardChartPoint[];
     riskDate: LocalDate | null;
     summary: string;
@@ -390,6 +392,7 @@ export function buildDashboardViewModel(
       runwayDays: selectedForecast.runwayDays,
     },
     chart: {
+      history: buildBalanceHistory(data.banking, data.settings.currency, data.settings.timezone, options.today),
       points: forecasts.certain.points.map((point, index) => ({
         date: point.date,
         certainBalanceCents: point.balanceCents,

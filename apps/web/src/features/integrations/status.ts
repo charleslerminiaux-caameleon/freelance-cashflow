@@ -1,7 +1,7 @@
 import type { IntegrationErrorCode } from "@fc/integrations/server";
 
 export const integrationMessages: Record<IntegrationErrorCode, string> = {
-  PROVIDER_AUTH_EXPIRED: "Connexion Qonto refusée. Vérifiez les identifiants serveur puis réessayez.",
+  PROVIDER_AUTH_EXPIRED: "Connexion Qonto refusée. Vérifiez les identifiants dans Intégrations puis réessayez.",
   PROVIDER_RATE_LIMIT: "Limite Qonto atteinte. Patientez quelques minutes puis réessayez.",
   PROVIDER_UNAVAILABLE: "Qonto est indisponible. Réessayez plus tard.",
   PROVIDER_INVALID_RESPONSE: "Réponse Qonto incompatible. Contactez le responsable de l’installation.",

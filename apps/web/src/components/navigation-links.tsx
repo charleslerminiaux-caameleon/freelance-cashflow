@@ -17,6 +17,6 @@ export function NavigationLinks() {
   const pathname = usePathname();
   return <ul>{navigation.map(([label, href]) => {
     const active = pathname === href || pathname?.startsWith(`${href}/`);
-    return <li key={href}><a href={href} aria-current={active ? "page" : undefined}>{label}</a></li>;
+    return <li key={href} className={href === "/integrations" ? "navigation-management" : undefined}><a href={href} aria-current={active ? "page" : undefined}>{label}</a></li>;
   })}</ul>;
 }

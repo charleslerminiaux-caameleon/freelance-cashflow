@@ -7,10 +7,11 @@ export function AppShell({ children, syncStatus = "Qonto : à configurer" }: { c
     <div className="app-shell">
       <header className="mobile-header">
         <a className="brand" href="/dashboard" aria-label="Freelance Cashflow">
-          <img src="/logo.jpeg" alt="" width="36" height="36" />
+          <span className="brand-mark"><img src="/logo-green.png" alt="" width="36" height="36" /></span>
         </a>
         <span className="sync-status" aria-label="État de synchronisation">
-          {syncStatus}
+          <img className="sidebar-qonto-logo" src="/qonto-logo.svg" alt="Qonto" width="62" height="20" />
+          <span>{syncStatus}</span>
         </span>
       </header>
 
@@ -20,15 +21,12 @@ export function AppShell({ children, syncStatus = "Qonto : à configurer" }: { c
 
       <aside className="sidebar" aria-label="Navigation principale">
         <a className="brand" href="/dashboard" aria-label="Freelance Cashflow">
-          <img src="/logo.jpeg" alt="" width="40" height="40" />
+          <span className="brand-mark"><img src="/logo-green.png" alt="" width="40" height="40" /></span>
           <span>Freelance Cashflow</span>
         </a>
         <nav aria-label="Sections de Freelance Cashflow">
           <NavigationLinks />
         </nav>
-        <div className="sync-status" aria-label="État de synchronisation">
-          {syncStatus}
-        </div>
       </aside>
 
       <main className="app-content">{children}</main>

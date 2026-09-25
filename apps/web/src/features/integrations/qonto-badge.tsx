@@ -71,8 +71,8 @@ export function QontoBadge({ lastSuccessAt, timezone, lastAttemptFailed, syncInP
           onClick={() => { setPinned(!pinned); setDismissed(pinned); }}
           onKeyDown={event => { if (event.key === "Escape") { setDismissed(true); setPinned(false); } }}
         >
-          <img src="/qonto-logo.svg" alt="Qonto" width="64" height="18" />
-          <Icon size={16} aria-hidden="true" className={progress ? "qonto-spinner" : undefined} />
+          <img src="/qonto-logo.svg" alt="Qonto" width="50" height="14" />
+          <Icon size={14} aria-hidden="true" className={progress ? "qonto-spinner" : undefined} />
         </button>
         <span role="tooltip" id={tooltipId} className="qonto-tooltip" hidden={!open}>
           {label}. {date}.

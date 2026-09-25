@@ -106,7 +106,7 @@ export function createBankingSyncStore(client: SupabaseClient, options?: { mode?
 
   return {
     async acquire(ownerUserId, runId, signal) {
-      const data = await call(options?.provider ? "acquire_direct_banking_sync" : options?.mode === "automatic" ? "acquire_automatic_banking_sync" : "acquire_banking_sync", {
+      const data = await call(options?.provider ? options.mode === "automatic" ? "acquire_automatic_direct_banking_sync" : "acquire_direct_banking_sync" : options?.mode === "automatic" ? "acquire_automatic_banking_sync" : "acquire_banking_sync", {
         p_owner_user_id: ownerUserId,
         p_run_id: runId,
         ...(options?.provider ? { p_provider: options.provider } : {}),

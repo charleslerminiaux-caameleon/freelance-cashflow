@@ -55,3 +55,10 @@ it("replays publication with the same run when the committed response is lost", 
  expect(publish).toHaveLength(2);expect(publish[0]?.[1]).toEqual(publish[1]?.[1]);
  expect(calls).not.toContain('fail_banking_sync');
 });
+
+it("skips automatic Pennylane without reading invoices when admission returns null", async () => {
+ mocks.rpc.mockImplementation((name: string) => { calls.push(name); return { abortSignal: () => Promise.resolve({ data: null, error: null }) }; });
+ expect(await synchronizeDirectForOwner(owner, "pennylane", { mode: "automatic" })).toEqual({ success: true, skipped: true });
+ expect(calls).toEqual(["acquire_automatic_direct_banking_sync"]);
+ expect(mocks.read).not.toHaveBeenCalled();
+});

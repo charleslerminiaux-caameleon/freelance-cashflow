@@ -36,7 +36,7 @@ function failureMessage(code: DetectionCode): string {
     case "DETECTION_NOT_FOUND":
       return "Cette opération bancaire n’est plus à jour. Revenez à l’historique bancaire puis réessayez.";
     case "DETECTION_SOURCE_UNAVAILABLE":
-      return "Aucune transaction Qonto publiée n’est disponible. Synchronisez Qonto puis réessayez.";
+      return "Aucune transaction bancaire publiée n’est disponible. Synchronisez votre banque puis réessayez.";
     case "DETECTION_DUPLICATE":
       return "Une charge mensuelle similaire existe. Associez-la ou confirmez explicitement la création.";
     case "DETECTION_INVALID":

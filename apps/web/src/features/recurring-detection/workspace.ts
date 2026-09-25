@@ -4,7 +4,7 @@ import { normalizeRecurringLabel } from "@fc/domain";
 import { z } from "zod";
 import { getQontoIntegration } from "@/features/integrations/repository";
 import { businessDateSchema } from "@/features/commercial-schema";
-import { detectionCodeSchema, publicationSchema, suggestionRowSchema, uuid, type SuggestionRow, type RecurringSuggestion, type RecurringSuggestionWorkspace } from "./schema";
+import { detectionCodeSchema, publicationSchema, suggestionRowSchema, uuid, type RecurringBankProvider, type SuggestionRow, type RecurringSuggestion, type RecurringSuggestionWorkspace } from "./schema";
 
 const columns = "creation_source, id, owner_user_id, integration_id, bank_account_id, currency, normalized_label, state, eligible, label, amount_cents, day_of_month, last_payment_date, next_date, source_publication, recurring_cashflow_id";
 async function pages<T>(fetchPage: (from: number, to: number) => Promise<T[]>): Promise<T[]> {
@@ -39,10 +39,15 @@ export async function listConfirmedRecurringSuggestions(client: SupabaseClient, 
 }
 const expenseSchema = z.object({ id: uuid, owner_user_id: uuid, label: z.string(), amount_cents: z.number().int().safe().positive() });
 const evidenceSchema = z.object({ suggestion_id: uuid, transaction_id: uuid, transaction: z.object({ id: uuid, owner_user_id: uuid, integration_id: uuid, label: z.string(), amount_cents: z.number().int().safe().nonnegative(), transaction_date: businessDateSchema }) });
-export async function getRecurringSuggestionWorkspace(client: SupabaseClient, owner: string): Promise<RecurringSuggestionWorkspace> {
+async function providerWorkspace(client: SupabaseClient, owner: string, provider: RecurringBankProvider): Promise<RecurringSuggestionWorkspace> {
   try {
     uuid.parse(owner); const signal = AbortSignal.timeout(40_000);
-    const integration = await getQontoIntegration(client, owner, signal);
+    const integration = provider === "qonto" ? await getQontoIntegration(client, owner, signal) : await (async () => {
+      const { data, error } = await client.from("integrations").select("id, last_success_at")
+        .eq("owner_user_id", owner).eq("provider", provider).abortSignal(signal).maybeSingle();
+      if (error) throw new Error("DATABASE_ERROR");
+      return data === null ? null : z.object({ id: uuid, last_success_at: publicationSchema.nullable() }).parse(data);
+    })();
     const empty = { suggestions: [], ignored: [], linkedExpenseOrigins: {}, linkedExpenseIds: [], lastAnalyzedAt: null, analysisError: null };
     if (!integration) return empty;
     const [rows, expenses, evidence, runResult] = await Promise.all([
@@ -82,7 +87,7 @@ export async function getRecurringSuggestionWorkspace(client: SupabaseClient, ow
       const matches = expensesByLabel.get(label) ?? [];
       matches.push(expense); expensesByLabel.set(label, matches);
     }
-    const candidates = rows.filter(row => row.state !== "confirmed").map(row => ({ ...suggestion(row),
+    const candidates = rows.filter(row => row.state !== "confirmed").map(row => ({ ...suggestion(row), provider,
       evidence: (evidenceById.get(row.id) ?? []).sort((a, b) => a.transactionDate.localeCompare(b.transactionDate) || a.id.localeCompare(b.id)),
       possibleDuplicates: (expensesByLabel.get(row.normalized_label) ?? []).filter(expense => BigInt(Math.abs(expense.amount_cents - row.amount_cents)) * 10n <= BigInt(row.amount_cents))
         .map(expense => ({ id: expense.id, label: expense.label, amountCents: expense.amount_cents })),
@@ -91,4 +96,18 @@ export async function getRecurringSuggestionWorkspace(client: SupabaseClient, ow
       linkedExpenseOrigins: Object.fromEntries(rows.flatMap(row => row.recurring_cashflow_id ? [[row.recurring_cashflow_id, row.creation_source]] : [])),
       linkedExpenseIds: [...linked], lastAnalyzedAt: run?.last_success_at ?? null, analysisError: run?.last_error_code ?? null };
   } catch { throw new Error("DATABASE_ERROR"); }
+}
+
+export async function getRecurringSuggestionWorkspace(client: SupabaseClient, owner: string): Promise<RecurringSuggestionWorkspace> {
+  const workspaces = await Promise.all((["qonto", "revolut", "bunq"] as const).map(provider => providerWorkspace(client, owner, provider)));
+  const linkedExpenseIds = [...new Set(workspaces.flatMap(workspace => workspace.linkedExpenseIds))];
+  const linked = new Set(linkedExpenseIds);
+  const combine = (key: "suggestions" | "ignored") => workspaces.flatMap(workspace => workspace[key]).map(suggestion => ({
+    ...suggestion, possibleDuplicates: suggestion.possibleDuplicates.filter(expense => !linked.has(expense.id)),
+  }));
+  return { suggestions: combine("suggestions"), ignored: combine("ignored"), linkedExpenseIds,
+    linkedExpenseOrigins: Object.assign({}, ...workspaces.map(workspace => workspace.linkedExpenseOrigins)),
+    lastAnalyzedAt: workspaces.flatMap(workspace => workspace.lastAnalyzedAt ? [workspace.lastAnalyzedAt] : []).sort().at(-1) ?? null,
+    analysisError: workspaces.find(workspace => workspace.analysisError)?.analysisError ?? null,
+  };
 }

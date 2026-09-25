@@ -29,7 +29,7 @@ it("loads paginated suggestions, ignored list, owned safe evidence, duplicate ma
     expect(init?.signal).toBeInstanceOf(AbortSignal);
     expect(url.searchParams.get("owner_user_id")).toBe(`eq.${owner}`);
     const table = url.pathname.split("/").at(-1);
-    if (table === "integrations") return { id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
+    if (table === "integrations") return url.searchParams.get("provider") !== "eq.qonto" ? null : { id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
     if (table === "recurring_detection_runs") return { lease_run_id: null, lease_expires_at: null, analyzed_publication: publication, last_success_at: publication, last_error_code: "DATABASE_ERROR" };
     if (table === "recurring_cashflows") return [{ id: linked, owner_user_id: owner, label: "CLOUD", amount_cents: 1050 }];
     expect(url.searchParams.get("integration_id")).toBe(`eq.${integration}`);
@@ -57,7 +57,7 @@ it("uses exact service-role RPC names and preserves candidate identity and obser
 it("refuses foreign evidence even if an upstream transport violates owner filtering", async () => {
   const client = clientFor(url => {
     const table = url.pathname.split("/").at(-1);
-    if (table === "integrations") return { id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
+    if (table === "integrations") return url.searchParams.get("provider") !== "eq.qonto" ? null : { id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
     if (table === "recurring_detection_runs") return null;
     if (table === "recurring_suggestions") return [row];
     if (table === "recurring_cashflows") return [];
@@ -75,7 +75,7 @@ it("groups duplicate discovery by normalized label once across pending and ignor
   const ignoredId = "66666666-6666-4666-8666-666666666666";
   const client = clientFor(url => {
     const table = url.pathname.split("/").at(-1);
-    if (table === "integrations") return { id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
+    if (table === "integrations") return url.searchParams.get("provider") !== "eq.qonto" ? null : { id: integration, status: "connected", last_success_at: publication, last_connection_succeeded: true, last_error_code: null };
     if (table === "recurring_detection_runs") return null;
     if (table === "recurring_suggestions") return [row, { ...row, id: owner, label: "Other", normalized_label: "other" }, { ...row, id: ignoredId, state: "dismissed" }, { ...row, id: integration, state: "confirmed", recurring_cashflow_id: linked }];
     if (table === "recurring_cashflows") return [
@@ -100,4 +100,41 @@ it("groups duplicate discovery by normalized label once across pending and ignor
     expect(workspace.ignored[0]?.possibleDuplicates.map(expense => expense.id)).toEqual([owner]);
     expect(workspace.linkedExpenseIds).toEqual([linked]);
   } finally { spy.mockRestore(); }
+});
+
+it.each(["revolut", "bunq"] as const)("isolates %s analysis RPCs and banking reads", async provider => {
+  const calls: { name: string; payload: Record<string, unknown> }[] = [];
+  const filters: string[] = [];
+  const client = clientFor((url, init) => {
+    const name = url.pathname.split("/").at(-1)!;
+    if (url.pathname.includes("/rpc/")) {
+      calls.push({ name, payload: JSON.parse(String(init?.body)) });
+      return name.startsWith("acquire_") ? { integration_id: integration, source_publication: publication, lease_expires_at: publication } : null;
+    }
+    if (name === "integrations") { filters.push(url.searchParams.get("provider")!); return []; }
+    return [];
+  });
+  const store = createAnalysisStore(client, provider), signal = new AbortController().signal;
+  await store.acquire(owner, linked, signal);
+  await store.publish(owner, linked, publication, [], signal);
+  await store.fail(owner, linked, "DATABASE_ERROR", signal);
+  await store.snapshot(owner, "2026-09-24", signal);
+  expect(calls.map(call => call.name)).toEqual(["acquire_direct_recurring_analysis", "publish_direct_recurring_analysis", "fail_direct_recurring_analysis"]);
+  expect(calls.every(call => call.payload.p_provider === provider)).toBe(true);
+  expect(filters.length).toBeGreaterThan(0);
+  expect(filters.every(filter => filter === `eq.${provider}`)).toBe(true);
+});
+
+it("loads direct-bank suggestions even without Qonto and preserves their provenance", async () => {
+  const client = clientFor(url => {
+    const table = url.pathname.split("/").at(-1);
+    if (table === "integrations") return url.searchParams.get("provider") === "eq.bunq" ? {id: integration, last_success_at: publication} : null;
+    if (table === "recurring_suggestions") return [row, {...row, id: linked, state: "confirmed", recurring_cashflow_id: linked}];
+    if (table === "recurring_detection_runs") return null;
+    return [];
+  });
+  const workspace = await getRecurringSuggestionWorkspace(client, owner);
+  expect(workspace.suggestions).toHaveLength(1);
+  expect(workspace.suggestions[0]).toMatchObject({provider: "bunq", id: suggestion});
+  expect(workspace.linkedExpenseIds).toContain(linked);
 });

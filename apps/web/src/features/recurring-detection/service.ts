@@ -2,7 +2,7 @@ import "server-only";
 import { detectMonthlyOutflows, type RecurringCandidate } from "@fc/domain";
 import { localDate } from "@fc/shared";
 import { detectionTransactions, type ObservedTransaction } from "./forecast";
-import { detectionErrorCode, uuid, type AnalysisResult, type DetectionCode } from "./schema";
+import { detectionErrorCode, uuid, type AnalysisResult, type DetectionCode, type RecurringBankProvider } from "./schema";
 
 export type AnalysisSnapshot = {
   integration: { id: string; last_success_at: string | null } | null;
@@ -83,11 +83,11 @@ export async function analyzeRecurring(owner: string, deps: AnalysisDependencies
   } finally { clearTimeout(timer); }
 }
 
-export async function analyzeRecurringForOwner(ownerUserId: string): Promise<AnalysisResult> {
+export async function analyzeRecurringForOwner(ownerUserId: string, provider: RecurringBankProvider = "qonto"): Promise<AnalysisResult> {
   // Lazy server composition keeps tests of the orchestration independent of env.
   try {
     const { productionAnalysisDependencies } = await import("./server");
-    return await analyzeRecurring(ownerUserId, productionAnalysisDependencies());
+    return await analyzeRecurring(ownerUserId, productionAnalysisDependencies(provider));
   } catch { return { success: false, code: "DATABASE_ERROR" }; }
 }
 

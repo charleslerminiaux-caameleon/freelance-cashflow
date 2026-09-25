@@ -23,7 +23,7 @@ const transactionSchema = z.object({
 export type BankAccount = z.infer<typeof accountSchema>;
 export type BankTransaction = z.infer<typeof transactionSchema>;
 export type BankIntegration = IntegrationState & { provider: "qonto" | "revolut" | "bunq" };
-export type BankingSnapshot = { integrations?: BankIntegration[]; integration: IntegrationState | null; accounts: BankAccount[]; fullTransactions?: BankTransaction[] };
+export type BankingSnapshot = { integrations?: BankIntegration[]; integration: IntegrationState | null; accounts: BankAccount[]; fullTransactions?: BankTransaction[]; fullHistoryWindow?: { since: string; until: string } };
 export type BankingReadOptions = { provider?: BankIntegration["provider"]; historyPage?: number; fullHistory?: { since: string; until: string }; signal?: AbortSignal };
 export type TransactionHistory = { items: BankTransaction[]; page: number; hasNext: boolean };
 const accountColumns = "id, integration_id, name, iban_masked, currency, current_balance_cents, available_balance_cents, status, updated_at, is_current";
@@ -99,7 +99,7 @@ export async function getBankingSnapshot(
     const markers = (rows: BankIntegration[]) => JSON.stringify(rows.map(row => [row.id, row.provider, row.last_success_at]).sort());
     if (markers(before) === markers(after)) {
       return { integration: after.find(row => row.provider === "qonto") ?? after[0] ?? null, integrations: after,
-        accounts, ...(fullTransactions ? { fullTransactions } : {}), ...(history ? { history } : {}) };
+        accounts, ...(fullTransactions ? { fullTransactions, fullHistoryWindow: options!.fullHistory } : {}), ...(history ? { history } : {}) };
     }
   }
   throw new Error("DATABASE_ERROR");
@@ -127,7 +127,9 @@ export async function listAllBankTransactions(client: SupabaseClient, ownerUserI
       signal.throwIfAborted();
       const { data, error } = await client.from("bank_transactions").select(transactionColumns)
         .eq("owner_user_id", ownerUserId).filter("integration_id", Array.isArray(integrationId) ? "in" : "eq", Array.isArray(integrationId) ? `(${integrationId.join(",")})` : integrationId)
-        .gte("transaction_date", window.since).lte("transaction_date", window.until)
+        // Include creation-date history for recurring detection and settlement-date
+        // history for booked balance reconstruction. Dates were validated above.
+        .or(`and(transaction_date.gte.${window.since},transaction_date.lte.${window.until}),and(value_date.gte.${window.since},value_date.lte.${window.until})`)
         .order("id", { ascending: true }).abortSignal(signal).range(from, from + 999);
       if (error) throw new Error("DATABASE_ERROR");
       const page = z.array(transactionSchema).parse(data); rows.push(...page);

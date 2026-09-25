@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Image from "next/image";
-import { CircleHelp, FileUp, RefreshCw, Settings2 } from "lucide-react";
+import { RefreshCw, Settings2 } from "lucide-react";
 import { integrationMessages, type IntegrationState } from "./status";
 
 export type SyncActionState = {
@@ -19,16 +19,16 @@ export function IntegrationPanel({ configured, integration, action }: {
   const [state, formAction, pending] = useActionState(action, { success: false, message: null });
   // Only this browser request disables the button: the DB lease arbitrates other tabs and recovery.
   const syncing = pending;
-  return <div className="integration-grid">
+  return <>
     <section className="dashboard-panel integration-card" aria-labelledby="qonto-title">
       <header className="integration-card-header">
-        <h2 id="qonto-title"><Image src="/qonto-logo.svg" alt="Qonto" width={113} height={32} /></h2>
+        <h2 id="qonto-title"><Image src="/qonto-logo.svg" alt="Qonto" width={99} height={28} /></h2>
         <span className="integration-badge">{!configured ? "À configurer" : integration?.status === "error" ? "À vérifier" : integration?.last_connection_succeeded === true ? "Connecté" : "À synchroniser"}</span>
       </header>
       <p>Retrouvez vos comptes et transactions Qonto dans votre trésorerie, en lecture seule.</p>
       <details className="integration-details" open={integration?.status === "error" || integration?.status === "syncing"}>
         <summary>Détails de la connexion</summary>
-        <p>{configured ? "Configuration serveur disponible" : "Configuration serveur à compléter"}</p>
+        <p>{configured ? "Identifiants de connexion disponibles" : "Identifiants à renseigner dans Configurer"}</p>
         <p>{integration?.last_connection_succeeded === true ? "Dernière connexion réussie" : integration?.last_connection_succeeded === false ? "Dernière connexion échouée" : "Aucune tentative de connexion"}</p>
         <p>{integration?.last_success_at ? `Dernière synchronisation publiée : ${integration.last_success_at}` : "Aucune synchronisation publiée"}</p>
         {integration?.last_error_code && <p className="form-error">{integrationMessages[integration.last_error_code]}</p>}
@@ -37,7 +37,7 @@ export function IntegrationPanel({ configured, integration, action }: {
         <a href="/cashflow">Consulter les comptes et transactions</a>
       </details>
       <div className="integration-card-actions">
-        <a className="integration-action" href="/settings/installation" aria-label="Gérer la connexion Qonto"><Settings2 size={16} aria-hidden="true" />Gérer</a>
+        <a className="integration-action" href="/integrations/setup#qonto" aria-label="Gérer la connexion Qonto"><Settings2 size={16} aria-hidden="true" />Gérer</a>
         <form action={formAction} aria-label="Synchronisation Qonto">
           <button type="submit" className="primary-link integration-action" disabled={!configured || syncing} aria-busy={syncing}>
             <RefreshCw size={16} aria-hidden="true" />{syncing ? "Synchronisation en cours…" : "Synchroniser Qonto"}
@@ -51,15 +51,18 @@ export function IntegrationPanel({ configured, integration, action }: {
     </section>
     <section className="dashboard-panel integration-card" aria-labelledby="tiime-title">
       <header className="integration-card-header">
-        <h2 id="tiime-title"><Image src="/tiime-logo.svg" alt="Tiime" width={100} height={32} /></h2>
-        <span className="integration-badge">Accès API à obtenir</span>
+        <h2 id="tiime-title"><Image src="/tiime-logo.svg" alt="Tiime" width={100} height={35} /></h2>
+        <span className="integration-badge">À configurer</span>
       </header>
       <p>Centralisez vos factures Tiime pour suivre vos encaissements et anticiper votre trésorerie.</p>
-      <p className="integration-note">La connexion nécessite un accès officiel auprès de Tiime. En attendant, importez vos factures par CSV.</p>
+      <details className="integration-details">
+        <summary>Détails de la connexion</summary>
+        <p>Connexion non configurée</p>
+        <p>Aucune synchronisation publiée</p>
+      </details>
       <div className="integration-card-actions">
-        <a className="integration-action" href="https://support.tiime.fr/fr/articles/26240-proposez-vous-une-api" aria-label="Consulter le guide Tiime d’accès API"><CircleHelp size={16} aria-hidden="true" />Aide</a>
-        <a className="primary-link integration-action" href="/invoices" aria-label="Importer un CSV de factures"><FileUp size={16} aria-hidden="true" />Importer un CSV</a>
+        <a className="integration-action" href="/integrations/setup#tiime"><Settings2 size={16} aria-hidden="true" />Configurer Tiime</a>
       </div>
     </section>
-  </div>;
+  </>;
 }
