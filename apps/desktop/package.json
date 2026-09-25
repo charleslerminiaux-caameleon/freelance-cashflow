@@ -1,0 +1,21 @@
+{
+  "name": "@fc/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Freelance Cashflow desktop launcher",
+  "author": "Freelance Cashflow contributors",
+  "license": "AGPL-3.0-only",
+  "main": "src/main.mjs",
+  "scripts": {
+    "test:run": "node --test src/*.test.mjs scripts/*.test.mjs",
+    "lint": "node scripts/check.mjs",
+    "build": "node scripts/check.mjs",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0",
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  }
+}
