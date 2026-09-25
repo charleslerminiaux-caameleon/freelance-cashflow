@@ -12,17 +12,72 @@ Il n’existe pas encore d’installation en un clic : quelques commandes sont n
 
 ### 1. Préparer les outils
 
-Vous aurez besoin de :
+Les étapes ci-dessous sont à faire une seule fois. Docker n’est pas nécessaire et les banques peuvent être connectées plus tard.
 
-- **Node.js 24**, pour faire fonctionner l’application ;
-- **Git**, pour télécharger le projet ;
-- **un compte Supabase et un nouveau projet vide**, pour conserver vos données.
+#### Ouvrir le terminal
 
-Docker n’est pas nécessaire pour cette installation. Les banques peuvent être connectées plus tard.
+Le terminal est une fenêtre dans laquelle vous collez des commandes, puis appuyez sur **Entrée** pour les lancer.
+
+- **Sur Mac** : appuyez sur **⌘ + Espace**, tapez `Terminal`, puis appuyez sur Entrée.
+- **Sur Windows** : ouvrez le menu Démarrer, tapez `cmd`, puis ouvrez **Invite de commandes**.
+- **Sur Linux** : ouvrez l’application **Terminal** de votre distribution.
+
+Pour la suite, copiez une ligne à la fois et attendez qu’elle se termine avant de passer à la suivante. Les lignes ci-dessous ne sont pas à saisir dans la barre d’adresse du navigateur.
+
+#### Installer Node.js
+
+Node.js permet à Freelance Cashflow de fonctionner sur votre ordinateur.
+
+1. Ouvrez la [page officielle de téléchargement de Node.js](https://nodejs.org/en/download).
+2. Sélectionnez la **version 24 LTS** et votre système (**macOS**, **Windows** ou **Linux**).
+3. Sur Mac ou Windows, téléchargez l’installateur **`.pkg`** ou **`.msi`**, ouvrez-le et suivez les étapes. Sur Linux, suivez les commandes proposées sur cette page pour votre système.
+4. Fermez puis rouvrez votre terminal, et lancez :
+
+```bash
+node --version
+npm --version
+```
+
+La première commande doit afficher `v24.` suivi d’autres chiffres. La seconde affiche un numéro de version : **npm est installé avec Node.js**, vous n’avez pas à l’installer séparément.
+
+#### Installer Git
+
+Git sert ici à télécharger l’application.
+
+- **Sur Windows** : téléchargez l’installateur depuis la [page officielle Git pour Windows](https://git-scm.com/install/windows), ouvrez-le et conservez les choix proposés par défaut.
+- **Sur Mac** : la [documentation Git pour macOS](https://git-scm.com/install/mac) propose les outils Apple. Lancez cette commande, puis acceptez l’installation dans la fenêtre qui s’ouvre :
+
+```bash
+xcode-select --install
+```
+
+Cette commande est réservée au Mac. Si un message indique que les outils sont déjà installés, passez à la vérification ci-dessous.
+
+- **Sur Linux** : suivez la [procédure Git pour votre distribution](https://git-scm.com/install/linux).
+
+Après l’installation, fermez puis rouvrez le terminal et vérifiez :
+
+```bash
+git --version
+```
+
+Vous devez obtenir `git version` suivi d’un numéro. Si `node`, `npm` ou `git` est « introuvable » ou « non reconnu », vérifiez que l’installation correspondante est terminée, puis rouvrez le terminal avant de continuer.
+
+#### Créer votre espace Supabase
+
+Supabase conserve les données de l’application. **Rien à installer sur votre ordinateur pour cette étape** : tout se passe sur son site.
+
+1. Ouvrez [Supabase](https://supabase.com/dashboard) et créez un compte, ou connectez-vous si vous en avez déjà un.
+2. Créez une organisation si le site le demande : c’est simplement l’espace qui regroupe vos projets. Vous pouvez lui donner votre nom.
+3. Cliquez sur **New project** (« Nouveau projet ») et nommez-le `freelance-cashflow`.
+4. Choisissez un mot de passe pour la base de données, conservez-le dans votre gestionnaire de mots de passe, puis choisissez une région proche de vous.
+5. Validez la création et attendez que le projet soit prêt. Gardez cette page ouverte : vous y récupérerez les valeurs demandées à l’étape 3.
+
+Le mot de passe de la base est distinct de celui de votre compte Supabase. Il pourra vous être demandé lors de la connexion du projet depuis le terminal.
 
 ### 2. Télécharger l’application
 
-Ouvrez un terminal — l’application qui permet de saisir des commandes sur votre ordinateur — puis exécutez ces lignes dans l’ordre :
+Dans votre terminal, exécutez ces lignes dans l’ordre. La première télécharge le projet dans un nouveau dossier `freelance-cashflow` ; la deuxième vous place dans ce dossier. Gardez ensuite ce terminal ouvert pour les étapes suivantes :
 
 ```bash
 git clone https://github.com/charleslerminiaux-caameleon/freelance-cashflow.git
@@ -36,7 +91,19 @@ Corepack et pnpm servent à installer les composants nécessaires au projet. Si 
 
 ### 3. Relier votre espace Supabase
 
-Dans le dossier téléchargé, copiez le fichier `.env.example` dans le sous-dossier `apps/web`, puis renommez cette copie **`.env.local`**. Ouvrez-la dans un éditeur de texte et renseignez ces trois valeurs depuis les paramètres de votre projet Supabase :
+Depuis le dossier `freelance-cashflow`, créez le fichier de configuration avec cette commande, identique sur Mac, Windows et Linux. Elle est destinée à une première installation : elle copie le modèle dans **`apps/web/.env.local`**.
+
+```bash
+node -e "require('node:fs').copyFileSync('.env.example', 'apps/web/.env.local', require('node:fs').constants.COPYFILE_EXCL)"
+```
+
+Si le message contient `EEXIST`, le fichier existe déjà : conservez-le et ouvrez-le directement.
+
+Pour l’ouvrir **sur Windows**, lancez `notepad apps\web\.env.local`. **Sur Mac**, lancez `open -e apps/web/.env.local`. Sur Linux, ouvrez ce fichier avec votre éditeur de texte ; **Ctrl+H** permet généralement d’afficher les fichiers dont le nom commence par un point.
+
+Revenez sur votre projet dans le [tableau de bord Supabase](https://supabase.com/dashboard). Le bouton **Connect** permet de retrouver l’URL du projet ; les clés sont dans **Settings → API Keys** (« Paramètres → Clés API »). Consultez au besoin l’[aide officielle pour retrouver les clés](https://supabase.com/docs/guides/api/api-keys).
+
+Dans le fichier, collez chaque valeur après le signe `=` de la ligne correspondante, puis enregistrez avec **Ctrl+S** sur Windows ou **⌘+S** sur Mac :
 
 | Ligne à remplir | Valeur à copier depuis Supabase |
 | --- | --- |
@@ -46,7 +113,16 @@ Dans le dossier téléchargé, copiez le fichier `.env.example` dans le sous-dos
 
 Les clés `anon` et `service_role` se trouvent dans la rubrique des clés API historiques (« legacy »). Gardez ce fichier privé : la clé `service_role` donne un accès privilégié à vos données. Laissez les autres valeurs vides pour commencer sans connexion bancaire.
 
-Préparez ensuite la base de données avec les commandes suivantes. Remplacez `REFERENCE_DU_PROJET` par l’identifiant de votre nouveau projet Supabase, disponible dans ses paramètres :
+Préparez ensuite la base de données avec les commandes suivantes. Remplacez `REFERENCE_DU_PROJET` par l’identifiant de votre nouveau projet Supabase, disponible dans **Settings → General → Reference ID**. Vous le retrouvez aussi dans l’adresse de la page du projet : dans `https://supabase.com/dashboard/project/abcdefghijklmnopqrst`, la référence est `abcdefghijklmnopqrst`.
+
+La commande `login` vous guide pour autoriser la connexion dans le navigateur. La commande `link` peut demander le mot de passe de la base choisi lors de sa création ; les caractères peuvent rester invisibles pendant la saisie, c’est normal.
+
+```text
+Exemple à adapter :
+corepack pnpm dlx supabase@2.116.0 link --project-ref abcdefghijklmnopqrst
+```
+
+Voici les commandes à lancer dans l’ordre :
 
 ```bash
 corepack pnpm dlx supabase@2.116.0 login
