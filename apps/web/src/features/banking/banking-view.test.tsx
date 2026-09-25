@@ -110,13 +110,13 @@ it.each([
   expect(screen.queryByRole("link", { name: /Créer une charge récurrente/i })).toBeNull();
 });
 
-it.each(["revolut", "bunq"] as const)("hides Qonto-only recurring creation for %s transactions in a mixed snapshot", provider => {
+it.each(["revolut", "bunq"] as const)("allows recurring creation for %s transactions in a mixed snapshot", provider => {
  const qonto = {...banking.integration!, provider:"qonto" as const};
  const other = {...qonto,id:"other",provider};
  const account = {...banking.accounts[0]!,integration_id:other.id,currency:"EUR",status:"active" as const,is_current:true};
  render(<BankingView banking={{integration:qonto,integrations:[qonto,other],accounts:[account]}}
   history={{items:[{...history.items[0]!,currency:"EUR",status:"completed"}],page:1,hasNext:false}} currency="EUR"/>);
- expect(screen.queryByRole("link",{name:/Créer une charge récurrente/i})).toBeNull();
+ expect(screen.getByRole("link",{name:/Créer une charge récurrente/i})).toBeTruthy();
 });
 
 

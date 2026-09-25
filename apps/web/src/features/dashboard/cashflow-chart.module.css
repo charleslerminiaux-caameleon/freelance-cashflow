@@ -1,0 +1,7 @@
+.historyControls { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; margin: .75rem 0; font-size: .8rem; }
+.historyControls > span { margin-right: .35rem; color: var(--muted, #63746e); }
+.historyControls button { border: 1px solid var(--border, #dbe4df); border-radius: .45rem; background: transparent; color: inherit; padding: .3rem .65rem; cursor: pointer; font: inherit; }
+.historyControls button[aria-pressed="true"] { background: #e9eef3; border-color: #a5b2be; color: #334155; }
+.historyControls button:focus-visible { outline: 2px solid #475569; outline-offset: 2px; }
+.historyCaption { color: var(--muted, #63746e); font-size: .75rem; line-height: 1.5; margin: .4rem 0 .75rem; }
+.actualLegend { border-color: #475569 !important; background: #475569; }

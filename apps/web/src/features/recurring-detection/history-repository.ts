@@ -3,8 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { nextRecurringDate, normalizeRecurringLabel, suggestedRecurringLabel } from "@fc/domain";
 import { z } from "zod";
 import { businessDateSchema } from "@/features/commercial-schema";
-import { getQontoIntegration } from "@/features/integrations/repository";
-import { detectionErrorCode, uuid } from "./schema";
+import { detectionErrorCode, uuid, publicationSchema } from "./schema";
 import { historyRecurringInputSchema, historyRecurringWorkspaceSchema, type HistoryRecurringInput, type HistoryRecurringWorkspace } from "./history-schema";
 
 export async function confirmRecurringFromTransaction(client: SupabaseClient, ownerUserId: string, input: HistoryRecurringInput): Promise<string> {
@@ -28,6 +27,7 @@ const transactionSchema = z.object({ ...scope, id: uuid, bank_account_id: uuid, 
 const accountSchema = z.object({ ...scope, id: uuid, currency, status: z.enum(["active", "closed"]), is_current: z.boolean() });
 const settingsSchema = z.object({ owner_user_id: uuid, currency, timezone: z.string() });
 const seriesSchema = z.object({ ...scope, bank_account_id: uuid, currency, normalized_label: z.string(), state: z.enum(["pending", "confirmed", "dismissed"]), recurring_cashflow_id: uuid.nullable() });
+const linkedExpenseSchema = z.object({ owner_user_id: uuid, recurring_cashflow_id: uuid });
 const expenseSchema = z.object({ id: uuid, owner_user_id: uuid, label: z.string(), amount_cents: z.number().int().safe().positive() });
 const categorySchema = z.object({ id: uuid, owner_user_id: uuid, name: z.string(), type: z.enum(["outflow", "both"]) });
 async function pages<T>(fetchPage: (from: number, to: number) => Promise<T[]>): Promise<T[]> {
@@ -43,10 +43,26 @@ export async function getHistoryRecurringWorkspace(client: SupabaseClient, owner
   if (!uuid.safeParse(ownerUserId).success || !uuid.safeParse(transactionId).success) throw new Error("DETECTION_INVALID");
   const signal = AbortSignal.timeout(40_000);
   try {
+    const source = await client.from("bank_transactions").select("id, owner_user_id, integration_id")
+      .eq("owner_user_id", ownerUserId).eq("id", transactionId).abortSignal(signal).maybeSingle();
+    if (source.error) throw new Error("DATABASE_ERROR");
+    if (!source.data) throw new Error("DETECTION_NOT_FOUND");
+    const origin = z.object({ id: uuid, ...scope }).parse(source.data);
+    if (origin.id !== transactionId || origin.owner_user_id !== ownerUserId) throw new Error("DATABASE_ERROR");
+    const readIntegration = async () => {
+      const { data, error } = await client.from("integrations").select("id, provider, last_success_at")
+        .eq("owner_user_id", ownerUserId).eq("id", origin.integration_id).in("provider", ["qonto", "revolut", "bunq"])
+        .abortSignal(signal).maybeSingle();
+      if (error) throw new Error("DATABASE_ERROR");
+      if (!data) return null;
+      const integration = z.object({ id: uuid, provider: z.enum(["qonto", "revolut", "bunq"]), last_success_at: publicationSchema.nullable() }).parse(data);
+      if (integration.id !== origin.integration_id) throw new Error("DATABASE_ERROR");
+      return integration;
+    };
     for (let attempt = 0; attempt < 3; attempt++) {
-      const before = await getQontoIntegration(client, ownerUserId, signal);
+      const before = await readIntegration();
       if (!before?.last_success_at) throw new Error("DETECTION_SOURCE_UNAVAILABLE");
-      const [transactionResult, settingsResult, series, expenses, categories] = await Promise.all([
+      const [transactionResult, settingsResult, series, expenses, categories, linkedExpenses] = await Promise.all([
         client.from("bank_transactions").select("id, owner_user_id, integration_id, bank_account_id, label, amount_cents, currency, direction, status, transaction_date")
           .eq("owner_user_id", ownerUserId).eq("integration_id", before.id).eq("id", transactionId).abortSignal(signal).maybeSingle(),
         client.from("app_settings").select("owner_user_id, currency, timezone").eq("owner_user_id", ownerUserId).abortSignal(signal).single(),
@@ -65,6 +81,12 @@ export async function getHistoryRecurringWorkspace(client: SupabaseClient, owner
             .eq("owner_user_id", ownerUserId).in("type", ["outflow", "both"]).order("id").abortSignal(signal).range(from, to);
           if (error) throw error; return z.array(categorySchema).parse(data);
         }),
+        pages(async (from, to) => {
+          const { data, error } = await client.from("recurring_suggestions").select("owner_user_id, recurring_cashflow_id")
+            .eq("owner_user_id", ownerUserId).not("recurring_cashflow_id", "is", null)
+            .order("id").abortSignal(signal).range(from, to);
+          if (error) throw error; return z.array(linkedExpenseSchema).parse(data);
+        }),
       ]);
       if (transactionResult.error || settingsResult.error) throw new Error("DATABASE_ERROR");
       const tx = transactionResult.data === null ? null : transactionSchema.parse(transactionResult.data);
@@ -73,12 +95,13 @@ export async function getHistoryRecurringWorkspace(client: SupabaseClient, owner
         .eq("owner_user_id", ownerUserId).eq("integration_id", before.id).eq("id", tx.bank_account_id).abortSignal(signal).maybeSingle() : { data: null, error: null };
       if (accountResult.error) throw new Error("DATABASE_ERROR");
       const account = accountResult.data === null ? null : accountSchema.parse(accountResult.data);
-      const after = await getQontoIntegration(client, ownerUserId, signal);
+      const after = await readIntegration();
       if (before.id !== after?.id || before.last_success_at !== after.last_success_at) continue;
       if (!tx) throw new Error("DETECTION_NOT_FOUND");
       if (settings.owner_user_id !== ownerUserId || tx.id !== transactionId || tx.owner_user_id !== ownerUserId || tx.integration_id !== before.id
         || (account && (account.id !== tx.bank_account_id || account.owner_user_id !== ownerUserId || account.integration_id !== before.id))
         || series.some(row => row.owner_user_id !== ownerUserId || row.integration_id !== before.id)
+        || linkedExpenses.some(row => row.owner_user_id !== ownerUserId)
         || expenses.some(row => row.owner_user_id !== ownerUserId) || categories.some(row => row.owner_user_id !== ownerUserId)) throw new Error("DATABASE_ERROR");
       const today = businessDateSchema.parse(new Intl.DateTimeFormat("sv-SE", { timeZone: settings.timezone }).format(new Date()));
       const normalized = normalizeRecurringLabel(tx.label);
@@ -87,7 +110,7 @@ export async function getHistoryRecurringWorkspace(client: SupabaseClient, owner
       const matches = series.filter(row => row.bank_account_id === tx.bank_account_id && row.currency === tx.currency && row.normalized_label === normalized);
       if (matches.length > 1) throw new Error("DATABASE_ERROR");
       const match = matches[0];
-      const linked = new Set(series.flatMap(row => row.recurring_cashflow_id ? [row.recurring_cashflow_id] : []));
+      const linked = new Set(linkedExpenses.map(row => row.recurring_cashflow_id));
       const available = expenses.filter(row => !linked.has(row.id));
       const shapeExpense = (row: z.infer<typeof expenseSchema>) => ({ id: row.id, label: row.label, amountCents: row.amount_cents });
       const dayOfMonth = Number(tx.transaction_date.slice(8, 10));

@@ -17,9 +17,8 @@ export function BankingView({ banking, history, currency, searchParameters = {} 
   const accountsById = new Map(accounts.map((account) => [account.id, account]));
   function canCreateRecurring(transaction: TransactionHistory["items"][number]): boolean {
     const account = accountsById.get(transaction.bank_account_id);
-    // History-to-recurring RPCs currently lock the owner's Qonto integration.
-    const qonto = integrations.find(row => row.provider === "qonto");
-    return !!qonto && account?.integration_id === qonto.id
+    const source = integrations.find(row => row.id === account?.integration_id);
+    return !!source
       && transaction.status === "completed" && transaction.direction === "outflow"
       && transaction.amount_cents > 0 && transaction.currency === currency
       && account?.is_current === true && account.status === "active"

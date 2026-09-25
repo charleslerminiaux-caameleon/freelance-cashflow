@@ -16,7 +16,9 @@ export default async function IntegrationsPage() {
   const actions = { pennylane: syncPennylaneAction, revolut: syncRevolutAction, bunq: syncBunqAction };
   return <div className="commercial-page">
     <header className="page-heading"><div><p className="eyebrow">Sources de données</p><h1>Intégrations</h1><p>Connectez vos banques et votre facturation directement, en lecture seule.</p></div></header>
-    <IntegrationPanel configured={isQontoConfigured()} integration={integration} action={syncQontoAction} />
-    <div className="integration-grid">{(["pennylane", "revolut", "bunq"] as const).map(provider => <DirectIntegrationCard key={provider} provider={provider} configured={loadDirectConfig(provider) !== null} integration={direct.find(item => item.provider === provider) ?? null} action={actions[provider]} />)}</div>
+    <div className="integration-grid">
+      <IntegrationPanel configured={isQontoConfigured()} integration={integration} action={syncQontoAction} />
+      {(["pennylane", "revolut", "bunq"] as const).map(provider => <DirectIntegrationCard key={provider} provider={provider} configured={loadDirectConfig(provider) !== null} integration={direct.find(item => item.provider === provider) ?? null} action={actions[provider]} />)}
+    </div>
   </div>;
 }

@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { DirectAutoSyncCoordinator } from "@/features/integrations/direct-auto-sync-coordinator";
+import { loadDirectConfig } from "@/features/integrations/direct-config";
 import { AutoSyncCoordinator } from "@/features/integrations/auto-sync-coordinator";
 
 import { getQontoIntegration } from "@/features/integrations/repository";
@@ -25,5 +27,6 @@ export default async function ProtectedAppLayout({ children }: { children: React
   } catch { integrationUnavailable = true; }
   finally { clearTimeout(timer); controller.abort(); }
 
-  return <AutoSyncCoordinator lastSuccessAt={integration?.last_success_at}><AppShell syncStatus={integrationUnavailable ? "Qonto : état indisponible" : integrationSummary(integration, isQontoConfigured())}>{children}</AppShell></AutoSyncCoordinator>;
+  const directProviders = (["revolut", "bunq", "pennylane"] as const).filter(provider => loadDirectConfig(provider) !== null);
+  return <DirectAutoSyncCoordinator providers={directProviders}><AutoSyncCoordinator lastSuccessAt={integration?.last_success_at}><AppShell syncStatus={integrationUnavailable ? "Qonto : état indisponible" : integrationSummary(integration, isQontoConfigured())}>{children}</AppShell></AutoSyncCoordinator></DirectAutoSyncCoordinator>;
 }

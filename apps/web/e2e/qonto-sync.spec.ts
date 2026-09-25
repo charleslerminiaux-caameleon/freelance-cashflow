@@ -14,7 +14,7 @@ test('owner synchronizes simulated Qonto and keeps published balances after a fa
   await page.getByRole('link', { name: 'Ouvrir le dashboard' }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await page.goto('/integrations');
-  await expect(page.getByRole('region', { name: 'Tiime', exact: true })).toContainText('Accès API à obtenir');
+  await expect(page.getByRole('region', { name: 'Tiime', exact: true })).toContainText('Demande API en attente');
   await expect(page.getByRole('region', { name: 'Tiime', exact: true }).getByRole('button')).toHaveCount(0);
   for (const name of ['Pennylane', 'Revolut Business', 'bunq']) {
     const card = page.getByRole('region', { name, exact: true });

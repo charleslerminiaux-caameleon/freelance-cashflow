@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useActionState } from "react";
 import { RefreshCw, Settings2 } from "lucide-react";
 import { directCatalog } from "./direct-catalog";
@@ -14,11 +15,11 @@ export function DirectIntegrationCard({ provider, configured, integration, actio
   const badge = !configured ? "À configurer" : integration?.status === "error" ? "À vérifier"
     : integration?.last_success_at ? "Connecté" : "À synchroniser";
   return <section className="dashboard-panel integration-card" aria-labelledby={`${provider}-title`}>
-    <header className="integration-card-header"><h2 id={`${provider}-title`}>{item.name}</h2><span className="integration-badge">{badge}</span></header>
+    <header className="integration-card-header"><h2 id={`${provider}-title`}><Image className={`integration-logo integration-logo-${provider}`} src={`/${provider}-logo.svg`} alt={item.name} width={provider === "pennylane" ? 142 : provider === "revolut" ? 120 : 90} height={provider === "bunq" ? 36 : 28} />{provider === "revolut" && <span className="integration-logo-caption" aria-hidden="true">Business</span>}</h2><span className="integration-badge">{badge}</span></header>
     <p>{item.description}</p><p className="integration-note">{item.requirement}</p>
     <details className="integration-details" open={integration?.status === "error"}>
       <summary>Détails de la connexion</summary>
-      <p>Connexion directe, sans agrégateur. Synchronisation manuelle en lecture seule.</p>
+      <p>Connexion directe, sans agrégateur. Synchronisation automatique toutes les 5 minutes lorsque l’application est ouverte, en lecture seule.</p>
       <p>{integration?.last_success_at ? `Dernière synchronisation publiée : ${integration.last_success_at}` : "Aucune synchronisation publiée"}</p>
       {integration?.last_error_code && <p className="form-error">{integrationMessages[integration.last_error_code].replaceAll("Qonto", item.name)}</p>}
       <a href={item.documentation}>Documentation officielle {item.name}</a>
@@ -29,6 +30,7 @@ export function DirectIntegrationCard({ provider, configured, integration, actio
         <RefreshCw size={16} aria-hidden="true" />{pending ? "Synchronisation en cours…" : `Synchroniser ${item.name}`}
       </button></form>
     </div>
+    {state.analysisMessage && <p role={state.analysisSuccess ? "status" : "alert"}>{state.analysisMessage}</p>}
     {state.message && <p role={state.success ? "status" : "alert"}>{state.message}</p>}
   </section>;
 }

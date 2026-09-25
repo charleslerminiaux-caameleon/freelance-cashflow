@@ -158,7 +158,7 @@ test("owner completes the manual cashflow journey", async ({ page }) => {
   await page.getByRole("link", { name: "Dashboard" }).click();
   await page.reload();
   await expect(page.getByRole("heading", { name: /Bonjour/u })).toBeVisible();
-  await expect(page.getByText("Solde projeté")).toBeVisible();
+  await expect(page.getByText("Solde et prévisions")).toBeVisible();
   await expect(page.getByText("Runway")).toBeVisible();
   await expect(page.getByLabel("Indicateurs de trésorerie")).toContainText(/42.?380,00/u);
   await expect(page.getByLabel("Prochaines sorties")).toContainText("Rémunération");

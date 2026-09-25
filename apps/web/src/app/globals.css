@@ -1536,11 +1536,11 @@ details.panel[open] > summary {
 .qonto-status { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.75rem; }
 .qonto-badge-anchor { display: inline-flex; position: relative; }
 .qonto-badge {
-  display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.75rem;
-  padding: 0.35rem 0.55rem; border: 1px solid #c9b780; border-radius: 0.55rem;
+  display: inline-flex; align-items: center; gap: 0.4rem; min-height: 1.875rem;
+  padding: 0.3rem 0.45rem; border: 1px solid #c9b780; border-radius: 0.4rem;
   background: #fff8e8; color: #785717; cursor: pointer;
 }
-.qonto-badge img { display: block; }
+.qonto-badge img { display: block; width: 50px; height: 14px; object-fit: contain; }
 .qonto-badge-fresh { background: #e8f2ef; color: #17624f; border-color: #a5cbbb; }
 .qonto-badge-error { background: #fff0ed; color: #a13528; border-color: #dcafa7; }
 .qonto-badge-checking, .qonto-badge-syncing, .qonto-badge-unconfigured {
@@ -1938,8 +1938,10 @@ details.panel[open] > summary {
 .integration-card, .banking-panel { padding: 1.5rem; min-width: 0; }
 .integration-card { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; min-height: 260px; border-radius: .6rem; box-shadow: 0 2px 5px rgb(24 54 48 / 5%); }
 .integration-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; width: 100%; min-height: 40px; }
-.integration-card-header h2 { display: flex; align-items: center; }
-.integration-card-header img { display: block; object-fit: contain; width: auto; height: 32px; }
+.integration-card-header h2 { display: flex; align-items: center; gap: .5rem; }
+.integration-card-header img { display: block; object-fit: contain; width: auto; height: 28px; max-width: 160px; }
+.integration-card-header .integration-logo-bunq { height: 42px; }
+.integration-card-header .integration-logo-caption { font-size: .75rem; font-weight: 500; color: var(--fc-muted); }
 .integration-card .integration-badge { color: var(--fc-muted); font-size: .75rem; }
 .integration-card > p { font-size: .9rem; line-height: 1.6; }
 .integration-note { color: var(--fc-muted); }

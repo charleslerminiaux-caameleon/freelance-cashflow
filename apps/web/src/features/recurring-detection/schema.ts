@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { businessDateSchema } from "@/features/commercial-schema";
 
+export type RecurringBankProvider = "qonto" | "revolut" | "bunq";
+
 export const detectionCodeSchema = z.enum(["DETECTION_LOCKED", "DETECTION_STALE", "DETECTION_INVALID", "DETECTION_DUPLICATE", "DETECTION_NOT_FOUND", "DETECTION_SOURCE_UNAVAILABLE", "DATABASE_ERROR"]);
 export type DetectionCode = z.infer<typeof detectionCodeSchema>;
 export type AnalysisResult = { success: true; count: number } | { success: false; code: DetectionCode };
@@ -35,6 +37,7 @@ export const suggestionRowSchema = z.object({
 });
 export type SuggestionRow = z.infer<typeof suggestionRowSchema>;
 export type RecurringSuggestion = {
+  provider?: RecurringBankProvider;
   creationSource: "detected" | "history";
   id: string; state: "pending" | "confirmed" | "dismissed"; eligible: boolean;
   label: string; amountCents: number; dayOfMonth: number; nextDate: string;

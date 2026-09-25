@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { readSavedCredentials } from "./credential-store";
 
 type QontoEnvironmentName = "QONTO_LOGIN" | "QONTO_SECRET_KEY";
 type EnvironmentReader = (name: QontoEnvironmentName) => unknown;
@@ -11,7 +12,7 @@ const credentialSchema = z
   .max(500)
   .regex(/^[^\s\p{Cc}]+$/u);
 
-const qontoConfigSchema = z
+export const qontoConfigSchema = z
   .object({
     login: credentialSchema.refine((value) => !value.includes(":")),
     secretKey: credentialSchema,
@@ -27,6 +28,11 @@ function processEnvironment(name: QontoEnvironmentName): unknown {
 export function loadQontoConfig(
   readEnvironment: EnvironmentReader = processEnvironment,
 ): QontoConfig | null {
+  const saved = readEnvironment === processEnvironment ? readSavedCredentials("qonto") : undefined;
+  if (saved !== undefined) {
+    const parsed = qontoConfigSchema.safeParse(saved);
+    return parsed.success ? parsed.data : null;
+  }
   const parsed = qontoConfigSchema.safeParse({
     login: readEnvironment("QONTO_LOGIN"),
     secretKey: readEnvironment("QONTO_SECRET_KEY"),

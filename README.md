@@ -78,4 +78,4 @@ Les données et calculs présentés ne constituent ni une comptabilité complèt
 
 ### Autres connexions directes
 
-Pennylane, Revolut Business et bunq disposent désormais de connecteurs serveur en lecture seule, sans agrégateur. Leur activation nécessite la migration `202609180001_direct_integrations.sql` et les identifiants du titulaire. Consultez [Connexions directes](docs/DIRECT_INTEGRATIONS.md) ou **Intégrations → Configurer** pour les offres requises et les limites. La validation sur compte réel reste à effectuer.
+Pennylane, Revolut Business et bunq disposent désormais de connecteurs serveur en lecture seule, sans agrégateur. Leur activation et leur actualisation automatique nécessitent les migrations `202609180001_direct_integrations.sql` et `202609240001_multi_provider_automation.sql` et les identifiants du titulaire. Consultez [Connexions directes](docs/DIRECT_INTEGRATIONS.md) ou **Intégrations → Configurer** pour les offres requises et les limites. La validation sur compte réel reste à effectuer.

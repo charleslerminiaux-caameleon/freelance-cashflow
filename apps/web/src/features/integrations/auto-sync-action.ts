@@ -1,5 +1,7 @@
 "use server";
 
+import { z } from "zod";
+import { loadDirectConfig, type DirectProvider } from "./direct-config";
 import { revalidatePath } from "next/cache";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
@@ -44,4 +46,18 @@ export async function autoSyncQontoAction(): Promise<AutoSyncActionResult> {
   } catch {
     return { status: "error", code: "DATABASE_ERROR" };
   }
+}
+
+
+export async function autoSyncDirectAction(provider: DirectProvider): Promise<AutoSyncActionResult> {
+  const { userId } = await requireOwner();
+  if (!z.enum(["pennylane", "revolut", "bunq"]).safeParse(provider).success || !loadDirectConfig(provider)) return { status: "skipped" };
+  try {
+    const { synchronizeDirectForOwner } = await import("./direct-sync");
+    const result = await synchronizeDirectForOwner(userId, provider, { mode: "automatic" });
+    if (result.success && result.skipped) return { status: "skipped" };
+    for (const path of ["/integrations", "/cashflow", "/dashboard", "/expenses", "/invoices", "/customers"]) revalidatePath(path);
+    revalidatePath("/", "layout");
+    return result.success ? { status: "synced", analysisResult: result.analysisResult } : { status: "error", code: result.code };
+  } catch { return { status: "error", code: "DATABASE_ERROR" }; }
 }

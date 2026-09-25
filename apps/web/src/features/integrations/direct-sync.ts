@@ -4,29 +4,36 @@ import { z } from "zod";
 import { createPennylaneProvider, createRevolutProvider, createBunqProvider, synchronizeBanking, IntegrationError, SyncStoreError } from "@fc/integrations/server";
 import type { IntegrationErrorCode } from "@fc/integrations/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { analyzeRecurringForOwner, type AnalysisResult } from "@/features/recurring-detection/service";
 import { getOwnerSettings } from "@/features/settings/repository";
 import { loadDirectConfig, type DirectProvider } from "./direct-config";
 import { createBankingSyncStore } from "./sync-repository";
 
-export type DirectSyncResult = { success: true; created: number; updated: number; skippedDrafts?: number; skippedCreditNotes?: number }
+export type DirectSyncResult = { success: true; created: number; updated: number; skippedDrafts?: number; skippedCreditNotes?: number; analysisResult?: AnalysisResult; skipped?: false }
+  | { success: true; skipped: true }
   | { success: false; code: IntegrationErrorCode };
 const publication = z.object({ created: z.number().int().nonnegative(), updated: z.number().int().nonnegative() });
 const failureCode = (error: unknown): IntegrationErrorCode => error instanceof IntegrationError || error instanceof SyncStoreError ? error.code : "DATABASE_ERROR";
 
-export async function synchronizeDirectForOwner(ownerUserId: string, provider: DirectProvider): Promise<DirectSyncResult> {
-  if (!loadDirectConfig(provider)) return { success: false, code: "PROVIDER_AUTH_EXPIRED" };
+export async function synchronizeDirectForOwner(ownerUserId: string, provider: DirectProvider, options?: { mode?: "manual" | "automatic" }): Promise<DirectSyncResult> {
+  if (!loadDirectConfig(provider)) return options?.mode === "automatic" ? { success: true, skipped: true } : { success: false, code: "PROVIDER_AUTH_EXPIRED" };
   const client = createAdminClient();
   const runId = randomUUID();
-  const store = createBankingSyncStore(client, { provider });
+  const store = createBankingSyncStore(client, { provider, ...options });
   try {
     if (provider !== "pennylane") {
       const bank = provider === "revolut" ? createRevolutProvider(loadDirectConfig("revolut")!) : createBunqProvider(loadDirectConfig("bunq")!);
       const settings = await getOwnerSettings(client, ownerUserId);
       const result = await synchronizeBanking({ ownerUserId, runId, timezone: settings.timezone, provider: bank, store });
-      return result.success && result.skipped ? { success: false, code: "SYNC_LOCKED" } : result as DirectSyncResult;
+      if (!result.success || result.skipped) return result;
+      let analysisResult: AnalysisResult;
+      try { analysisResult = await analyzeRecurringForOwner(ownerUserId, provider); }
+      catch { analysisResult = { success: false, code: "DATABASE_ERROR" }; }
+      return { ...result, analysisResult };
     }
     const signal = AbortSignal.timeout(150_000);
-    await store.acquire(ownerUserId, runId, signal);
+    const lease = await store.acquire(ownerUserId, runId, signal);
+    if (!lease) return { success: true, skipped: true };
     let connectionSucceeded = false;
     const lostLease = new AbortController();
     let heartbeatError: unknown;

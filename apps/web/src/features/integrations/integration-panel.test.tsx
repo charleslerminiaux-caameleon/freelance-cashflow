@@ -2,10 +2,10 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { IntegrationPanel } from "./integration-panel";
 const state = { id: "integration", status: "connected" as const, last_connection_succeeded: true, last_success_at: "2026-09-10T10:00:00Z", last_error_code: null };
-it("distinguishes unconfigured, no attempt and Tiime awaiting access with guide and CSV", () => {
+it("distinguishes unconfigured, no attempt and Tiime awaiting access with direct API guide", () => {
  render(<IntegrationPanel configured={false} integration={null} action={vi.fn()} />);
  expect(screen.getByRole("button", { name: "Synchroniser Qonto" })).toBeDisabled(); expect(screen.getByText("Aucune tentative de connexion")).toBeInTheDocument();
- expect(screen.getByText("Accès API à obtenir")).toBeInTheDocument(); expect(screen.getByRole("link", { name: /guide Tiime/i })).toHaveAttribute("href", "https://support.tiime.fr/fr/articles/26240-proposez-vous-une-api"); expect(screen.getByRole("link", { name: /Importer un CSV/ })).toHaveAttribute("href", "/invoices"); expect(screen.getAllByRole("button")).toHaveLength(1);
+ expect(screen.getByText("Demande API en attente")).toBeInTheDocument(); expect(screen.getByRole("link", { name: /guide Tiime/i })).toHaveAttribute("href", "https://support.tiime.fr/fr/articles/26240-proposez-vous-une-api"); expect(screen.getByRole("link", { name: /Comprendre l’accès API/ })).toHaveAttribute("href", "/integrations/setup#tiime"); expect(screen.getByRole("link", { name: /Gérer la connexion Qonto/ })).toHaveAttribute("href", "/integrations/setup#qonto"); expect(screen.getAllByRole("button")).toHaveLength(1);
 });
 it("shows independent last connection and sync failure without hiding published date", () => {
  render(<IntegrationPanel configured integration={{ ...state, status: "error", last_error_code: "DATABASE_ERROR" }} action={vi.fn()} />);

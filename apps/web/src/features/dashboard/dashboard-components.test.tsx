@@ -14,6 +14,9 @@ import { ScenarioControls } from "./scenario-controls";
 import { UpcomingLists } from "./upcoming-lists";
 import type { DashboardInclusions, DashboardTreasuryEvent } from "./view-model";
 
+// Keep UI tests outside the server-action/Supabase environment boundary.
+vi.mock("@/features/integrations/auto-sync-action", () => ({ autoSyncQontoAction: vi.fn() }));
+
 class ResizeObserverStub implements ResizeObserver {
   disconnect() {}
   observe() {}
@@ -256,6 +259,23 @@ describe("dashboard controls", () => {
 describe("dashboard detail panels", () => {
   it("formats cashflow chart ticks as French short dates", () => {
     expect(formatCashflowChartTick(localDate("2026-12-31"))).toBe("31/12");
+  });
+
+  it("defaults to 30 history days and lets users extend or hide the reconstructed period", () => {
+    render(<CashflowChart currency="EUR" horizonDays={90} scenario="certain" chart={{
+      points: [{ date: localDate("2026-09-24"), certainBalanceCents: moneyCents(10000), committedBalanceCents: moneyCents(10000), probableBalanceCents: moneyCents(10000), safetyThresholdCents: moneyCents(0) }],
+      riskDate: null, summary: "", history: { points: [
+        { date: localDate("2026-06-26"), actualBalanceCents: moneyCents(8000) },
+        { date: localDate("2026-08-25"), actualBalanceCents: moneyCents(9000) },
+        { date: localDate("2026-09-24"), actualBalanceCents: moneyCents(10000) },
+      ] },
+    }} />);
+    expect(screen.getByRole("button", { name: "30 jours" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/Historique affiché du 25\/08 au 24\/09/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "90 jours" }));
+    expect(screen.getByText(/Historique affiché du 26\/06 au 24\/09/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Masqué" }));
+    expect(screen.queryByText(/Historique affiché du/)).not.toBeInTheDocument();
   });
 
   it("formats cashflow chart tooltip labels as French short dates", () => {

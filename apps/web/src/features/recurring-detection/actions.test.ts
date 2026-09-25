@@ -189,7 +189,7 @@ it("dismisses and reexamines only the selected suggestion", async () => {
 it("reports manual analysis outcomes with stable messages", async () => {
   await expect(analyzeRecurringAction(initialState, new FormData())).resolves.toEqual({
     success: true,
-    message: "Analyse terminée : 2 récurrences détectées.",
+    message: "Analyse terminée : 6 récurrences détectées.",
   });
 
   mocks.analyzeRecurringForOwner.mockResolvedValue({ success: false, code: "DETECTION_LOCKED" });
@@ -206,4 +206,11 @@ it("authenticates manual analysis before invoking the privileged service", async
   await expect(analyzeRecurringAction(initialState, new FormData())).rejects.toThrow("redirect");
 
   expect(mocks.analyzeRecurringForOwner).not.toHaveBeenCalled();
+});
+
+it("analyzes every bank and tolerates banks without published transactions", async () => {
+  mocks.analyzeRecurringForOwner.mockImplementation(async (_owner, provider) => provider === "revolut" ? { success: true, count: 3 } : { success: false, code: "DETECTION_SOURCE_UNAVAILABLE" });
+  const result = await analyzeRecurringAction(initialState, new FormData());
+  expect(result).toEqual({success: true, message: "Analyse terminée : 3 récurrences détectées."});
+  expect(mocks.analyzeRecurringForOwner.mock.calls.map(call => call[1])).toEqual(["qonto", "revolut", "bunq"]);
 });

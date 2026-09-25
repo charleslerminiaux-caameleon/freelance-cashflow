@@ -246,7 +246,7 @@ export function ExpenseForm(props: ExpenseFormProps) {
       {props.mode === "recurring" && props.linkedFromQonto && frequency !== "monthly" ? (
         <p role="alert">
           L’exclusion des mois déjà payés s’applique uniquement aux charges mensuelles liées à
-          Qonto.
+          votre banque.
         </p>
       ) : null}
       {state.message ? <p role={state.success ? "status" : "alert"}>{state.message}</p> : null}

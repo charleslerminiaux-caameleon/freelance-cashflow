@@ -12,6 +12,9 @@ const { getDashboardViewModel, requireOwner } = vi.hoisted(() => ({
 vi.mock("@/features/dashboard/query", () => ({ getDashboardViewModel }));
 vi.mock("@/lib/auth/require-owner", () => ({ requireOwner }));
 
+// Keep UI tests outside the server-action/Supabase environment boundary.
+vi.mock("@/features/integrations/auto-sync-action", () => ({ autoSyncQontoAction: vi.fn() }));
+
 class ResizeObserverStub implements ResizeObserver {
   disconnect() {}
   observe() {}
