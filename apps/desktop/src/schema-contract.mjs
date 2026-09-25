@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 // Only application objects, independent of database OIDs, row contents and owners.
-export const contractQuery=`with relations as (
+export const contractSelect=`with relations as (
  select c.* from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p','v','m','f')
  and not exists(select 1 from pg_depend d where d.classid='pg_class'::regclass and d.objid=c.oid and d.deptype='e')
 ), functions as (
@@ -16,6 +16,10 @@ select jsonb_build_object(
  'constraints',coalesce((select jsonb_agg(jsonb_build_array(c.relname,k.conname,k.contype,pg_get_constraintdef(k.oid)) order by c.relname,k.conname) from relations c join pg_constraint k on k.conrelid=c.oid),'[]'::jsonb),
  'triggers',coalesce((select jsonb_agg(jsonb_build_array(c.relname,t.tgname,t.tgenabled,pg_get_triggerdef(t.oid)) order by c.relname,t.tgname) from relations c join pg_trigger t on t.tgrelid=c.oid where not t.tgisinternal),'[]'::jsonb)
 ) as contract`;
+// The Management API executes this batch in one transaction. SET LOCAL affects only
+// catalog rendering in this inspection, never stored function settings or database state.
+// pg_catalog forces explicit qualification of application/extension objects everywhere.
+export const contractQuery='SET LOCAL search_path = pg_catalog; '+contractSelect;
 export function contractHash(contract){
  if(!contract||!['relations','columns','functions','policies','constraints','triggers'].every(k=>Array.isArray(contract[k])))throw Error('INVALID_SCHEMA_CONTRACT');
  const normalized=Object.fromEntries(Object.entries(contract).sort(([a],[b])=>a.localeCompare(b)));

@@ -19,7 +19,7 @@ try{
  const entries=[];
  for(const row of manifest){
   sql(await readFile(new URL('../../../supabase/migrations/'+row.filename,import.meta.url),'utf8'));
-  const contract=JSON.parse(sql(contractQuery));
+  const contract=JSON.parse(sql('begin read only;'+contractQuery+';commit;'));
   entries.push({version:row.version,sha256:row.sha256,contractHash:contractHash(contract)});
  }
  // Verify the rejection guarantees on real PostgreSQL without changing any existing database.

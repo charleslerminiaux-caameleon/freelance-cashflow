@@ -37,3 +37,22 @@ Artefact : `apps/desktop/dist/Freelance Cashflow-0.1.1-mac-arm64.dmg`, non sign�
 SHA-256 : `891e7bda55a65409008e25f4fe66c6c966adb7f8b822a87682df1fb11f7d4dda`.
 
 Mac Intel retiré de la matrice conformément au choix utilisateur. Windows sera traité après la recette Apple Silicon. Aucun envoi GitHub ni remplacement de l’application actuellement ouverte n’a été effectué.
+
+## Correction confirmée en 0.1.2 — faux refus de schéma
+
+L’utilisateur a confirmé l’URL du même projet et le code `DATABASE_SCHEMA_CHANGED`. Une requête directe à l’API Management avec `read_only: true`, exactement comme l’installateur, a reproduit le refus. Le relevé via CLI et celui via l’API différaient uniquement dans l’expression générée de `recurring_suggestions.normalized_label_hash` : `digest(...)` contre `extensions.digest(...)`. La fonction réellement référencée est la même ; la notation varie selon le `search_path` de la session.
+
+Correction : fixer localement le chemin de recherche à `pg_catalog` pour la lecture du catalogue, afin de qualifier explicitement les objets applicatifs et les extensions. Cette option ne vit que dans la transaction de lecture ; elle ne modifie ni fonctions stockées, ni tables, ni politiques. Les 21 contrats de référence ont été régénérés depuis les migrations dans une base jetable. Aucun retrait de préfixe textuel ni assouplissement des contrôles structurels.
+
+Preuves :
+
+- test PostgreSQL de deux chemins de recherche : échec avant, réussite après ;
+- génération de tous les préfixes et détection des altérations de colonne, signature et RLS : réussite ;
+- inspection de la stack locale dédiée : compatible ;
+- inspection directe du projet utilisateur via le véritable code `inspectDatabase` et l’API Management : compatible, zéro migration à appliquer ;
+- 36 tests desktop et lint : réussite ;
+- aucun secret affiché, aucun changement de donnée ou migration distante.
+
+Le diagnostic initial par CLI n’était pas suffisant pour reproduire le contexte exact de connexion de l’assistant. La vérification finale utilise maintenant ce contexte exact.
+
+Artefact corrigé : `apps/desktop/dist/Freelance Cashflow-0.1.2-mac-arm64.dmg`, SHA-256 `7ab9d61c3bd50fcb9d3ed3635e024612ad6fbae201d69146844eb72a4de18a30`. Paquet monté en lecture seule : manifeste corrigé identique, smoke avec Node embarqué et deux configurations réussi, volume démonté.

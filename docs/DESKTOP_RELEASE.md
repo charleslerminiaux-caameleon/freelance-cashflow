@@ -34,9 +34,10 @@ Les empreintes de chaque préfixe de migrations sont conservées dans `apps/desk
 ```sh
 node apps/desktop/scripts/generate-schema-contracts.mjs
 node apps/desktop/scripts/inspect-database.integration.mjs
+node apps/desktop/scripts/schema-contract.integration.mjs
 ```
 
-Le générateur crée sa propre base temporaire, applique les migrations dans l’ordre, teste les altérations et supprime uniquement cette base. L’inspection suivante reste en lecture seule sur la stack existante. Aucune de ces commandes n’utilise un projet hébergé.
+Le générateur crée sa propre base temporaire, applique les migrations dans l’ordre, teste les altérations et supprime uniquement cette base. L’inspection suivante reste en lecture seule sur la stack existante. Aucune de ces commandes n’utilise un projet hébergé. La lecture du contrat impose `SET LOCAL search_path = pg_catalog` dans sa transaction pour obtenir les mêmes noms qualifiés via le CLI, le générateur et l’API Management. Le test de régression compare deux chemins de recherche différents, sans modifier la base.
 
 ## Signature avant publication
 
