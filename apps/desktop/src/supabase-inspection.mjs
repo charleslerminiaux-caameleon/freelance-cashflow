@@ -24,9 +24,13 @@ export function classifyDatabase({tables,functions,versions,manifest,foreignSche
  const incomplete=expectedTables.some(t=>!tables.includes(t))||expectedFunctions.some(f=>!functions.includes(f));
  const ordered=[...versions].sort();
  const contractMismatch=versions.length&&applied.at(-1)?.contractHash!==undefined&&applied.at(-1).contractHash!==structuralHash;
- const invalid=contractMismatch||foreignSchemas.length||unknown||incomplete||new Set(versions).size!==versions.length||
-  JSON.stringify(prefix)!==JSON.stringify(ordered)||(!versions.length&&(tables.length||functions.length));
- return {kind:invalid?'incompatible':!versions.length?'empty':pending.length?'pending':'compatible',pending};
+ const knownVersions=new Set(manifest.map(m=>m.version));
+ const reason=!versions.length&&(tables.length||functions.length)?'DATABASE_HISTORY_MISSING':
+  versions.some(v=>!knownVersions.has(v))?'DATABASE_HISTORY_UNKNOWN':
+  new Set(versions).size!==versions.length||JSON.stringify(prefix)!==JSON.stringify(ordered)?'DATABASE_HISTORY_GAP':
+  foreignSchemas.length||unknown?'DATABASE_OBJECTS_UNEXPECTED':
+  incomplete?'DATABASE_OBJECTS_MISSING':contractMismatch?'DATABASE_SCHEMA_CHANGED':null;
+ return {kind:reason?'incompatible':!versions.length?'empty':pending.length?'pending':'compatible',pending,...(reason?{reason}:{})};
 }
 async function jsonRequest(request,url,options) {
  let response;

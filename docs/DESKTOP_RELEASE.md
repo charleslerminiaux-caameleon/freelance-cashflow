@@ -4,7 +4,7 @@
 
 Utiliser un checkout propre, sans fichiers `.env` locaux, Node.js 24.20.0 et pnpm 10.17.1. Le lockfile épingle Electron 44.4.5 et electron-builder 26.15.3. Les sources de la version Next.js installée dans `apps/web/node_modules/next/dist/docs` restent la référence locale.
 
-Construire nativement sur chaque cible : macOS arm64, macOS x64 et Windows x64. La workflow (manuelle ou déclenchée sur la branche de test `codex/desktop-installer`) `.github/workflows/desktop.yml` vérifie l’architecture effective avant de fabriquer un artefact non signé. Elle ne publie aucune release.
+Construire nativement sur chaque cible : macOS arm64 et Windows x64. La workflow (manuelle ou déclenchée sur la branche de test `codex/desktop-installer`) `.github/workflows/desktop.yml` vérifie l’architecture effective avant de fabriquer un artefact non signé. Elle ne publie aucune release.
 
 ## Commandes
 
@@ -63,7 +63,7 @@ Sur un profil de test sans Node, Git, pnpm ou Docker :
 7. Désinstaller le logiciel ; confirmer que les réglages et le projet distant restent présents.
 8. Vérifier signature/notarisation et les sommes de contrôle avant publication.
 
-Compléter le rapport de recette pour chaque OS et architecture. Un build réussi sur Mac ne valide pas Windows, et un test sur Apple Silicon ne valide pas Intel.
+Compléter le rapport de recette pour chaque OS et architecture. Un build réussi sur Mac ne valide pas Windows. Mac Intel est exclu du périmètre à la demande de l’utilisateur.
 
 ## Références officielles
 

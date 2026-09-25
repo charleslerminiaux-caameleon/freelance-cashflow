@@ -1,6 +1,6 @@
 # Recette de l’installateur — 25 septembre 2026
 
-Statut : implémentation locale terminée et DMG Mac Apple Silicon de test produit. Pas de livraison publique. Windows et Mac Intel attendent l’autorisation d’exécuter les builds GitHub.
+Statut : implémentation locale terminée et DMG Mac Apple Silicon de test produit. Pas de livraison publique. Prochaine étape : recette manuelle sur Mac Apple Silicon, puis Windows. Mac Intel est abandonné à la demande de l’utilisateur.
 
 ## Artefact local
 
@@ -67,3 +67,7 @@ Autres choix documentés :
 - Le DMG et le serveur qu’il contient ont été testés ; cela ne vaut pas certification d’une installation complète sur machine vierge.
 
 Les guides `docs/DESKTOP_INSTALLATION.md` et `docs/DESKTOP_RELEASE.md` décrivent la configuration assistée, les commandes de fabrication et la recette restante.
+
+## Ordre de validation confirmé
+
+L’utilisateur confirme : tester d’abord le DMG local sur Mac Apple Silicon ; traiter Windows ensuite ; abandonner Mac Intel faute de machine de test. La cible Intel a été retirée de la matrice de builds. La demande GitHub précédente est différée : aucune autorisation ni action GitHub n’est nécessaire pour le test Mac local. Les mentions Intel ci-dessus décrivent les limites constatées avant cette décision.

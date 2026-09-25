@@ -12,11 +12,13 @@ extraResources:
 asar: true
 npmRebuild: false
 mac:
+  icon: build/icon.icns
   target: dmg
   category: public.app-category.finance
   identity: null
   minimumSystemVersion: "13.0.0"
 win:
+  icon: build/icon.png
   target: nsis
 nsis:
   oneClick: false

@@ -23,7 +23,7 @@ let window,tray,controller,quitting=false,notice=null;
 async function showWindow(){
  if(window&&!window.isDestroyed()){window.show();window.focus();return;}
  window=new BrowserWindow({width:880,height:790,minWidth:650,minHeight:620,title:'Installer Freelance Cashflow',
-  backgroundColor:'#f5f7f3',webPreferences:{preload:join(source,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true}});
+  icon:join(source,'ui','logo.png'),backgroundColor:'#fafbfa',webPreferences:{preload:join(source,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true}});
  window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
  window.webContents.on('will-navigate',event=>event.preventDefault());
  window.on('close',event=>{

@@ -4,7 +4,7 @@ L’assistant de bureau remplace les commandes de la première installation. Il 
 
 ## Disponibilité
 
-Le code fournit une cible **macOS 13 ou ultérieur** (Apple Silicon et Intel, fichiers distincts) et **Windows 10/11 x64**. La disponibilité réelle de chaque fichier et les tests effectués sont consignés dans le [rapport de recette](acceptance/2026-09-25-desktop-installer.md).
+Le code fournit une cible **macOS 13 ou ultérieur** (Apple Silicon uniquement) et **Windows 10/11 x64**. La disponibilité réelle de chaque fichier et les tests effectués sont consignés dans le [rapport de recette](acceptance/2026-09-25-desktop-installer.md).
 
 Les paquets de recette non signés ne constituent pas une version publique. Aucune publication automatique n’est effectuée. Il n’y a pas de lien de téléchargement public tant qu’une livraison n’a pas été validée et publiée.
 

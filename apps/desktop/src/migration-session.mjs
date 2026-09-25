@@ -24,7 +24,7 @@ export function createMigrationSession({inspect,run,prepare}) {
  return {
   preview(input){return exclusively(async()=>{
    guard(input);preview=null;const current=await inspect(input);guard(input);
-   if(current.kind==='incompatible')throw failure('INCOMPATIBLE_DATABASE');
+   if(current.kind==='incompatible')throw failure(current.reason??'INCOMPATIBLE_DATABASE');
    if(current.pending.length) {
     guard(input);const dir=await prepare(input);
     try{guard(input);await run(['link','--project-ref',input.config.projectRef],dir,input);
