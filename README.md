@@ -171,15 +171,45 @@ Vous avez déjà une installation ? Suivez le [guide de mise à jour](docs/UPDAT
 
 ### 4. Ouvrir Freelance Cashflow
 
-Dans le terminal, depuis le dossier `freelance-cashflow`, lancez :
+**À chaque ouverture d’un nouveau terminal, revenez d’abord dans le dossier de l’application.** Le terminal ne se souvient pas nécessairement du dossier utilisé la fois précédente.
+
+**Sur Mac ou Linux**, si vous avez téléchargé le projet dans votre dossier personnel :
 
 ```bash
-npx --yes pnpm@10.17.1 dev
+cd ~/freelance-cashflow
 ```
 
-Ouvrez **[http://localhost:3000](http://localhost:3000)** dans votre navigateur. Créez votre compte, confirmez votre adresse e-mail si Supabase le demande, puis connectez-vous et suivez les étapes de configuration. Le parcours **Paramètres → Installation et diagnostic** vous aide à vérifier votre installation.
+**Sur Windows**, dans l’Invite de commandes :
 
-Gardez le terminal ouvert pendant l’utilisation. Pour arrêter l’application, appuyez sur **Ctrl+C**. Pour la rouvrir, relancez `npx --yes pnpm@10.17.1 dev` depuis son dossier, puis ouvrez la même adresse.
+```bat
+cd /d "%USERPROFILE%\freelance-cashflow"
+```
+
+Ces chemins correspondent à un téléchargement dans votre dossier personnel. Si vous avez placé le projet ailleurs, utilisez son emplacement réel. Par exemple, sur Mac, pour un projet téléchargé sur le Bureau : `cd ~/Desktop/freelance-cashflow`.
+
+**Si `cd` affiche une erreur, arrêtez-vous et retrouvez le dossier avant de continuer.** Une fois dans le dossier de l’application, lancez cette commande, identique sur les trois systèmes :
+
+```bash
+npx --yes pnpm@10.17.1 run dev
+```
+
+Attendez que le terminal indique que l’application est prête (« Ready »), puis ouvrez **[http://localhost:3000](http://localhost:3000)** dans votre navigateur. Si le terminal indique un autre port, ouvrez l’adresse affichée à la ligne « Local ».
+
+Créez votre compte, confirmez votre adresse e-mail si Supabase le demande, puis connectez-vous et suivez les étapes de configuration. Le parcours **Paramètres → Installation et diagnostic** vous aide à vérifier votre installation.
+
+Gardez le terminal ouvert pendant l’utilisation. Pour arrêter l’application, appuyez sur **Ctrl+C**. Pour la rouvrir dans un nouveau terminal, **refaites les deux étapes : `cd` vers le dossier du projet, puis la commande `npx` ci-dessus**. Vous n’avez pas besoin de télécharger à nouveau le projet ni de réinstaller ses composants.
+
+#### Si le terminal affiche « Command "dev" not found »
+
+Cette erreur peut apparaître lorsque la commande est lancée en dehors du dossier de l’application. Sur Mac, un **`~` juste avant `%`** indique généralement que vous êtes dans votre dossier personnel, pas dans `freelance-cashflow`.
+
+Reprenez la commande `cd` adaptée à votre système ci-dessus, puis relancez `npx --yes pnpm@10.17.1 run dev`. Si l’erreur persiste, lancez :
+
+```bash
+npm pkg get name scripts.dev
+```
+
+Le résultat doit contenir `freelance-cashflow` et le script `pnpm --filter @fc/web dev`. Pour demander de l’aide, transmettez la commande saisie et le message d’erreur complet.
 
 ### 5. Faire votre première prévision
 
