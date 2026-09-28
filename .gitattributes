@@ -1,0 +1,2 @@
+# Migration bytes are hashed in the installer schema contracts on every OS.
+supabase/migrations/*.sql text eol=lf
