@@ -211,6 +211,24 @@ npm pkg get name scripts.dev
 
 Le résultat doit contenir `freelance-cashflow` et le script `pnpm --filter @fc/web dev`. Pour demander de l’aide, transmettez la commande saisie et le message d’erreur complet.
 
+#### Si le terminal affiche « next: command not found » ou « node_modules missing »
+
+Le projet est téléchargé, mais ses composants ne sont pas installés, ou leur installation n’est pas terminée. Le dossier `node_modules` est créé lors de cette installation ; il n’est pas inclus dans le téléchargement Git.
+
+Depuis le dossier `freelance-cashflow`, lancez :
+
+```bash
+npx --yes pnpm@10.17.1 install --frozen-lockfile
+```
+
+**Attendez la fin sans erreur avant de continuer.** Si l’installation échoue, transmettez la commande et sa sortie complète pour obtenir de l’aide ; ne relancez pas encore l’application. Il n’est pas nécessaire d’installer `next` séparément ni globalement : il fait partie des composants du projet.
+
+Une fois l’installation réussie, démarrez l’application :
+
+```bash
+npx --yes pnpm@10.17.1 run dev
+```
+
 ### 5. Faire votre première prévision
 
 1. Renseignez votre solde de départ.
