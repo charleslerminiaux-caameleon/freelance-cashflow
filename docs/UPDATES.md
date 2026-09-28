@@ -1,6 +1,38 @@
-# Mettre à jour Libra
+# Mettre à jour Freelance Cashflow
 
-> Installateur de bureau : voir [le guide Mac et Windows](DESKTOP_INSTALLATION.md) et [la fabrication des paquets](DESKTOP_RELEASE.md).
+## Installateur Mac
+
+Téléchargez la version souhaitée depuis l’avertissement dans l’application ou depuis la [page des versions](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases). Consultez ses nouveautés et instructions, quittez Freelance Cashflow, puis remplacez l’application dans Applications. Les réglages sont conservés. Si une migration est nécessaire, l’assistant vous guide et demande une sauvegarde préalable. [Guide détaillé](DESKTOP_INSTALLATION.md).
+
+## Installation manuelle, notamment sur Windows
+
+Consultez d’abord les notes de la version et sauvegardez votre base. Dans le terminal où l’application fonctionne, utilisez **Ctrl+C** pour l’arrêter. Ouvrez le dossier `freelance-cashflow` avec le terminal, puis vérifiez votre état :
+
+```bash
+git status
+```
+
+Si des fichiers ont été modifiés, conservez ces modifications et faites-vous accompagner avant de continuer. Ne les effacez pas. Sur une copie sans modifications locales, la commande suivante récupère la dernière version de votre branche actuelle, depuis le dépôt que vous suivez :
+
+```bash
+git pull --ff-only
+```
+
+Si une erreur ou un conflit apparaît, arrêtez-vous à cette étape. Sinon, installez les dépendances :
+
+```bash
+npx --yes pnpm@10.17.1 install --frozen-lockfile
+```
+
+Conservez `apps/web/.env.local`. Si la publication annonce des migrations de base, appliquez la procédure de contrôle ci-dessous avant de redémarrer. Sinon, relancez :
+
+```bash
+npx --yes pnpm@10.17.1 dev
+```
+
+Ouvrez ensuite `http://localhost:3000`. La commande `git pull` suit votre branche ; elle ne sélectionne pas une ancienne version précise. Pour rester sur une version particulière ou passer à un fork, suivez les instructions du mainteneur. [Choix et notifications](APPLICATION_UPDATES.md).
+
+## Contrôles avant migration
 
 1. Sauvegardez et vérifiez la procédure de [restauration](BACKUP_RESTORE.md).
 2. Notez le commit utilisé et préservez les modifications locales. Installez les

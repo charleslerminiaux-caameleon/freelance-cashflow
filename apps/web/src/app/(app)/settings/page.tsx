@@ -1,3 +1,4 @@
+import { UpdateSettings } from "@/features/updates/update-notice";
 import { updateSettingsAction } from "@/features/settings/actions";
 import { getOwnerSettings } from "@/features/settings/repository";
 import { forecastHorizonDaysSchema } from "@/features/settings/schema";
@@ -31,6 +32,8 @@ export default async function SettingsPage() {
       </header>
 
       <p><a href="/settings/installation">Installation et diagnostic</a></p>
+
+      <UpdateSettings />
 
       <section className="panel settings-panel" aria-labelledby="forecast-settings-title">
         <div className="section-heading">

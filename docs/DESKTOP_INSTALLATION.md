@@ -2,16 +2,18 @@
 
 L’assistant de bureau remplace les commandes de la première installation. Il conserve le modèle actuel : un serveur sur votre ordinateur et les données dans votre propre projet Supabase. Internet reste nécessaire.
 
-## Disponibilité
+## Disponibilité et téléchargement
 
-Le code fournit une cible **macOS 13 ou ultérieur** (Apple Silicon uniquement) et **Windows 10/11 x64**. La disponibilité réelle de chaque fichier et les tests effectués sont consignés dans le [rapport de recette](acceptance/2026-09-25-desktop-installer.md).
+L’[installateur Mac 0.1.5](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/tag/desktop-v0.1.5) est disponible en préversion pour **macOS 13 ou ultérieur, Apple Silicon uniquement** (M1 et générations suivantes). Il n’est pas encore signé ni notarié par Apple. Les Mac Intel ne sont pas pris en charge par ce fichier.
 
-Les paquets de recette non signés ne constituent pas une version publique. Aucune publication automatique n’est effectuée. Il n’y a pas de lien de téléchargement public tant qu’une livraison n’a pas été validée et publiée.
+**Sur PC Windows**, utilisez la [procédure manuelle du README](../README.md#installation-manuelle--windows-et-autres-systèmes) en attendant l’arrivée de l’installateur Windows. Aucun fichier Windows n’est encore proposé.
 
-## Installer
+## Installer sur Mac
 
-- **Mac** : ouvrez le fichier `.dmg`, déplacez Freelance Cashflow dans Applications, puis ouvrez l’application.
-- **Windows** : ouvrez le fichier `.exe` et suivez les étapes de l’installateur. L’installation est propre à votre compte Windows.
+1. Téléchargez le `.dmg` depuis la page GitHub ci-dessus.
+2. Ouvrez-le et déplacez Freelance Cashflow dans Applications.
+3. Ouvrez l’application. Si macOS bloque le développeur non identifié, et si vous avez téléchargé le fichier depuis cette page GitHub, utilisez **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**, puis confirmez. Consultez l’[aide Apple](https://support.apple.com/fr-fr/102445). Ne désactivez pas globalement les protections de macOS.
+4. Suivez les étapes Supabase ci-dessous.
 
 Il n’est pas nécessaire d’installer Node.js, Git, pnpm, Docker ou Supabase CLI. Le lanceur contient les exécutables nécessaires.
 
@@ -57,6 +59,8 @@ Fermer l’onglet laisse le serveur actif. Pour l’arrêter, choisissez **Quitt
 Ne partagez jamais vos clés ni une capture de formulaire contenant des données réelles.
 
 ## Réglages et mises à jour
+
+Depuis la version 0.1.5, un avertissement facultatif annonce les nouvelles versions dans l’application. Vous pouvez lire les nouveautés, reporter ou ignorer une version. Les réglages sont dans **Paramètres → Mises à jour**. Voir le [guide des mises à jour](APPLICATION_UPDATES.md).
 
 Les réglages se trouvent dans le profil utilisateur : `~/Library/Application Support/Freelance Cashflow` sur Mac, et `%APPDATA%/Freelance Cashflow` sur Windows. La clé serveur est chiffrée via le stockage sécurisé du système. Le coffre bancaire reste séparé des binaires.
 

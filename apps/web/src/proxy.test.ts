@@ -44,3 +44,11 @@ it("preserves refreshed session cookies when redirecting a non-owner", async () 
   expect(setCookie).toContain("HttpOnly");
   expect(setCookie).toContain("SameSite=lax");
 });
+
+it('allows public update metadata even when Supabase is unavailable without opening other APIs', async () => {
+  refreshAuth.mockRejectedValue(new Error('Supabase unavailable'));
+  const response = await proxy(new NextRequest('https://cashflow.example/api/updates'));
+  expect(response.status).toBe(200);
+  expect(response.headers.get('location')).toBeNull();
+  await expect(proxy(new NextRequest('https://cashflow.example/api/private'))).rejects.toThrow('Supabase unavailable');
+});
