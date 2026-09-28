@@ -5,6 +5,7 @@ import { getOwnerUserId } from "@/lib/supabase/owner-settings";
 import { refreshAuth } from "@/lib/supabase/proxy";
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname === "/api/updates") return NextResponse.next();
   const { response, userId } = await refreshAuth(request);
   const ownerUserId = userId ? await getOwnerUserId() : null;
   const destination = decideRouteRedirect(request.nextUrl.pathname, {
