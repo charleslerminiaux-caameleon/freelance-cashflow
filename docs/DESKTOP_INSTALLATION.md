@@ -27,6 +27,18 @@ Il n’est pas nécessaire d’installer Node.js, Git, pnpm, Docker ou Supabase 
 
 La création du projet et les réglages d’authentification restent des étapes guidées sur Supabase. Les connexions bancaires sont facultatives.
 
+## Créer le jeton personnel Supabase
+
+Dans les [réglages des jetons Supabase](https://supabase.com/dashboard/account/tokens), créez un jeton nommé par exemple **Installation Freelance Cashflow** :
+
+- **Périmètre** : jeton **Scoped**, limité au seul projet utilisé par Freelance Cashflow.
+- **Expiration conseillée** : **24 heures**, ou la durée la plus courte proposée qui vous laisse terminer l’installation. C’est une recommandation pour ce parcours, pas une durée imposée par Supabase.
+- **Permissions** : **Database**, **Project Settings**, **API Keys** et **API Key Secrets**, toutes en **Read** (lecture). Laissez les autres permissions désactivées.
+
+Copiez le jeton dans l’assistant. La lecture Database permet de vérifier la structure ; les trois autres permissions permettent de relier le projet avant les migrations. Les migrations se connectent avec le **mot de passe de la base** : les droits de lecture du jeton ne limitent pas les modifications autorisées par ce mot de passe. Voir la [documentation officielle des permissions Supabase](https://supabase.com/docs/guides/platform/personal-access-tokens).
+
+Après l’installation réussie, révoquez le jeton dans Supabase. L’application ne le conserve pas et n’en a pas besoin au quotidien. Si une future mise à jour demande une nouvelle vérification, créez un nouveau jeton temporaire. S’il expire avant la fin de l’installation, remplacez-le dans l’assistant.
+
 ## Utilisation quotidienne
 
 Double-cliquez sur l’application ou son raccourci. Le navigateur s’ouvre une fois le serveur local prêt. Un deuxième double-clic réutilise le lanceur existant.

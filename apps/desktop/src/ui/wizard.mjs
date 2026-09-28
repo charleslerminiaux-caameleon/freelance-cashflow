@@ -55,7 +55,11 @@ function render(){
   field(panel,'URL du projet','url','url');
   panel.append(el('p','Supabase : Connect pour l’URL, puis Settings → API Keys → Legacy pour les clés.',{class:'hint'}));
   const grid=el('div',undefined,{class:'grid'});field(grid,'Clé publique anon','anonKey','password');field(grid,'Clé secrète service_role','serviceRoleKey','password');panel.append(grid);
-  field(panel,'Jeton personnel Supabase','accessToken','password');panel.append(el('p','Ce jeton sert à vérifier et préparer la base. Il n’est pas enregistré.',{class:'hint'}));link(panel,'Créer ou retrouver mon jeton','tokens');
+  field(panel,'Jeton personnel Supabase','accessToken','password');
+  panel.append(el('p','Créez un jeton limité à votre projet (Scoped). Durée conseillée : 24 heures, ou la durée la plus courte proposée qui couvre votre installation.',{class:'hint'}));
+  panel.append(el('p','Permissions à sélectionner en lecture (Read) : Database, Project Settings, API Keys et API Key Secrets. Laissez les autres permissions désactivées.',{class:'hint'}));
+  panel.append(el('p','Le jeton n’est pas enregistré. Révoquez-le après l’installation : il ne sert pas à l’utilisation quotidienne. Les migrations utilisent le mot de passe de la base saisi ci-dessous.',{class:'hint'}));
+  link(panel,'Créer mon jeton dans Supabase','tokens');
   field(panel,'Mot de passe de la base','databasePassword','password');panel.append(el('p','Distinct du mot de passe de votre compte Supabase. Il n’est pas enregistré.',{class:'hint'}));
   form.append(panel,el('button','Vérifier mon installation',{type:'submit'}));
   form.addEventListener('submit',e=>{e.preventDefault();void invoke('inspect',Object.fromEntries(new FormData(form)));});content.append(form);
