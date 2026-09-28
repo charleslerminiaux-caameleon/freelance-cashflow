@@ -22,7 +22,7 @@ Le terminal est une fenêtre dans laquelle vous collez des commandes, puis appuy
 - **Sur Windows** : ouvrez le menu Démarrer, tapez `cmd`, puis ouvrez **Invite de commandes**.
 - **Sur Linux** : ouvrez l’application **Terminal** de votre distribution.
 
-Pour la suite, copiez une ligne à la fois et attendez qu’elle se termine avant de passer à la suivante. Les lignes ci-dessous ne sont pas à saisir dans la barre d’adresse du navigateur.
+**Ne collez pas toutes les étapes d’un coup.** Copiez une commande à la fois et attendez qu’elle se termine. **Si elle affiche une erreur, arrêtez-vous à cette étape** : les suivantes ne pourront pas réparer la précédente. Les lignes ci-dessous ne sont pas à saisir dans la barre d’adresse du navigateur.
 
 #### Installer Node.js
 
@@ -51,7 +51,7 @@ Git sert ici à télécharger l’application.
 xcode-select --install
 ```
 
-Cette commande est réservée au Mac. Si un message indique que les outils sont déjà installés, passez à la vérification ci-dessous.
+Cette commande est réservée au Mac. **Attendez la fin de l’installation dans la fenêtre Apple avant de continuer**, même si le terminal vous permet déjà de saisir une autre commande. Si un message indique que les outils sont déjà installés, passez à la vérification ci-dessous.
 
 - **Sur Linux** : suivez la [procédure Git pour votre distribution](https://git-scm.com/install/linux).
 
@@ -77,17 +77,46 @@ Le mot de passe de la base est distinct de celui de votre compte Supabase. Il po
 
 ### 2. Télécharger l’application
 
-Dans votre terminal, exécutez ces lignes dans l’ordre. La première télécharge le projet dans un nouveau dossier `freelance-cashflow` ; la deuxième vous place dans ce dossier. Gardez ensuite ce terminal ouvert pour les étapes suivantes :
+Téléchargez d’abord le projet. Attendez la fin du téléchargement avant de continuer :
 
 ```bash
 git clone https://github.com/charleslerminiaux-caameleon/freelance-cashflow.git
-cd freelance-cashflow
-npm install --global corepack
-corepack enable
-corepack pnpm install --frozen-lockfile
 ```
 
-Corepack et pnpm servent à installer les composants nécessaires au projet. Si Corepack est déjà installé, vous pouvez passer la ligne `npm install --global corepack`.
+Si le terminal affiche `No developer tools were found`, terminez l’installation des outils Apple décrite plus haut, vérifiez `git --version`, puis relancez le téléchargement. Si le dossier existe déjà, ne le supprimez pas : vérifiez qu’il contient le projet avant de reprendre.
+
+Entrez ensuite dans le dossier téléchargé :
+
+```bash
+cd freelance-cashflow
+```
+
+**Si cette commande affiche `no such file or directory`, arrêtez-vous : le projet n’a pas été téléchargé à cet emplacement.** Ne lancez pas encore l’installation des composants.
+
+Vérifiez que vous êtes dans le bon dossier :
+
+```bash
+node -e "console.log(require('./package.json').name); console.log('Fichier de versions présent :', require('node:fs').existsSync('pnpm-lock.yaml'))"
+```
+
+Vous devez lire **`freelance-cashflow`** et **`Fichier de versions présent : true`**. Installez alors les composants :
+
+```bash
+npx --yes pnpm@10.17.1 install --frozen-lockfile
+```
+
+`npx`, fourni avec Node.js et npm, lance ici la version de pnpm prévue par le projet. Cette méthode utilise le cache de votre compte utilisateur et **ne nécessite ni installation globale de Corepack, ni `corepack enable`, ni `sudo`**. Voir la [documentation officielle de npx](https://docs.npmjs.com/cli/v11/commands/npx/).
+
+Attendez la fin de l’installation sans erreur. Gardez ce terminal ouvert et restez dans le dossier `freelance-cashflow` pour les étapes suivantes.
+
+#### Si vous avez essayé l’ancienne procédure sur Mac
+
+| Message affiché | Ce qu’il signifie et comment reprendre |
+| --- | --- |
+| `No developer tools were found` | Les outils Apple nécessaires à Git manquent. Lancez `xcode-select --install`, attendez la fin de l’installation, puis vérifiez `git --version` et recommencez le téléchargement. |
+| `cd: no such file or directory: freelance-cashflow` | Le téléchargement n’a pas créé le dossier à cet emplacement. Reprenez à `git clone` après avoir vérifié Git. |
+| `EACCES` avec `/usr/local/…` lors de l’installation de Corepack | L’ancienne procédure essayait d’écrire dans un dossier système. Laissez de côté `npm install --global corepack` et `corepack enable` ; utilisez la commande `npx` ci-dessus une fois dans le dossier du projet. |
+| `ERR_PNPM_NO_LOCKFILE` | Le fichier `pnpm-lock.yaml` est introuvable, généralement parce que vous n’êtes pas dans le dossier du projet. Vérifiez le dossier comme indiqué plus haut. Ne retirez pas `--frozen-lockfile` pour contourner cette erreur. |
 
 ### 3. Relier votre espace Supabase
 
@@ -119,21 +148,21 @@ La commande `login` vous guide pour autoriser la connexion dans le navigateur. L
 
 ```text
 Exemple à adapter :
-corepack pnpm dlx supabase@2.116.0 link --project-ref abcdefghijklmnopqrst
+npx --yes pnpm@10.17.1 dlx supabase@2.116.0 link --project-ref abcdefghijklmnopqrst
 ```
 
 Voici les commandes à lancer dans l’ordre :
 
 ```bash
-corepack pnpm dlx supabase@2.116.0 login
-corepack pnpm dlx supabase@2.116.0 link --project-ref REFERENCE_DU_PROJET
-corepack pnpm dlx supabase@2.116.0 db push --linked --dry-run
+npx --yes pnpm@10.17.1 dlx supabase@2.116.0 login
+npx --yes pnpm@10.17.1 dlx supabase@2.116.0 link --project-ref REFERENCE_DU_PROJET
+npx --yes pnpm@10.17.1 dlx supabase@2.116.0 db push --linked --dry-run
 ```
 
 La dernière commande affiche les fichiers qui vont créer la structure de votre base. Vérifiez que le projet lié est bien le **nouveau projet vide dédié à Freelance Cashflow**, puis appliquez-les :
 
 ```bash
-corepack pnpm dlx supabase@2.116.0 db push --linked
+npx --yes pnpm@10.17.1 dlx supabase@2.116.0 db push --linked
 ```
 
 Dans les paramètres d’authentification Supabase, définissez aussi l’URL du site sur `http://localhost:3000` et autorisez les inscriptions par e-mail pour créer votre premier compte.
@@ -145,12 +174,12 @@ Vous avez déjà une installation ? Suivez le [guide de mise à jour](docs/UPDAT
 Dans le terminal, depuis le dossier `freelance-cashflow`, lancez :
 
 ```bash
-corepack pnpm dev
+npx --yes pnpm@10.17.1 dev
 ```
 
 Ouvrez **[http://localhost:3000](http://localhost:3000)** dans votre navigateur. Créez votre compte, confirmez votre adresse e-mail si Supabase le demande, puis connectez-vous et suivez les étapes de configuration. Le parcours **Paramètres → Installation et diagnostic** vous aide à vérifier votre installation.
 
-Gardez le terminal ouvert pendant l’utilisation. Pour arrêter l’application, appuyez sur **Ctrl+C**. Pour la rouvrir, relancez `corepack pnpm dev` depuis son dossier, puis ouvrez la même adresse.
+Gardez le terminal ouvert pendant l’utilisation. Pour arrêter l’application, appuyez sur **Ctrl+C**. Pour la rouvrir, relancez `npx --yes pnpm@10.17.1 dev` depuis son dossier, puis ouvrez la même adresse.
 
 ### 5. Faire votre première prévision
 
@@ -197,7 +226,7 @@ Le projet utilise Next.js pour l’interface et le serveur, Supabase pour l’au
 | `packages/shared` | Outils communs pour les montants et les dates |
 | `supabase` | Migrations, règles d’accès et tests de la base |
 
-Le dépôt utilise pnpm 10 via Corepack et Node.js 24. Chaque installation est mono-propriétaire ; les données financières sont protégées par `owner_user_id` et les règles Row Level Security de PostgreSQL.
+Le dépôt utilise pnpm 10.17.1 et Node.js 24. Les commandes de ce guide lancent pnpm via `npx`, sans installation globale. Chaque installation est mono-propriétaire ; les données financières sont protégées par `owner_user_id` et les règles Row Level Security de PostgreSQL.
 
 Les migrations du dossier `supabase/migrations` préparent une nouvelle base. Pour une base existante, vérifiez les migrations en attente et sauvegardez les données avant application. Ne lancez pas `db reset` sur votre base hébergée.
 
@@ -216,12 +245,12 @@ Les connexions configurées depuis l’interface nécessitent un stockage serveu
 ### Vérifications pour le développement
 
 ```bash
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm test:run
-corepack pnpm build
-corepack pnpm test:isolated
-corepack pnpm test:client-boundary
+npx --yes pnpm@10.17.1 lint
+npx --yes pnpm@10.17.1 typecheck
+npx --yes pnpm@10.17.1 test:run
+npx --yes pnpm@10.17.1 build
+npx --yes pnpm@10.17.1 test:isolated
+npx --yes pnpm@10.17.1 test:client-boundary
 ```
 
 Les deux dernières commandes nécessitent Docker et utilisent une base de test jetable dédiée, avec des fournisseurs simulés. Elles ne doivent pas utiliser les données ni les identifiants de votre installation réelle. Le [guide d’installation](docs/INSTALLATION.md) détaille les prérequis de test, dont Chromium.
