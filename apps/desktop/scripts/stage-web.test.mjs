@@ -29,3 +29,21 @@ test('materializes pnpm packages without losing their sibling dependency resolut
  const result=spawnSync(process.execPath,[join(destination,'apps/web/server.js')],{encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);assert.equal(result.stdout.trim(),'works');
 });
+
+test('rebases absolute build links to traced copies and rejects unrelated external links',async t=>{
+ const root=await mkdtemp(join(tmpdir(),'fc-absolute-'));t.after(()=>rm(root,{recursive:true,force:true}));
+ const webRoot=join(root,'apps/web'),destination=join(root,'bundle');
+ const standalone=join(webRoot,'.next-desktop/standalone');
+ const packagePath='node_modules/.pnpm/example@1/node_modules/example';
+ for(const [path,value] of [[join(standalone,'apps/web/server.js'),'server'],[join(root,packagePath,'index.js'),'untraced'],[join(standalone,packagePath,'index.js'),'traced']]){
+  await mkdir(join(path,'..'),{recursive:true});await writeFile(path,value);
+ }
+ await mkdir(join(webRoot,'public'));await mkdir(join(webRoot,'.next-desktop/static'));
+ const modules=join(standalone,'apps/web/node_modules');await mkdir(modules,{recursive:true});
+ await symlink(join(root,packagePath),join(modules,'example'),'junction');
+ await stageWeb({webRoot,destination});
+ assert.equal(await readFile(join(destination,'apps/web/node_modules/example/index.js'),'utf8'),'traced');
+ const outside=await mkdtemp(join(tmpdir(),'fc-outside-'));t.after(()=>rm(outside,{recursive:true,force:true}));
+ await symlink(outside,join(modules,'outside'),'junction');
+ await assert.rejects(stageWeb({webRoot,destination}),/Standalone link escapes its root/);
+});
