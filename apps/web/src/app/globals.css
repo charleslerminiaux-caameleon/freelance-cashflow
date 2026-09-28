@@ -2030,3 +2030,5 @@ details.panel[open] > summary {
 .auth-page { font-size: var(--fc-text-body); }
 .dashboard-kpi small.kpi-caption { font-size: .7rem; white-space: nowrap; line-height: 1.4; }
 .dashboard-kpi small { font-size: .7rem; }
+
+.update-notice{border:1px solid #bfd8d2;background:#edf6f2;border-radius:12px;padding:18px 22px;margin-bottom:24px;color:#22443f}.update-notice p{font-size:14px;line-height:1.6}.update-notice summary{cursor:pointer;font-weight:600}.update-release-notes{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto}.update-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:16px}.update-actions button,.update-settings button{cursor:pointer;border:1px solid #bfd8d2;border-radius:8px;padding:8px 12px;background:white;color:#22443f}.update-settings{margin-bottom:24px}.update-settings label{display:flex;align-items:center;gap:8px}.update-settings input[type=checkbox]{width:auto}

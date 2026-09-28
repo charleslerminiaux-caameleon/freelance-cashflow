@@ -4,7 +4,7 @@ L’assistant de bureau remplace les commandes de la première installation. Il 
 
 ## Disponibilité et téléchargement
 
-L’[installateur Mac 0.1.4](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/tag/desktop-v0.1.4) est disponible en préversion pour **macOS 13 ou ultérieur, Apple Silicon uniquement** (M1 et générations suivantes). Il n’est pas encore signé ni notarié par Apple. Les Mac Intel ne sont pas pris en charge par ce fichier.
+L’[installateur Mac 0.1.5](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/tag/desktop-v0.1.5) est disponible en préversion pour **macOS 13 ou ultérieur, Apple Silicon uniquement** (M1 et générations suivantes). Il n’est pas encore signé ni notarié par Apple. Les Mac Intel ne sont pas pris en charge par ce fichier.
 
 **Sur PC Windows**, utilisez la [procédure manuelle du README](../README.md#installation-manuelle--windows-et-autres-systèmes) en attendant l’arrivée de l’installateur Windows. Aucun fichier Windows n’est encore proposé.
 
@@ -59,6 +59,8 @@ Fermer l’onglet laisse le serveur actif. Pour l’arrêter, choisissez **Quitt
 Ne partagez jamais vos clés ni une capture de formulaire contenant des données réelles.
 
 ## Réglages et mises à jour
+
+Depuis la version 0.1.5, un avertissement facultatif annonce les nouvelles versions dans l’application. Vous pouvez lire les nouveautés, reporter ou ignorer une version. Les réglages sont dans **Paramètres → Mises à jour**. Voir le [guide des mises à jour](APPLICATION_UPDATES.md).
 
 Les réglages se trouvent dans le profil utilisateur : `~/Library/Application Support/Freelance Cashflow` sur Mac, et `%APPDATA%/Freelance Cashflow` sur Windows. La clé serveur est chiffrée via le stockage sécurisé du système. Le coffre bancaire reste séparé des binaires.
 

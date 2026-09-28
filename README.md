@@ -12,19 +12,27 @@ Choisissez la méthode adaptée à votre ordinateur :
 
 | Votre ordinateur | Installation |
 | --- | --- |
-| **Mac Apple Silicon (M1, M2, M3, M4 ou ultérieur), macOS 13 minimum** | [Télécharger l’installateur Mac 0.1.4](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/download/desktop-v0.1.4/Freelance.Cashflow-0.1.4-mac-arm64.dmg) |
+| **Mac Apple Silicon (M1, M2, M3, M4 ou ultérieur), macOS 13 minimum** | [Télécharger l’installateur Mac 0.1.5](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/download/desktop-v0.1.5/Freelance.Cashflow-0.1.5-mac-arm64.dmg) |
 | **PC Windows** | Suivez la [procédure manuelle ci-dessous](#installation-manuelle--windows-et-autres-systèmes), en attendant l’arrivée de l’installateur Windows. |
 | **Mac Intel ou Linux** | Utilisez la procédure manuelle. Le fichier Mac proposé ne prend pas en charge les Mac Intel. |
 
 ### Installer sur Mac Apple Silicon
 
-1. Téléchargez le fichier **Freelance.Cashflow-0.1.4-mac-arm64.dmg** depuis le lien ci-dessus ou la [page de téléchargement GitHub](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/tag/desktop-v0.1.4).
+1. Téléchargez le fichier **Freelance.Cashflow-0.1.5-mac-arm64.dmg** depuis le lien ci-dessus ou la [page de téléchargement GitHub](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/tag/desktop-v0.1.5).
 2. Ouvrez le fichier `.dmg`, puis glissez **Freelance Cashflow** dans **Applications**.
 3. Ouvrez Freelance Cashflow depuis Applications. Cette **préversion n’est pas encore signée ni notariée par Apple**. Si macOS bloque l’ouverture parce que le développeur ne peut pas être vérifié, ouvrez **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**, puis confirmez, uniquement si le fichier provient bien de cette page GitHub. Voir l’[aide officielle Apple](https://support.apple.com/fr-fr/102445).
 4. Suivez l’assistant pour créer ou relier votre propre projet Supabase. Il explique les clés à fournir, les permissions et la durée du jeton temporaire, puis prépare la base après votre confirmation.
 5. Freelance Cashflow s’ouvre dans votre navigateur. Les fois suivantes, double-cliquez simplement sur l’application.
 
 Vous n’avez pas besoin d’installer Node.js, Git, pnpm ou Docker avec cet installateur. Un compte Supabase et une connexion Internet restent nécessaires. Le [guide Mac détaillé](docs/DESKTOP_INSTALLATION.md) explique la configuration et les mises à jour. Pour remplacer une version précédente, quittez d’abord Freelance Cashflow, puis remplacez l’application dans Applications ; vos réglages sont conservés.
+
+### Être informé des mises à jour
+
+À partir de la version 0.1.5, l’application affiche un avertissement lorsqu’une nouvelle version de sa distribution est disponible, sans compte GitHub. Consultez les nouveautés, puis choisissez de télécharger la mise à jour, de la reporter ou d’ignorer cette version. Rien n’est installé automatiquement.
+
+Dans **Paramètres → Mises à jour**, retrouvez la version installée et sa provenance, désactivez les vérifications ou réaffichez une version ignorée. Un fork communautaire suit ses propres publications ; changer de distribution demande de vérifier ses instructions et la compatibilité des données. Voir le [fonctionnement des mises à jour](docs/APPLICATION_UPDATES.md).
+
+Si vous utilisez encore la version 0.1.4, téléchargez et installez manuellement la 0.1.5 une première fois pour bénéficier de ces avertissements.
 
 ## Installation manuelle — Windows et autres systèmes
 
