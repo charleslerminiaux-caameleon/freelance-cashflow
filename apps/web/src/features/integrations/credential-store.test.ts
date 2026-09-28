@@ -7,14 +7,15 @@ import { createCredentialStore } from "./credential-store";
 const directories: string[] = [];
 function fixture() { const directory = mkdtempSync(join(tmpdir(), "fc-credentials-")); directories.push(directory); return { directory, store: createCredentialStore(directory) }; }
 afterEach(() => { for (const dir of directories.splice(0)) rmSync(dir, { recursive: true, force: true }); });
-it("persists encrypted credentials across instances with restricted file permissions", () => {
+it("persists encrypted credentials across instances with POSIX permissions where supported", () => {
   const { directory, store } = fixture();
   expect(store.read("qonto")).toBeUndefined();
   store.write("qonto", { login: "demo", secretKey: "private-canary" });
   expect(createCredentialStore(directory).read("qonto")).toEqual({ login: "demo", secretKey: "private-canary" });
   for (const file of readdirSync(directory)) {
     expect(readFileSync(join(directory, file), "utf8")).not.toContain("private-canary");
-    expect(statSync(join(directory, file)).mode & 0o777).toBe(0o600);
+    // Windows uses inherited ACLs; stat mode bits do not report POSIX permissions.
+    if (process.platform !== "win32") expect(statSync(join(directory, file)).mode & 0o777).toBe(0o600);
   }
 });
 it("persists disconnection instead of accidentally falling back to environment credentials", () => {

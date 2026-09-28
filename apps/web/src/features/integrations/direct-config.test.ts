@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { resolve } from 'node:path';
 import { loadDirectConfig } from './direct-config';
 it('requires complete credentials and rejects header injection', () => {
  expect(loadDirectConfig('pennylane', () => undefined)).toBeNull();
@@ -9,5 +10,5 @@ it('requires complete credentials and rejects header injection', () => {
 it('never reads browser supplied config and gives bunq a local context path', () => {
  const config = loadDirectConfig('bunq', name => name === 'BUNQ_API_KEY' ? 'bunq-key' : undefined);
  expect(config).toMatchObject({apiKey:'bunq-key'});
- expect(config && 'contextPath' in config && config.contextPath.endsWith('/.libra/bunq-context.json')).toBe(true);
+ expect(config).toMatchObject({contextPath: resolve(process.cwd(), '.libra', 'bunq-context.json')});
 });
