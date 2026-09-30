@@ -6,7 +6,7 @@ L’assistant de bureau remplace les commandes de la première installation. Il 
 
 L’[installateur Mac 0.1.5](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/tag/desktop-v0.1.5) est disponible en préversion pour **macOS 13 ou ultérieur, Apple Silicon uniquement** (M1 et générations suivantes). Il n’est pas encore signé ni notarié par Apple. Les Mac Intel ne sont pas pris en charge par ce fichier.
 
-**Sur PC Windows**, utilisez la [procédure manuelle du README](../README.md#installation-manuelle--windows-et-autres-systèmes) en attendant l’arrivée de l’installateur Windows. Aucun fichier Windows n’est encore proposé.
+**Sur PC Windows x64**, [téléchargez l’installateur 0.1.4](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/download/desktop-v0.1.4/Freelance.Cashflow-0.1.4-win-x64.exe), proposé en préversion non signée. Windows ARM natif n’est pas pris en charge. La [procédure manuelle du README](../README.md#installation-manuelle--windows-et-autres-systèmes) reste disponible au choix.
 
 ## Installer sur Mac
 
@@ -16,6 +16,18 @@ L’[installateur Mac 0.1.5](https://github.com/charleslerminiaux-caameleon/free
 4. Suivez les étapes Supabase ci-dessous.
 
 Il n’est pas nécessaire d’installer Node.js, Git, pnpm, Docker ou Supabase CLI. Le lanceur contient les exécutables nécessaires.
+
+## Installer sur Windows x64
+
+1. [Téléchargez l’installateur Windows 0.1.4 (.exe)](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/download/desktop-v0.1.4/Freelance.Cashflow-0.1.4-win-x64.exe). Windows ARM natif n’est pas pris en charge.
+2. Ouvrez le fichier et suivez l’assistant d’installation, puis lancez **Freelance Cashflow** depuis le raccourci créé.
+3. Suivez l’assistant pour créer ou relier votre propre projet Supabase, puis ouvrez l’application dans votre navigateur.
+
+**Alerte Windows attendue : cet installateur n’est pas signé.** Microsoft Defender SmartScreen peut afficher « Windows a protégé votre ordinateur » ou bloquer une « application non reconnue ». C’est attendu pour cette préversion non signée ; ce message de réputation ne signifie pas à lui seul qu’un virus a été détecté. Si le fichier provient bien de cette release GitHub et que le message concerne uniquement une application non reconnue, cliquez sur **Informations complémentaires → Exécuter quand même**, si cette option est proposée. Ne désactivez pas Microsoft Defender. Si une menace précise est détectée, ne contournez pas le blocage.
+
+Node.js, Git, pnpm et Docker ne sont pas nécessaires avec cet installateur. Un compte Supabase et une connexion Internet restent nécessaires. Vous préférez ne pas utiliser l’installateur ? La [procédure manuelle](../README.md#installation-manuelle--windows-et-autres-systèmes) reste disponible.
+
+La version Windows proposée est la **0.1.4** : elle ne comprend pas encore les notifications de mise à jour introduites dans la version Mac 0.1.5.
 
 ## Relier Supabase
 

@@ -13,7 +13,7 @@ Choisissez la méthode adaptée à votre ordinateur :
 | Votre ordinateur | Installation |
 | --- | --- |
 | **Mac Apple Silicon (M1, M2, M3, M4 ou ultérieur), macOS 13 minimum** | [Télécharger l’installateur Mac 0.1.5](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/download/desktop-v0.1.5/Freelance.Cashflow-0.1.5-mac-arm64.dmg) |
-| **PC Windows** | Suivez la [procédure manuelle ci-dessous](#installation-manuelle--windows-et-autres-systèmes), en attendant l’arrivée de l’installateur Windows. |
+| **PC Windows x64** | [Télécharger l’installateur Windows 0.1.4](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/download/desktop-v0.1.4/Freelance.Cashflow-0.1.4-win-x64.exe) — non signé, alerte SmartScreen attendue ; [procédure manuelle](#installation-manuelle--windows-et-autres-systèmes) au choix. |
 | **Mac Intel ou Linux** | Utilisez la procédure manuelle. Le fichier Mac proposé ne prend pas en charge les Mac Intel. |
 
 ### Installer sur Mac Apple Silicon
@@ -26,17 +26,29 @@ Choisissez la méthode adaptée à votre ordinateur :
 
 Vous n’avez pas besoin d’installer Node.js, Git, pnpm ou Docker avec cet installateur. Un compte Supabase et une connexion Internet restent nécessaires. Le [guide Mac détaillé](docs/DESKTOP_INSTALLATION.md) explique la configuration et les mises à jour. Pour remplacer une version précédente, quittez d’abord Freelance Cashflow, puis remplacez l’application dans Applications ; vos réglages sont conservés.
 
+### Installer sur Windows x64
+
+1. [Téléchargez l’installateur Windows 0.1.4 (.exe)](https://github.com/charleslerminiaux-caameleon/freelance-cashflow/releases/download/desktop-v0.1.4/Freelance.Cashflow-0.1.4-win-x64.exe). Windows ARM natif n’est pas pris en charge.
+2. Ouvrez le fichier et suivez l’assistant d’installation, puis lancez **Freelance Cashflow** depuis le raccourci créé.
+3. Suivez l’assistant pour créer ou relier votre propre projet Supabase, puis ouvrez l’application dans votre navigateur.
+
+**Alerte Windows attendue : cet installateur n’est pas signé.** Microsoft Defender SmartScreen peut afficher « Windows a protégé votre ordinateur » ou bloquer une « application non reconnue ». C’est attendu pour cette préversion non signée ; ce message de réputation ne signifie pas à lui seul qu’un virus a été détecté. Si le fichier provient bien de cette release GitHub et que le message concerne uniquement une application non reconnue, cliquez sur **Informations complémentaires → Exécuter quand même**, si cette option est proposée. Ne désactivez pas Microsoft Defender. Si une menace précise est détectée, ne contournez pas le blocage.
+
+Node.js, Git, pnpm et Docker ne sont pas nécessaires avec cet installateur. Un compte Supabase et une connexion Internet restent nécessaires. Vous préférez ne pas utiliser l’installateur ? La [procédure manuelle](#installation-manuelle--windows-et-autres-systèmes) reste disponible.
+
+La version Windows proposée est la **0.1.4** : elle ne comprend pas encore les notifications de mise à jour introduites dans la version Mac 0.1.5.
+
 ### Être informé des mises à jour
 
 À partir de la version 0.1.5, l’application affiche un avertissement lorsqu’une nouvelle version de sa distribution est disponible, sans compte GitHub. Consultez les nouveautés, puis choisissez de télécharger la mise à jour, de la reporter ou d’ignorer cette version. Rien n’est installé automatiquement.
 
 Dans **Paramètres → Mises à jour**, retrouvez la version installée et sa provenance, désactivez les vérifications ou réaffichez une version ignorée. Un fork communautaire suit ses propres publications ; changer de distribution demande de vérifier ses instructions et la compatibilité des données. Voir le [fonctionnement des mises à jour](docs/APPLICATION_UPDATES.md).
 
-Si vous utilisez encore la version 0.1.4, téléchargez et installez manuellement la 0.1.5 une première fois pour bénéficier de ces avertissements.
+Sur Mac Apple Silicon, si vous utilisez encore la version 0.1.4, téléchargez et installez manuellement la 0.1.5 une première fois pour bénéficier de ces avertissements. Le fichier Windows disponible reste en version 0.1.4.
 
 ## Installation manuelle — Windows et autres systèmes
 
-**Sur PC Windows, utilisez cette procédure en attendant l’installateur Windows.** Elle reste aussi disponible sur Mac et Linux. Quelques commandes sont nécessaires la première fois ; ensuite, la gestion quotidienne se fait dans l’interface.
+**Cette procédure reste disponible sur Windows, Mac et Linux pour ceux qui préfèrent installer l’application manuellement.** Quelques commandes sont nécessaires la première fois ; ensuite, la gestion quotidienne se fait dans l’interface.
 
 ### 1. Préparer les outils
 
